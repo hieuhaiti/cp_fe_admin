@@ -4,7 +4,7 @@ import type {
   CitizenFeedbackListData,
   FeedbackListParams,
   UpdateFeedbackStatusBody,
-  FeedbackFeatureCollection,
+  // FeedbackFeatureCollection,
 } from '@/types/api'
 import { serviceFeedbackPath, serviceAdminFeedbackPath } from '@/constant/serviceConstant'
 
@@ -56,12 +56,15 @@ export default {
       resolved: 'approved',
       rejected: 'rejected',
     }
-    const status = legacyStatus ? statusMap[legacyStatus] ?? legacyStatus : undefined
+    const status = legacyStatus ? (statusMap[legacyStatus] ?? legacyStatus) : undefined
     const payload = {
       status,
       expectedUpdatedAt: data.expectedUpdatedAt,
     }
 
-    return apiClient.patch<CitizenFeedback>(`${serviceAdminFeedbackPath}/${feedbackId}/review`, payload)
+    return apiClient.patch<CitizenFeedback>(
+      `${serviceAdminFeedbackPath}/${feedbackId}/review`,
+      payload
+    )
   },
 }
