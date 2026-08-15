@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { Bell } from 'lucide-react'
+import { Bell, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -41,25 +41,98 @@ function getSecondaryText(n: Notification) {
 }
 
 function isReadFlag(n: Notification) {
-  return n.isRead ?? n.is_read ?? false
+  return Boolean(n.isRead ?? n.is_read ?? n.readAt ?? n.read_at)
 }
 
 function createdAtOf(n: Notification) {
   return n.createdAt ?? n.created_at ?? ''
 }
 
-function getNotificationPath(n: Notification) {
-  const data = n.data ?? n.payload
+/**
+ * Kênh & type notification server phát ra (xem admin/src/pages/NotificationSend
+ * và server/src/realtime/field-report-listener). Bấm vào thông báo phải mở
+ * đúng trang chuyên đề, kèm `?highlight=<id>` (hoặc query cụ thể) khi payload
+ * có ID để trang đó có thể cuộn/tô sáng entity tương ứng sau này.
+ *
+ * Ưu tiên đọc:
+ * 1. `data.path` — override tường minh từ server (nội bộ, phải bắt đầu `/`)
+ * 2. `data.url` — link ngoài (http/https), trả về nguyên URL để mở tab mới
+ * 3. Channel + type để suy ra trang + ID để deep-link
+ */
+function getNotificationPath(n: Notification): string | null {
+  const data = (n.data ?? n.payload ?? {}) as Record<string, unknown>
+  const channel = (n.channel ?? (data.channel as string | undefined)) || ''
+  const type = n.type || ''
+
+  // 1. explicit internal path override
+  const explicitPath = data.path
   if (
-    typeof data?.path === 'string' &&
-    data.path.startsWith('/') &&
-    !data.path.startsWith('//')
+    typeof explicitPath === 'string' &&
+    explicitPath.startsWith('/') &&
+    !explicitPath.startsWith('//')
   ) {
-    return data.path
+    return explicitPath
   }
-  if (n.channel === 'feedback') return '/feedbacks'
-  if (n.channel === 'comment') return '/news-comments'
-  if (n.channel === 'news') return '/news'
+  // 2. explicit external URL override
+  const explicitUrl = data.url
+  if (typeof explicitUrl === 'string' && /^https?:\/\//.test(explicitUrl)) {
+    return explicitUrl
+  }
+
+  // 3. channel/type → route + optional entity id
+  const asId = (value: unknown): string | null => {
+    if (value === null || value === undefined || value === '') return null
+    const n = Number(value)
+    return Number.isFinite(n) && n > 0 ? String(n) : null
+  }
+  const withQuery = (base: string, key: string, value: unknown) => {
+    const id = asId(value)
+    return id ? `${base}?${key}=${id}` : base
+  }
+
+  // Feedback / field reports — server sends `data.reportId`
+  if (
+    channel === 'feedback' ||
+    type.startsWith('feedback_') ||
+    type.startsWith('field_report_')
+  ) {
+    return withQuery('/feedbacks', 'highlight', data.reportId ?? data.feedbackId ?? data.id)
+  }
+
+  // News comments — server sends `data.commentId` (or newsId for filter)
+  if (channel === 'comment' || type.startsWith('comment_')) {
+    return withQuery('/news-comments', 'highlight', data.commentId ?? data.id)
+  }
+
+  // News articles
+  if (channel === 'news' || type.startsWith('news_')) {
+    return withQuery('/news', 'highlight', data.newsId ?? data.id)
+  }
+
+  // Forest classification
+  if (channel === 'forest' || type.startsWith('forest_')) {
+    return withQuery(
+      '/forest-classification',
+      'snapshot',
+      data.snapshotId ?? data.forestSnapshotId ?? data.id
+    )
+  }
+
+  // Flood — runId cho lượt chạy, artifactId cho lớp đã công bố
+  if (channel === 'flood' || type.startsWith('flood_')) {
+    const runId = asId(data.runId ?? data.floodRunId)
+    const artifactId = asId(data.artifactId ?? data.floodArtifactId ?? data.id)
+    if (runId) return `/flood?run=${runId}`
+    if (artifactId) return `/flood?artifact=${artifactId}`
+    return '/flood'
+  }
+
+  // System channel (announcement / maintenance / backup / system_alert) —
+  // không có trang chuyên đề, không điều hướng để tránh mở page rỗng.
+  if (channel === 'system' || type === 'announcement' || type === 'system_alert') {
+    return null
+  }
+
   return null
 }
 
@@ -109,8 +182,8 @@ export function NotificationMenu() {
   const raw = query.data as ApiResponse<NotificationListData> | undefined
   const data = raw?.data
   const notifications: Notification[] = data?.items ?? data?.notifications ?? []
-  const unreadData = (unreadQuery.data as ApiResponse<{ unread: number }> | undefined)?.data
-  const unreadCountRaw = unreadData?.unread ?? data?.unreadCount ?? data?.unread_count
+  const unreadData = (unreadQuery.data as ApiResponse<{ count: number }> | undefined)?.data
+  const unreadCountRaw = unreadData?.count ?? data?.unreadCount ?? data?.unread_count
   const unreadCount = Number.isFinite(Number(unreadCountRaw))
     ? Math.max(0, Number(unreadCountRaw))
     : Math.max(0, notifications.filter((n) => !isReadFlag(n)).length)
@@ -132,6 +205,18 @@ export function NotificationMenu() {
       onSuccess: () => {
         refreshNotifications()
       },
+    },
+    false
+  )
+
+  const deleteMutation = useApiMutation(
+    (id: number | string) => notificationService.delete(id),
+    {
+      onSuccess: () => {
+        refreshNotifications()
+        toast.success('Đã xoá thông báo')
+      },
+      onError: () => toast.error('Không thể xoá thông báo.'),
     },
     false
   )
@@ -209,12 +294,38 @@ export function NotificationMenu() {
                       markAsReadMutation.mutate(n.id)
                     }
                     const path = getNotificationPath(n)
-                    if (path) navigate(path)
+                    if (!path) return
+                    if (/^https?:\/\//.test(path)) {
+                      window.open(path, '_blank', 'noopener,noreferrer')
+                    } else {
+                      navigate(path)
+                    }
                   }}
                 >
-                  <div className="flex w-full items-center justify-between gap-2">
-                    <span className={cn('text-sm', !read && 'font-medium')}>{primary}</span>
+                  <div className="flex w-full items-start gap-2">
+                    <span className={cn('min-w-0 flex-1 text-sm', !read && 'font-medium')}>
+                      {primary}
+                    </span>
                     {!read && <span className="bg-primary h-2 w-2 rounded-full" />}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-muted-foreground hover:text-destructive -mt-1 -mr-1 shrink-0"
+                      aria-label="Xoá thông báo"
+                      disabled={
+                        deleteMutation.isPending &&
+                        String(deleteMutation.variables) === String(n.id)
+                      }
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        deleteMutation.mutate(n.id)
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
                   </div>
                   {secondary && <span className="text-muted-foreground text-xs">{secondary}</span>}
                   <span className="text-muted-foreground text-[11px]">

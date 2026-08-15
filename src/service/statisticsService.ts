@@ -27,10 +27,6 @@ export default {
   getAreas: (params: { type?: string; year?: number } = {}) =>
     apiClient.get(`${serviceStatsPath}/areas`, { params }),
 
-  /** GET /statistics/timeseries?type= */
-  getTimeseries: (type?: string) =>
-    apiClient.get(`${serviceStatsPath}/timeseries`, { params: { type } }),
-
   /** GET /statistics/compare?beforeSourceId=&afterSourceId= */
   compare: (beforeSourceId: number | string, afterSourceId: number | string) =>
     apiClient.get(`${serviceStatsPath}/compare`, { params: { beforeSourceId, afterSourceId } }),

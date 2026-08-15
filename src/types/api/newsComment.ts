@@ -59,15 +59,10 @@ export interface NewsCommentAdminListParams {
   limit?: number
   targetType?: 'news' | string
   targetId?: number
-  approved?: boolean
+  status?: 'pending' | 'approved' | 'rejected'
   newsId?: number
-  isApproved?: boolean
   sortBy?: 'created_at' | 'updated_at'
   sortOrder?: 'ASC' | 'DESC'
-
-  // legacy
-  news_id?: number
-  is_approved?: boolean
 }
 
 export interface CreatePublicCommentBody {

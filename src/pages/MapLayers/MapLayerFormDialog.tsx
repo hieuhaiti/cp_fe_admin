@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -17,7 +18,7 @@ import { mapLayerService, useApiQuery } from '@/service'
 import GeoJsonMapPreview from '@/components/features/GeoJsonMapPreview'
 import type { ApiResponse, CreateMapLayerBody, GeometryType, MapLayer } from '@/types/api'
 import { toast } from 'react-toastify'
-import { MAP_LAYER_CATEGORY_OPTIONS } from '@/constant/mapLayerConstant'
+import { getMapLayerCategoryLabel, MAP_LAYER_CATEGORY_OPTIONS } from '@/constant/mapLayerConstant'
 
 interface MapLayerFormDialogProps {
   open: boolean
@@ -31,7 +32,11 @@ type MapLayerDetailData = MapLayer | { mapLayer?: MapLayer }
 
 export const mapLayerSchema = z.object({
   category: z.string().trim().min(1, { message: 'Vui lòng chọn nhóm lớp' }).max(60),
-  layer_group: z.string().trim().max(80).optional().or(z.literal('')),
+  category_name: z
+    .string({ message: 'Tên danh mục là bắt buộc' })
+    .trim()
+    .min(2, { message: 'Tên danh mục phải có ít nhất 2 ký tự' })
+    .max(120),
   name: z
     .string({ message: 'Tên lớp bản đồ là bắt buộc' })
     .trim()
@@ -43,6 +48,7 @@ export const mapLayerSchema = z.object({
   properties: z.record(z.string(), z.any()).nullable().optional(),
   is_active: z.boolean().optional(),
   is_public: z.boolean().optional(),
+  is_enable_default: z.boolean().optional(),
 })
 
 function stringifyJson(value: unknown): string {
@@ -171,13 +177,16 @@ export default function MapLayerFormDialog({
   isLoading = false,
 }: MapLayerFormDialogProps) {
   const [category, setCategory] = useState<string>('forest_district')
-  const [layerGroup, setLayerGroup] = useState<string>('')
+  const [categoryName, setCategoryName] = useState<string>(() =>
+    getMapLayerCategoryLabel('forest_district')
+  )
   const [layerKind, setLayerKind] = useState<'basemap' | 'overlay'>('overlay')
   const [name, setName] = useState<string>('')
   const [geometryType, setGeometryType] = useState<FormGeometryKind>('polygon')
   const [rasterFileName, setRasterFileName] = useState<string>('')
   const [isActive, setIsActive] = useState<'true' | 'false'>('true')
   const [isPublic, setIsPublic] = useState<'true' | 'false'>('false')
+  const [isEnableDefault, setIsEnableDefault] = useState(false)
   const [latitude, setLatitude] = useState<string>('')
   const [longitude, setLongitude] = useState<string>('')
   const [geometryDataText, setGeometryDataText] = useState<string>('')
@@ -191,8 +200,16 @@ export default function MapLayerFormDialog({
 
   async function detectTiffMagicBytes(file: File): Promise<boolean> {
     const bytes = new Uint8Array(await file.slice(0, 4).arrayBuffer())
-    const le = bytes[0] === 0x49 && bytes[1] === 0x49 && (bytes[2] === 0x2a || bytes[2] === 0x2b) && bytes[3] === 0x00
-    const be = bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[2] === 0x00 && (bytes[3] === 0x2a || bytes[3] === 0x2b)
+    const le =
+      bytes[0] === 0x49 &&
+      bytes[1] === 0x49 &&
+      (bytes[2] === 0x2a || bytes[2] === 0x2b) &&
+      bytes[3] === 0x00
+    const be =
+      bytes[0] === 0x4d &&
+      bytes[1] === 0x4d &&
+      bytes[2] === 0x00 &&
+      (bytes[3] === 0x2a || bytes[3] === 0x2b)
     return le || be
   }
 
@@ -213,7 +230,7 @@ export default function MapLayerFormDialog({
       setLongitude('')
       setGeometryDataText('')
       toast.success(
-        `Đã ghi nhận ${file.name} là raster — nạp thực tế qua Import Raster / Ingest GEE`,
+        `Đã ghi nhận ${file.name} là raster — nạp thực tế qua Import Raster / Ingest GEE`
       )
       return
     }
@@ -268,12 +285,13 @@ export default function MapLayerFormDialog({
     if (!open) return
     if (!isEdit) {
       setCategory('forest_district')
-      setLayerGroup('')
+      setCategoryName(getMapLayerCategoryLabel('forest_district'))
       setLayerKind('overlay')
       setName('')
       setGeometryType('polygon')
       setIsActive('true')
       setIsPublic('false')
+      setIsEnableDefault(false)
       setLatitude('')
       setLongitude('')
       setGeometryDataText('')
@@ -283,12 +301,15 @@ export default function MapLayerFormDialog({
 
     if (layer) {
       setCategory(layer.category || 'forest_district')
-      setLayerGroup(layer.layer_group || '')
+      setCategoryName(
+        layer.category_name || getMapLayerCategoryLabel(layer.category || 'forest_district')
+      )
       setLayerKind(layer.layer_kind === 'basemap' ? 'basemap' : 'overlay')
       setName(layer.name_vi || layer.name || '')
       setGeometryType(toFormGeometryType(layer.geometry_type))
       setIsActive(layer.is_active ? 'true' : 'false')
       setIsPublic(layer.is_public ? 'true' : 'false')
+      setIsEnableDefault(Boolean(layer.is_enable_default))
       const point = extractPointCoordinates(layer.geometry_data)
       if (toFormGeometryType(layer.geometry_type) === 'point' && point) {
         setLatitude(String(point.lat))
@@ -374,12 +395,13 @@ export default function MapLayerFormDialog({
 
     const fullValidation = mapLayerSchema.safeParse({
       category,
-      layer_group: layerGroup.trim(),
+      category_name: categoryName.trim(),
       name: name.trim(),
       geometry_type: geometryType,
       properties: properties ?? null,
       is_active: isActive === 'true',
       is_public: isPublic === 'true',
+      is_enable_default: isEnableDefault,
     })
     if (!fullValidation.success) {
       const first = fullValidation.error.issues[0]
@@ -388,20 +410,23 @@ export default function MapLayerFormDialog({
     }
 
     const code = isEdit && layer?.code ? layer.code : toLayerCode(name.trim())
-    const trimmedLayerGroup = layerGroup.trim()
     onSubmit({
       code,
       name_vi: name.trim(),
       table_name: isEdit && layer?.table_name ? layer.table_name : code,
       schema_name: isEdit ? layer?.schema_name || 'gis' : 'gis',
       category,
+      category_name: categoryName.trim(),
       layer_kind: layerKind,
-      layer_group: trimmedLayerGroup ? trimmedLayerGroup : null,
       geometry_type: toApiGeometryType(geometryType),
       epsg_code: 4326,
       is_active: isActive === 'true',
       is_public: isPublic === 'true',
+      is_enable_default: isEnableDefault,
       is_editable: true,
+      ...(isEdit && (layer?.updatedAt || layer?.updated_at)
+        ? { expectedUpdatedAt: layer.updatedAt || layer.updated_at || undefined }
+        : {}),
     })
   }
 
@@ -420,7 +445,13 @@ export default function MapLayerFormDialog({
             <Label>
               Nhóm lớp <span className="text-destructive">*</span>
             </Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select
+              value={category}
+              onValueChange={(value) => {
+                setCategory(value)
+                setCategoryName(getMapLayerCategoryLabel(value))
+              }}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Chọn nhóm lớp" />
               </SelectTrigger>
@@ -432,6 +463,22 @@ export default function MapLayerFormDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="map-layer-category-name">
+              Tên danh mục hiển thị <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="map-layer-category-name"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              placeholder="Ví dụ: Ranh giới hành chính"
+              maxLength={120}
+            />
+            <p className="text-muted-foreground text-xs">
+              Tên tiếng Việt được hiển thị khi nhóm lớp dữ liệu trên WebGIS.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -455,18 +502,6 @@ export default function MapLayerFormDialog({
                 ? 'Lớp nền sẽ tự động được bật khi user vào bản đồ, hiển thị ở mục "Lớp nền" trong sidebar.'
                 : 'Lớp phủ mặc định tắt, được gom nhóm theo "Nhóm lớp" trong sidebar.'}
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="map-layer-group">Nhóm phụ </Label>
-            <Input
-              id="map-layer-group"
-              value={layerGroup}
-              onChange={(e) => setLayerGroup(e.target.value)}
-              placeholder="Ví dụ: nhiet_do_be_mat"
-              maxLength={80}
-            />
-            <p className="text-muted-foreground text-xs">Tùy chọn.</p>
           </div>
 
           <div className="space-y-2">
@@ -528,6 +563,25 @@ export default function MapLayerFormDialog({
           </div>
 
           <div className="space-y-2">
+            <label
+              htmlFor="map-layer-default-enabled"
+              className="border-border flex cursor-pointer items-center gap-3 rounded-md border p-3"
+            >
+              <Checkbox
+                id="map-layer-default-enabled"
+                checked={isEnableDefault}
+                onCheckedChange={(checked) => setIsEnableDefault(checked === true)}
+              />
+              <span className="space-y-0.5">
+                <span className="block text-sm font-medium">Bật mặc định trên WebGIS</span>
+                <span className="text-muted-foreground block text-xs">
+                  Lớp sẽ tự hiển thị khi người dùng mở bản đồ.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div className="space-y-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -551,14 +605,11 @@ export default function MapLayerFormDialog({
               <div className="border-muted bg-muted/20 space-y-1 rounded-md border p-3">
                 <p className="text-sm font-medium">Raster (GeoTIFF)</p>
                 <p className="text-muted-foreground text-xs">
-                  {rasterFileName
-                    ? `Đã ghi nhận: ${rasterFileName}`
-                    : 'Chưa chọn file raster.'}
+                  {rasterFileName ? `Đã ghi nhận: ${rasterFileName}` : 'Chưa chọn file raster.'}
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  Form chỉ lưu metadata (geometry_type = RASTER). Nạp file thực tế
-                  qua chức năng <strong>Ingest Raster</strong> hoặc{' '}
-                  <strong>GeoServer Coverage Store</strong>.
+                  Form chỉ lưu metadata (geometry_type = RASTER). Nạp file thực tế qua chức năng{' '}
+                  <strong>Ingest Raster</strong> hoặc <strong>GeoServer Coverage Store</strong>.
                 </p>
               </div>
             ) : geometryType === 'point' ? (
@@ -594,14 +645,12 @@ export default function MapLayerFormDialog({
             {geometryType !== 'raster' && geometryPreview.error && (
               <p className="text-destructive text-xs">{geometryPreview.error}</p>
             )}
-            {geometryType !== 'raster' &&
-              !geometryPreview.error &&
-              geometryPreview.geojson && (
-                <div className="border-muted bg-muted/20 rounded-md border p-2">
-                  <p className="text-muted-foreground mb-2 text-xs">Preview bản đồ</p>
-                  <GeoJsonMapPreview geojson={geometryPreview.geojson} />
-                </div>
-              )}
+            {geometryType !== 'raster' && !geometryPreview.error && geometryPreview.geojson && (
+              <div className="border-muted bg-muted/20 rounded-md border p-2">
+                <p className="text-muted-foreground mb-2 text-xs">Preview bản đồ</p>
+                <GeoJsonMapPreview geojson={geometryPreview.geojson} />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

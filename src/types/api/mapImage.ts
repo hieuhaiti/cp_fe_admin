@@ -17,6 +17,10 @@ export interface PdfMap {
   mimeType?: string
   thumbnailUrl?: string | null
   isPublic?: boolean
+  visibility?: 'public' | 'internal'
+  scale_label?: string | null
+  map_year?: number | null
+  preparing_agency?: string | null
   fileSize?: number | null
   uploadedBy?: number | null
   uploadedByName?: string | null
@@ -38,6 +42,11 @@ export interface PdfMap {
   // legacy snake_case (kept for legacy code)
   name?: string
   image_url?: string | null
+  file_name?: string | null
+  file_size?: number | string | null
+  mime_type?: string | null
+  original_name?: string | null
+  size_bytes?: number | string | null
   is_active?: boolean
   created_by?: number
   created_at?: string

@@ -1,5 +1,18 @@
-export type NotificationChannel = 'system' | 'fire' | string
-export type NotificationType = 'announcement' | 'fire_warning' | string
+export type NotificationChannel =
+  | 'system'
+  | 'forest'
+  | 'flood'
+  | 'feedback'
+  | 'comment'
+  | 'news'
+  | string
+export type NotificationType =
+  | 'announcement'
+  | 'forest_classification_published'
+  | 'forest_change_alert'
+  | 'flood_risk_alert'
+  | 'flood_warning'
+  | string
 export type NotificationPlatform = 'web' | 'android' | 'ios'
 export type NotificationTarget = 'user' | 'all' | 'role'
 
@@ -37,6 +50,7 @@ export interface NotificationListData {
 export interface NotificationListParams {
   page?: number
   limit?: number
+  unreadOnly?: boolean
   onlyUnread?: boolean
   isRead?: boolean
 
@@ -82,3 +96,15 @@ export type SendNotificationBody =
       body: string
       data?: Record<string, unknown>
     }
+
+export interface SendNotificationResult {
+  target: NotificationTarget
+  recipientCount: number
+  userId?: number
+  roleCode?: string
+  push: {
+    successCount: number
+    failureCount: number
+    disabled?: boolean
+  }
+}

@@ -35,6 +35,13 @@ export default {
   getPublicById: (pdfMapId: number | string) =>
     apiClient.get<PdfMap>(`${servicePdfMapPath}/${pdfMapId}`),
 
+  /** GET /cms/pdf-maps/:pdfMapId/download-url — signed, short-lived URL. */
+  getDownloadUrl: (pdfMapId: number | string, expireSeconds = 300) =>
+    apiClient.get<{ url: string; expiresAt?: string; fileName?: string }>(
+      `${servicePdfMapPath}/${pdfMapId}/download-url`,
+      { params: { expireSeconds } }
+    ),
+
   /** GET /admin/cms/pdf-maps (admin list) */
   getAll: (params?: PdfMapListParams) =>
     apiClient.get<PdfMapListData>(serviceAdminPdfMapPath, { params }),

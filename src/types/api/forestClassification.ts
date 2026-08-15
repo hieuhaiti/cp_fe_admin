@@ -1,22 +1,45 @@
 // Types cho forest-classification API. Mirror shape từ
-// server/src/controllers/forest-classification.controller.js formatSnapshot().
+// server/src/controllers/forest-classification.controller.js formatSnapshot()
+// và services/forest-classification/pipeline.js buildLegend()/summariseCoverage().
 //
 // province_summary structure (từ pipeline):
-//   - byClass: { [classId: 0..12]: haNumber }
+//   - byClass: { [classId: 0..11]: haNumber }
 //   - totalHa: number
+//   - forestHa / forestPercent: rừng tự nhiên + rừng trồng (classes 1+2)
+//   - mineHa / minePercent: khai trường mỏ + bãi thải mỏ (classes 9+10)
+//   - legend: [{ classId, nameVi, nameEn, color, ha, percent }]
+//   - classSchema: 'campha_landcover_12'
 
-import type { GeeDistrictExportProgress, GeeProcessingState } from './geeProcessing'
+import type { GeeProcessingState } from './geeProcessing'
+
+export interface ForestClassLegendEntry {
+  classId: number
+  nameVi: string
+  nameEn: string
+  color: string
+  ha: number
+  percent: number
+}
 
 export interface ForestClassProvinceSummary {
   byClass?: Record<string, number>
-  totalHa?: number
-  [key: string]: any
+  totalHa?: number | null
+  forestHa?: number
+  forestPercent?: number
+  mineHa?: number
+  minePercent?: number
+  legend?: ForestClassLegendEntry[]
+  classSchema?: string
+  source?: string
+  rasterIngestJobId?: number | string | null
+  [key: string]: unknown
 }
 
 export interface ForestClassSnapshot {
   id: number | string
   year: number
   month: number
+  attempt?: number
   status: string // pending | computing | completed | failed | published
   provinceSummary?: ForestClassProvinceSummary
   oobAccuracy?: number | null
@@ -29,27 +52,13 @@ export interface ForestClassSnapshot {
   downloadFilename?: string | null
   computedAt?: string | null
   errorMessage?: string | null
-  districtExportSummary?: GeeDistrictExportProgress | Record<string, unknown> | null
   retryCount?: number
   nextRetryAt?: string | null
   lastRetryError?: string | null
-  [key: string]: any
-}
-
-// Server trả nested structure trong /latest response — mỗi huyện là 1 object
-// với `classes[]` con, đã group sẵn (không phải flat rows). Client render trực
-// tiếp không cần regroup.
-export interface ForestClassDistrictClassArea {
-  classId: number
-  className?: string | null
-  areaHa: number
-}
-
-export interface ForestClassDistrictArea {
-  districtCode?: string | null
-  districtName?: string | null
-  classes: ForestClassDistrictClassArea[]
-  [key: string]: any
+  /** Ngưỡng % mây tối đa đã dùng khi chạy kỳ này (null = mặc định server). */
+  cloudCover?: number | null
+  modelParams?: Record<string, unknown>
+  [key: string]: unknown
 }
 
 export interface ForestClassAreaComparisonMetric {
@@ -62,12 +71,6 @@ export interface ForestClassAreaComparisonMetric {
 export interface ForestClassClassComparison extends ForestClassAreaComparisonMetric {
   classId: number
   className: string
-}
-
-export interface ForestClassDistrictComparison {
-  districtCode?: string | null
-  districtName?: string | null
-  forest: ForestClassAreaComparisonMetric
 }
 
 export interface ForestClassComparison {
@@ -83,12 +86,10 @@ export interface ForestClassComparison {
     forest: ForestClassAreaComparisonMetric
     classes: ForestClassClassComparison[]
   }
-  districts: ForestClassDistrictComparison[]
 }
 
 export interface ForestClassLatestData {
   snapshot: ForestClassSnapshot | null
-  districtAreas: ForestClassDistrictArea[]
   comparison?: ForestClassComparison | null
   geeTileUrl?: string | null
   stale?: boolean
@@ -96,140 +97,45 @@ export interface ForestClassLatestData {
   processing?: GeeProcessingState
 }
 
-export interface ForestClassDistrictExport {
-  id: number | string
-  districtCode: string
-  districtName: string
-  status: 'pending' | 'computing' | 'exporting' | 'completed' | 'published' | 'failed' | 'skipped'
-  scaleM: number | null
-  areaByClass: Record<string, number> | null
-  totalAreaHa: number | null
-  forestAreaHa: number | null
-  /** Public aliases returned when infrastructure-only fields are hidden. */
-  tileUrl?: string | null
-  tileGeneratedAt?: string | null
-  geeTileUrl?: string | null
-  geeDownloadUrl?: string | null
-  geeDownloadFilename?: string | null
-  geoserverDownloadUrl?: string | null
-  downloadFilename?: string | null
-  geeGeneratedAt?: string | null
-  minioKey?: string | null
-  geoserverLayer?: string | null
-  geoserverStore?: string | null
-  rasterIngestJobId?: number | string | null
-  rasterIngestStatus?: string | null
-  errorMessage?: string | null
-  durationMs?: number | null
-  startedAt?: string | null
-  completedAt?: string | null
-}
-
-export interface ForestClassDistrictExportsData {
-  snapshotId: number | string
-  snapshotStatus?: string
-  year: number
-  month: number
-  attempt: number
-  scaleM: number | null
-  total: number
-  discoveredTotal?: number
-  expectedTotal?: number
-  districtCodeCount?: number
-  coverageScope?: 'districtMosaic'
-  coverageCount?: number
-  fullyPublished?: boolean
-  completed: number
-  failed: number
-  skipped: number
-  pending: number
-  sourceCount?: number
-  storedCount?: number
-  publishedCount?: number
-  readyCount?: number
-  ready?: number
-  queuedCount?: number
-  failedPublishCount?: number
-  missingCount?: number
-  geoserverLayers?: string[]
-  aggregate: {
-    totalHa: number
-    forestHa: number
-    byClass: Record<string, number>
-  }
-  districts: ForestClassDistrictExport[]
-}
-
 export interface ForestClassPublishRasterData {
   snapshotId: number | string
-  /** Legacy whole-province raster ingest response. */
   jobId?: number | string
   status?: string
   layerCode?: string
   deduplicated?: boolean
   geoserverLayer?: string
-  /** District batch response. */
-  total?: number
-  totalDistricts?: number
-  districtCodeCount?: number
-  fullyPublished?: boolean
-  sourceCount?: number
-  storedCount?: number
-  available?: number
-  publishedCount?: number
-  readyCount?: number
-  ready?: number
-  published?: number
-  queued?: number
-  queuedCount?: number
-  enqueued?: number
-  enqueuedCount?: number
-  missing?: number
-  missingCount?: number
-  unavailable?: number
-  failed?: number
-  failedCount?: number
   alreadyPublished?: boolean
-  jobs?: Array<{
-    districtCode: string
-    districtName?: string
-    jobId: number | string
-    status: string
-    layerCode?: string
-    deduplicated?: boolean
-    existing?: boolean
-  }>
 }
 
-// Row từ /history: server trả snake_case. Client tolerant cả 2 để tương thích
-// snapshot cũ (formatSnapshot camelCase từ /latest vs raw row snake_case
-// từ listCompleted).
+// Row từ /history: server trả snake_case cho row DB nguyên bản.
 export interface ForestClassHistoryItem {
   id: number | string
   year: number
   month: number
+  attempt?: number
   status: string
+  trigger?: string | null
+  requested_by?: number | string | null
   oob_accuracy?: number | null
+  test_accuracy?: number | null
+  test_kappa?: number | null
+  s2_image_count?: number | null
+  ls_image_count?: number | null
+  gt_zone_count?: number | null
+  gt_point_count?: number | null
   duration_ms?: number | null
-  province_summary?: ForestClassProvinceSummary
+  download_scale_m?: number | null
+  province_summary?: ForestClassProvinceSummary | null
   computed_at?: string | null
   published_at?: string | null
+  created_at?: string | null
+  updated_at?: string | null
   gee_tile_url?: string | null
   gee_tile_generated_at?: string | null
   gee_download_url?: string | null
   geoserver_layer?: string | null
-  district_total?: number
-  district_source_count?: number
-  district_geoserver_count?: number
-  district_ready_count?: number
-  geoserver_layers?: string[]
-  totalDistricts?: number
-  sourceCount?: number
-  districtLayerCount?: number
-  readyCount?: number
-  geoserverLayers?: string[]
   error_message?: string | null
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface ForestClassHistoryData {
@@ -242,6 +148,8 @@ export interface ForestClassRefreshBody {
   groundTruthAssetId?: string
   gtBufferM?: number
   minFieldTest?: number
+  /** Ngưỡng % mây tối đa cho ảnh Sentinel-2. 0–100. Server mặc định 50. */
+  cloudCover?: number
 }
 
 export interface ForestClassRefreshData {

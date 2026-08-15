@@ -38,10 +38,10 @@ export default {
 
   /**
    * GET /admin/field-reports/clusters
-   * Returns FeatureCollection scoped by bbox
+   * Returns clusters array: { cluster_id, report_count, reporter_count, longitude, latitude }
    */
-  getMap: (params?: Pick<FeedbackListParams, 'status' | 'category' | 'priority' | 'bbox'>) =>
-    apiClient.get<FeedbackFeatureCollection>(`${serviceAdminFeedbackPath}/clusters`, { params }),
+  getMap: (params?: { radiusMeters?: number; minReporters?: number; from?: string; to?: string }) =>
+    apiClient.get<any[]>(`${serviceAdminFeedbackPath}/clusters`, { params }),
 
   /** GET /admin/field-reports/:feedbackId */
   getAdminById: (feedbackId: number | string) =>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { tokenManager } from '@/lib/tokenManager'
 
 type UseNotificationWebSocketOptions = {
@@ -47,13 +47,8 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
     const socketRef = useRef<WebSocket | null>(null)
     const lastRefetchAtRef = useRef(0)
 
-    const socketUrl = useMemo(() => {
-        const token = tokenManager.getAccessToken() || undefined
-        return buildNotificationSocketUrl(token)
-    }, [])
-
     useEffect(() => {
-        if (!enabled || !socketUrl) return
+        if (!enabled) return
 
         let disposed = false
 
@@ -85,6 +80,11 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
         const connect = () => {
             if (disposed) return
 
+            const socketUrl = buildNotificationSocketUrl(
+                tokenManager.getAccessToken() || undefined
+            )
+            if (!socketUrl) return
+
             const socket = new WebSocket(socketUrl)
             socketRef.current = socket
 
@@ -93,7 +93,7 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
                 if (roleCode) {
                     socket.send(JSON.stringify({
                         action: 'subscribe',
-                        channels: [`role_${roleCode}`],
+                        channels: [`role:${roleCode}`],
                     }))
                 }
             }
@@ -128,5 +128,5 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
                 socketRef.current = null
             }
         }
-    }, [enabled, onMessage, roleCode, socketUrl])
+    }, [enabled, onMessage, roleCode])
 }

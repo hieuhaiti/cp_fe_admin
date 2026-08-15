@@ -295,7 +295,7 @@ export default function News(): JSX.Element {
                               e.stopPropagation()
                               openEditDialog(n)
                             }}
-                            title="Chỉnh sửa"
+                            tooltip="Chỉnh sửa"
                           >
                             <Pen className="size-4" />
                           </Button>
@@ -308,7 +308,7 @@ export default function News(): JSX.Element {
                               e.stopPropagation()
                               openDeleteDialog(n)
                             }}
-                            title="Xóa"
+                            tooltip="Xóa"
                           >
                             <Trash2 className="text-destructive size-4" />
                           </Button>

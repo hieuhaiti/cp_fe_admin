@@ -10,7 +10,6 @@ export { default as notificationService } from './notificationService'
 // Content
 export { default as newsService } from './newsService'
 export { default as newsCommentService } from './newsCommentService'
-export { default as documentService } from './documentService'
 export { default as citizenFeedbackService } from './citizenFeedbackService'
 // Alias matching Postman naming
 export { default as feedbackService } from './citizenFeedbackService'
@@ -21,17 +20,19 @@ export { default as mapImageService } from './mapImageService'
 export { default as pdfMapService } from './mapImageService'
 export { default as mapLayerService } from './mapLayerService'
 export { default as mapLayerApiService } from './mapLayerApiService'
-export { default as layerSeriesService } from './layerSeriesService'
 // Alias matching Postman naming
 export { default as mapApiService } from './mapLayerApiService'
 
 // GEE / satellite / weather / flood
+// Weather and field-measurement modules remain available for legacy compatibility,
+// but they are no longer exposed in the admin navigation or routes.
 export { default as weatherService } from './weatherService'
 export { default as remoteSensingService } from './remoteSensingService'
 export { default as floodService } from './floodService'
 export { default as satelliteService } from './satelliteService'
 export { default as forestClassificationService } from './forestClassificationService'
 export { default as fieldMeasurementService } from './fieldMeasurementService'
+export { default as kttvScenarioService } from './kttvScenarioService'
 
 // Statistics
 export { default as statisticsService } from './statisticsService'

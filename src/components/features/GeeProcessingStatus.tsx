@@ -25,9 +25,43 @@ const TONE_CLASSES: Record<Tone, string> = {
   destructive: 'border-destructive/30 bg-destructive/10',
 }
 
+const EMPTY_QUEUE = {
+  status: 'idle',
+  concurrency: 1,
+  maxPending: 0,
+  capacityRemaining: 0,
+  accepting: false,
+  position: null,
+  jobsAhead: 0,
+  waitingCount: 0,
+  enqueuedAt: null,
+  startedAt: null,
+  globalBusy: false,
+  activePipeline: null,
+  activePipelineLabel: null,
+} satisfies GeeProcessingState['queue']
+
+const EMPTY_DISTRICT_EXPORT = {
+  status: 'not_started',
+  total: 0,
+  completed: 0,
+  failed: 0,
+  skipped: 0,
+  pending: 0,
+  progressPercent: 0,
+} satisfies GeeProcessingState['districtExport']
+
+const EMPTY_RETRY = {
+  count: 0,
+  nextRetryAt: null,
+  lastError: null,
+} satisfies GeeProcessingState['retry']
+
 function resolvePresentation(processing: GeeProcessingState) {
-  if (processing.queue.status === 'queued') {
-    const ahead = processing.queue.jobsAhead
+  const queue = processing.queue ?? EMPTY_QUEUE
+  const retry = processing.retry ?? EMPTY_RETRY
+  if (queue.status === 'queued') {
+    const ahead = queue.jobsAhead
     return {
       tone: 'warning' as Tone,
       icon: Clock3,
@@ -49,7 +83,7 @@ function resolvePresentation(processing: GeeProcessingState) {
     }
   }
 
-  if (processing.queue.status === 'running' || processing.state === 'computing') {
+  if (queue.status === 'running' || processing.state === 'computing') {
     return {
       tone: 'info' as Tone,
       icon: Loader2,
@@ -63,9 +97,9 @@ function resolvePresentation(processing: GeeProcessingState) {
       tone: 'destructive' as Tone,
       icon: CircleAlert,
       title: 'Chưa thể cập nhật dữ liệu',
-      description: processing.retry.nextRetryAt
+      description: retry.nextRetryAt
         ? `Quá trình bị gián đoạn. Hệ thống sẽ tự thử lại lúc ${formatDateTime(
-            processing.retry.nextRetryAt
+            retry.nextRetryAt
           )}.`
         : 'Hãy gửi lại yêu cầu. Nếu lỗi tiếp tục, vui lòng liên hệ quản trị viên.',
     }
@@ -104,27 +138,29 @@ export default function GeeProcessingStatus({
 
   const presentation = resolvePresentation(processing)
   const Icon = presentation.icon
-  const district = processing.districtExport
+  const queue = processing.queue ?? EMPTY_QUEUE
+  const district = processing.districtExport ?? EMPTY_DISTRICT_EXPORT
+  const retry = processing.retry ?? EMPTY_RETRY
   const showDistrictProgress = district.total > 0
   const districtSettled = district.completed + district.failed + district.skipped
   const isSpinning = processing.state === 'computing'
   const otherPipelineRunning =
-    processing.queue.globalBusy &&
-    processing.queue.status !== 'running' &&
-    processing.queue.activePipeline &&
-    processing.queue.activePipeline !== processing.pipeline
+    queue.globalBusy &&
+    queue.status !== 'running' &&
+    queue.activePipeline &&
+    queue.activePipeline !== processing.pipeline
   const shouldDefaultOpen =
-    processing.queue.status === 'queued' ||
-    processing.queue.status === 'running' ||
+    queue.status === 'queued' ||
+    queue.status === 'running' ||
     processing.state === 'computing' ||
     processing.state === 'exporting' ||
     processing.state === 'failed'
   const disclosureKey = [
     processing.pipeline,
     processing.state,
-    processing.queue.status,
-    processing.queue.enqueuedAt,
-    processing.queue.startedAt,
+    queue.status,
+    queue.enqueuedAt,
+    queue.startedAt,
   ].join(':')
   const open = disclosure?.key === disclosureKey ? disclosure.open : shouldDefaultOpen
 
@@ -184,28 +220,28 @@ export default function GeeProcessingStatus({
           <div className="border-border/60 space-y-3 border-t px-3 py-3 sm:px-4">
             <div>
               <p className="text-muted-foreground text-sm leading-6">{presentation.description}</p>
-              {processing.retry.lastError && processing.state === 'failed' && (
+              {retry.lastError && processing.state === 'failed' && (
                 <p className="text-destructive mt-1 line-clamp-2 text-xs">
-                  {processing.retry.lastError}
+                  {retry.lastError}
                 </p>
               )}
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {processing.queue.waitingCount > 0 && (
+              {queue.waitingCount > 0 && (
                 <Badge variant="outline" className="bg-background/70">
-                  {processing.queue.waitingCount} yêu cầu đang chờ
+                  {queue.waitingCount} yêu cầu đang chờ
                 </Badge>
               )}
-              {processing.queue.status === 'queued' && processing.queue.position != null && (
+              {queue.status === 'queued' && queue.position != null && (
                 <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning">
-                  Lượt thứ {processing.queue.position}
+                  Lượt thứ {queue.position}
                 </Badge>
               )}
-              {processing.retry.count > 0 && (
+              {retry.count > 0 && (
                 <Badge variant="outline" className="gap-1">
                   <RotateCcw className="h-3 w-3" aria-hidden="true" />
-                  Đã thử lại {processing.retry.count} lần
+                  Đã thử lại {retry.count} lần
                 </Badge>
               )}
             </div>
@@ -247,7 +283,7 @@ export default function GeeProcessingStatus({
 
             {otherPipelineRunning && (
               <p className="border-border text-muted-foreground border-t pt-2 text-[11px]">
-                Hệ thống đang cập nhật {processing.queue.activePipelineLabel}. Yêu cầu này sẽ bắt
+                Hệ thống đang cập nhật {queue.activePipelineLabel}. Yêu cầu này sẽ bắt
                 đầu ngay sau đó.
               </p>
             )}

@@ -1,8 +1,9 @@
 import type { JSX } from 'react'
-import { useState } from 'react'
-import { useApiQuery, useApiMutation, newsCommentService } from '@/service'
+import { useMemo, useState } from 'react'
+import { useApiQuery, useApiMutation, newsCommentService, newsService } from '@/service'
 import type {
   ApiResponse,
+  News,
   NewsComment,
   NewsCommentAdminListParams,
   NewsCommentListData,
@@ -54,17 +55,33 @@ export default function NewsComments(): JSX.Element {
   const [limit, setLimit] = useState<number>(10)
   const [searchValue, setSearchValue] = useState<string>('')
   const [approvedFilter, setApprovedFilter] = useState<string>('all')
+  const [newsId, setNewsId] = useState<number | null>(null)
+
+  const newsListQuery = useApiQuery(
+    ['news-comments', 'news-list'],
+    () => newsService.getAll({ page: 1, limit: 100, sortBy: 'created_at', sortOrder: 'DESC' }),
+    {},
+    false,
+    false
+  )
+  const newsRaw = newsListQuery.data as ApiResponse<any> | undefined
+  const newsData = newsRaw?.data as any
+  const newsOptions: News[] = useMemo(
+    () => (newsData?.items ?? newsData?.news ?? []) as News[],
+    [newsData]
+  )
 
   const queryParams: NewsCommentAdminListParams = {
     page: currentPage,
     limit,
-    ...(approvedFilter !== 'all' && { approved: approvedFilter === 'true' }),
+    ...(newsId != null && { newsId }),
+    ...(approvedFilter !== 'all' && { status: approvedFilter === 'true' ? 'approved' : 'pending' }),
   }
 
   const dbQuery = useApiQuery(
     ['news-comments', queryParams],
     () => newsCommentService.getAll(queryParams),
-    {},
+    { enabled: newsId != null },
     false,
     false
   )
@@ -153,6 +170,31 @@ export default function NewsComments(): JSX.Element {
         filter={
           <div className="flex items-center gap-2">
             <Select
+              value={newsId != null ? String(newsId) : ''}
+              onValueChange={(v) => {
+                setNewsId(v ? Number(v) : null)
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-72">
+                <SelectValue placeholder="Chọn bài viết" />
+              </SelectTrigger>
+              <SelectContent>
+                {newsOptions.length === 0 ? (
+                  <div className="text-muted-foreground px-2 py-1.5 text-sm">
+                    {newsListQuery.isFetching ? 'Đang tải...' : 'Chưa có bài viết'}
+                  </div>
+                ) : (
+                  newsOptions.map((n) => (
+                    <SelectItem key={n.id} value={String(n.id)}>
+                      #{n.id} · {n.title ?? n.translations?.vi?.title ?? `Bài viết #${n.id}`}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+
+            <Select
               value={approvedFilter}
               onValueChange={(v) => {
                 setApprovedFilter(v)
@@ -207,7 +249,13 @@ export default function NewsComments(): JSX.Element {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredComments.length === 0 ? (
+            {newsId == null ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-muted-foreground text-center">
+                  Chọn một bài viết để xem bình luận
+                </TableCell>
+              </TableRow>
+            ) : filteredComments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center">
                   Không có dữ liệu
@@ -264,7 +312,7 @@ export default function NewsComments(): JSX.Element {
                               e.stopPropagation()
                               if (!toApprovedFlag(isApproved)) approveMutation.mutate(c.id)
                             }}
-                            title={
+                            tooltip={
                               toApprovedFlag(isApproved)
                                 ? 'Bình luận đã được duyệt'
                                 : 'Duyệt bình luận'
@@ -285,7 +333,7 @@ export default function NewsComments(): JSX.Element {
                               e.stopPropagation()
                               openDeleteDialog(c)
                             }}
-                            title="Xóa"
+                            tooltip="Xóa"
                           >
                             <Trash2 className="text-destructive size-4" />
                           </Button>

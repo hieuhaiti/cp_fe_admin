@@ -16,10 +16,6 @@ export const serviceAdminNewsPath = '/admin/cms/news'
 export const serviceAdminNewsCommentsPath = '/admin/cms/news/comments'
 export const serviceAdminCommentsPath = '/admin/comments'
 
-// Documents
-export const serviceDocumentPath = '/cms/documents'
-export const serviceAdminDocumentPath = '/admin/cms/documents'
-
 // Feedback (Postman)
 export const serviceFeedbackPath = '/field-reports'
 export const serviceAdminFeedbackPath = '/admin/field-reports'
@@ -34,7 +30,6 @@ export const serviceMapImagePath = '/cms/pdf-maps'
 export const serviceMapLayerPath = '/admin/layers'
 export const serviceMapImportJobPath = '/admin/layers/imports'
 export const serviceMapRasterHarvestPath = '/map/rasters'
-export const serviceLayerSeriesPath = '/map/layer-groups'
 
 // Map APIs (third-party sharing)
 export const serviceMapApiPath = '/admin/api-registry'

@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { mapImageService, useApiQuery } from '@/service'
 import type { ApiResponse, MapImage } from '@/types/api'
-import { parseLink, isPdf } from '@/lib/utils'
 import { formatDateTime } from '@/lib/date'
-import { CalendarClock, FileImage, FileText, Globe, Info, Map as MapIcon } from 'lucide-react'
+import { CalendarClock, Download, FileImage, FileText, Globe, Info, Map as MapIcon } from 'lucide-react'
+import { toast } from 'react-toastify'
 
 interface MapImageDetailDialogProps {
   open: boolean
@@ -81,11 +82,27 @@ export default function MapImageDetailDialog({
   const descriptionVi =
     mapImage?.translations?.vi?.description || mapImage?.description || ''
   const descriptionEn = mapImage?.translations?.en?.description || ''
-  const fileUrl = mapImage?.fileUrl || mapImage?.image_url || ''
-  const thumbnailUrl = mapImage?.thumbnailUrl || ''
+  const fileName = mapImage?.fileName || mapImage?.file_name || mapImage?.original_name || ''
+  const fileSize = mapImage?.fileSize || mapImage?.file_size || mapImage?.size_bytes
   const createdAt = mapImage?.createdAt || mapImage?.created_at
   const updatedAt = mapImage?.updatedAt || mapImage?.updated_at
   const uploader = mapImage?.uploadedByName || (mapImage?.uploadedBy ? `#${mapImage.uploadedBy}` : '-')
+  const isPublic = mapImage?.isPublic ?? mapImage?.visibility === 'public'
+  const scale = mapImage?.scale ?? mapImage?.scale_label
+  const year = mapImage?.year ?? mapImage?.map_year
+  const preparingAgency = mapImage?.region ?? mapImage?.preparing_agency
+
+  const handleDownload = async () => {
+    if (!mapImage?.id) return
+    try {
+      const response = await mapImageService.getDownloadUrl(mapImage.id)
+      const url = response.data?.url
+      if (!url) throw new Error('Máy chủ chưa trả về liên kết tải tệp.')
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể mở bản đồ PDF.')
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,20 +134,20 @@ export default function MapImageDetailDialog({
                   <Badge
                     variant="outline"
                     className={
-                      mapImage.isPublic
+                      isPublic
                         ? 'border-info/30 bg-info/10 text-info'
                         : 'text-muted-foreground'
                     }
                   >
                     <Globe className="mr-1 size-3" />
-                    {mapImage.isPublic ? 'Công khai' : 'Nội bộ'}
+                    {isPublic ? 'Công khai' : 'Nội bộ'}
                   </Badge>
                   {mapImage.themeCode && (
                     <Badge variant="secondary">
                       {THEME_LABEL[mapImage.themeCode] ?? mapImage.themeCode}
                     </Badge>
                   )}
-                  {mapImage.year && <Badge variant="outline">Năm {mapImage.year}</Badge>}
+                  {year && <Badge variant="outline">Năm {year}</Badge>}
                 </div>
               </div>
             </div>
@@ -144,49 +161,15 @@ export default function MapImageDetailDialog({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {fileUrl ? (
-                    <div className="grid gap-4 md:grid-cols-[1fr_180px]">
-                      <div className="bg-muted/40 flex min-h-64 items-center justify-center overflow-hidden rounded-md border">
-                        {isPdf(fileUrl) ? (
-                          <div className="flex flex-col items-center gap-2 py-10 text-center">
-                            <FileText className="text-primary size-12" />
-                            <span className="text-sm font-medium">Tệp PDF</span>
-                            <span className="text-muted-foreground text-xs break-all">
-                              {mapImage.fileName || '-'}
-                            </span>
-                          </div>
-                        ) : (
-                          <img
-                            src={parseLink(fileUrl)}
-                            alt={titleVi}
-                            className="max-h-105 w-full object-contain"
-                          />
-                        )}
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-muted-foreground text-xs font-medium">Thumbnail</p>
-                          {thumbnailUrl ? (
-                            <div className="bg-muted/40 mt-1 flex h-40 items-center justify-center overflow-hidden rounded-md border">
-                              <img
-                                src={parseLink(thumbnailUrl)}
-                                alt={`${titleVi} - thumbnail`}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="text-muted-foreground bg-muted/20 mt-1 flex h-40 items-center justify-center rounded-md border border-dashed text-xs">
-                              Chưa có thumbnail
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground bg-muted/20 flex h-40 items-center justify-center rounded-md border border-dashed text-sm">
-                      Chưa có ảnh nguồn.
-                    </div>
-                  )}
+                  <div className="bg-muted/20 flex min-h-48 flex-col items-center justify-center gap-3 rounded-md border border-dashed p-6 text-center">
+                    <FileText className="text-primary size-12" />
+                    <p className="text-sm text-muted-foreground">
+                      Tệp PDF được bảo vệ; liên kết tải sẽ được tạo khi mở tệp.
+                    </p>
+                    <Button variant="outline" size="sm" disabled={!mapImage.id} onClick={handleDownload}>
+                      <Download className="size-4" /> Mở / tải tệp
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -206,9 +189,9 @@ export default function MapImageDetailDialog({
                           : '-'}
                       </CodeValue>
                     </DetailField>
-                    <DetailField label="Năm">{mapImage.year ?? '-'}</DetailField>
-                    <DetailField label="Tỉ lệ">{mapImage.scale || '-'}</DetailField>
-                    <DetailField label="Khu vực">{mapImage.region || '-'}</DetailField>
+                    <DetailField label="Năm">{year ?? '-'}</DetailField>
+                    <DetailField label="Tỉ lệ">{scale || '-'}</DetailField>
+                    <DetailField label="Đơn vị lập">{preparingAgency || '-'}</DetailField>
                     <DetailField label="Tiêu đề (VI)" wide>
                       {mapImage.translations?.vi?.title || '-'}
                     </DetailField>
@@ -235,17 +218,14 @@ export default function MapImageDetailDialog({
                 <CardContent>
                   <dl className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
                     <DetailField label="Tên tệp" wide>
-                      <CodeValue>{mapImage.fileName}</CodeValue>
+                      <CodeValue>{fileName}</CodeValue>
                     </DetailField>
                     <DetailField label="Loại tệp">
-                      <CodeValue>{mapImage.mimeType}</CodeValue>
+                      <CodeValue>{mapImage.mimeType ?? mapImage.mime_type}</CodeValue>
                     </DetailField>
-                    <DetailField label="Kích thước">{formatFileSize(mapImage.fileSize)}</DetailField>
-                    <DetailField label="Đường dẫn tệp" wide>
-                      <CodeValue>{fileUrl}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Đường dẫn thumbnail" wide>
-                      <CodeValue>{thumbnailUrl}</CodeValue>
+                    <DetailField label="Kích thước">{formatFileSize(fileSize)}</DetailField>
+                    <DetailField label="Truy cập tệp" wide>
+                      Liên kết ngắn hạn được tạo khi người dùng chọn mở/tải tệp.
                     </DetailField>
                     <DetailField label="Người tải lên">{uploader}</DetailField>
                   </dl>

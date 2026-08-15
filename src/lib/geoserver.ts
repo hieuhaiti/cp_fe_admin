@@ -1,3 +1,5 @@
+import apiClient, { getApiBaseUrl } from '@/service/common/apiClient'
+
 const DEFAULT_WORKSPACE = 'campha'
 // Earth Engine only documents these URLs as lasting "a few hours", without a
 // guaranteed TTL. Four hours is deliberately conservative so the UI does not
@@ -97,11 +99,12 @@ function buildServiceEndpoint(layerFqn: string, service: 'wms' | 'wcs') {
 }
 
 export function buildGeoserverRasterTileUrl(
-  layerFqns: Array<string | null | undefined>
+  layerFqns: string | null | undefined | Array<string | null | undefined>
 ): string | null {
+  const candidates = Array.isArray(layerFqns) ? layerFqns : [layerFqns]
   const layers = Array.from(
     new Set(
-      layerFqns
+      candidates
         .map((layer) => normalizeGeoserverLayer(layer))
         .filter((layer): layer is string => Boolean(layer))
     )
@@ -146,7 +149,10 @@ export function buildGeoserverPreviewUrl(layerFqn?: string | null): string | nul
     version: '1.1.0',
     request: 'GetMap',
     layers: `${service.workspace}:${service.layerName}`,
-    bbox: '107.35,13.83,108.87,15.55',
+    // Cẩm Phả TP bounding box (WGS84). Kéo rộng hơn ranh giới hành chính một chút
+    // để OpenLayers preview có chỗ zoom-out. Trước đây bị nhầm sang Kon Tum
+    // (107.35,13.83,108.87,15.55) khiến preview mở ra vùng trống.
+    bbox: '107.00,20.80,107.60,21.25',
     width: '768',
     height: '768',
     srs: 'EPSG:4326',
@@ -198,6 +204,78 @@ export function buildGeoserverGeoJsonUrl(
   })
 
   return `${root}/${workspace}/wfs?${params.toString()}`
+}
+
+/**
+ * Issues a short-lived server ticket then returns an API proxy URL. Generic
+ * map layers must never expose the GeoServer endpoint directly in the admin.
+ */
+export async function buildMapProxyExportUrl(
+  layerId: number | string,
+  service: 'wfs' | 'wcs'
+): Promise<string> {
+  const normalizedId = Number(layerId)
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+    throw new Error('ID lớp bản đồ không hợp lệ.')
+  }
+  const ticketResponse = await apiClient.get<{ ticket?: string }>(
+    `/maps/layers/${normalizedId}/tile-ticket`,
+    { params: { access: 'export' } }
+  )
+  const ticket = ticketResponse.data?.ticket
+  if (!ticket) throw new Error('Máy chủ chưa cấp vé xuất dữ liệu.')
+
+  const params = new URLSearchParams(
+    service === 'wcs'
+      ? { request: 'GetCoverage', format: 'image/tiff', ticket }
+      : {
+          request: 'GetFeature',
+          count: '10000',
+          srsName: 'EPSG:4326',
+          outputFormat: 'application/json',
+          ticket,
+        }
+  )
+  return `${getApiBaseUrl()}/maps/layers/${normalizedId}/${service}?${params.toString()}`
+}
+
+/**
+ * Build a MapLibre-compatible WMS tile URL through the API map proxy.
+ * Public layers need no browser credentials; private layers receive a
+ * short-lived view ticket because MapLibre raster requests cannot attach the
+ * admin Authorization header.
+ */
+export async function buildMapProxyRasterTileUrl(
+  layerId: number | string,
+  isPublic = false
+): Promise<string> {
+  const normalizedId = Number(layerId)
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+    throw new Error('ID lớp bản đồ không hợp lệ.')
+  }
+
+  let ticket: string | undefined
+  if (!isPublic) {
+    const ticketResponse = await apiClient.get<{ ticket?: string }>(
+      `/maps/layers/${normalizedId}/tile-ticket`,
+      { params: { access: 'view' } }
+    )
+    ticket = ticketResponse.data?.ticket
+    if (!ticket) throw new Error('Máy chủ chưa cấp vé xem bản đồ.')
+  }
+
+  const params = new URLSearchParams({
+    request: 'GetMap',
+    width: '256',
+    height: '256',
+    crs: 'EPSG:3857',
+    format: 'image/png',
+    transparent: 'true',
+    version: '1.3.0',
+  })
+  if (ticket) params.set('ticket', ticket)
+
+  return `${getApiBaseUrl()}/maps/layers/${normalizedId}/wms?${params.toString()}&bbox={bbox-epsg-3857}`
 }
 
 export async function downloadGeoJsonFile(url: string, filename: string): Promise<void> {

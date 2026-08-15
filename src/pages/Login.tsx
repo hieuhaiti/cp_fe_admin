@@ -16,6 +16,7 @@ import { authService } from '@/service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { z } from 'zod'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import { toast } from 'react-toastify'
@@ -238,21 +239,26 @@ export default function Login() {
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {DEMO_ACCOUNTS.map((acc) => (
-                    <button
-                      key={acc.email}
-                      type="button"
-                      onClick={() => loginAsDemo(acc.email)}
-                      onContextMenu={(e) => {
-                        e.preventDefault()
-                        fillDemo(acc.email)
-                      }}
-                      title="Nhấn để đăng nhập nhanh (chuột phải: chỉ điền form)"
-                      disabled={isLoading}
-                      className={`group flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left text-xs transition hover:shadow-md disabled:opacity-50 ${acc.color}`}
-                    >
-                      <span className="font-semibold">{acc.label}</span>
-                      <span className="opacity-70">{acc.email}</span>
-                    </button>
+                    <Tooltip key={acc.email}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => loginAsDemo(acc.email)}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            fillDemo(acc.email)
+                          }}
+                          disabled={isLoading}
+                          className={`group flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left text-xs transition hover:shadow-md disabled:opacity-50 ${acc.color}`}
+                        >
+                          <span className="font-semibold">{acc.label}</span>
+                          <span className="opacity-70">{acc.email}</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Nhấn để đăng nhập nhanh (chuột phải: chỉ điền form)
+                      </TooltipContent>
+                    </Tooltip>
                   ))}
                 </div>
               </div>

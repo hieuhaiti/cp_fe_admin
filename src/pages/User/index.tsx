@@ -430,7 +430,7 @@ export default function User(): JSX.Element {
                               e.stopPropagation()
                               openEditDialog(u)
                             }}
-                            title="Chỉnh sửa"
+                            tooltip="Chỉnh sửa"
                           >
                             <Pen className="size-4" />
                           </Button>
@@ -443,7 +443,7 @@ export default function User(): JSX.Element {
                               e.stopPropagation()
                               openChangeRoleDialog(u)
                             }}
-                            title="Đổi vai trò"
+                            tooltip="Đổi vai trò"
                           >
                             <ShieldCheck className="size-4" />
                           </Button>
@@ -456,7 +456,7 @@ export default function User(): JSX.Element {
                               e.stopPropagation()
                               openResetPasswordDialog(u)
                             }}
-                            title="Đặt lại mật khẩu"
+                            tooltip="Đặt lại mật khẩu"
                           >
                             <KeyRound className="size-4" />
                           </Button>
@@ -469,7 +469,7 @@ export default function User(): JSX.Element {
                               e.stopPropagation()
                               openActiveDialog(u)
                             }}
-                            title={isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                            tooltip={isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
                           >
                             <Power
                               className={
@@ -488,7 +488,7 @@ export default function User(): JSX.Element {
                               e.stopPropagation()
                               openDeleteDialog(u)
                             }}
-                            title="Xóa"
+                            tooltip="Xóa"
                           >
                             <Trash2 className="text-destructive size-4" />
                           </Button>

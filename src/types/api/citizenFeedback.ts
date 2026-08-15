@@ -49,6 +49,7 @@ export interface CitizenFeedback {
   attachments?: FeedbackAttachment[]
   statusLogs?: FeedbackStatusLog[]
   userName?: string | null
+  userEmail?: string | null
   createdBy?: number | string | null
   createdByName?: string | null
   updatedBy?: number | string | null
@@ -56,9 +57,24 @@ export interface CitizenFeedback {
   resolvedAt?: string | null
   createdAt?: string
   updatedAt?: string
+  referenceCode?: string
+  photoCount?: number
+  reviewReason?: string | null
+  reviewedBy?: number | string | null
+  reviewedAt?: string | null
 
   // legacy
   user_id?: number
+  sender_user_id?: number | string | null
+  sender_name?: string | null
+  sender_email?: string | null
+  longitude?: number | null
+  latitude?: number | null
+  reference_code?: string
+  photo_count?: number
+  review_reason?: string | null
+  reviewed_by?: number | string | null
+  reviewed_at?: string | null
   location_coordinates?: string | null
   location_text?: string | null
   is_location_verified?: boolean

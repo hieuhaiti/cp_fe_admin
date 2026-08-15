@@ -33,7 +33,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { mapLayerApiService, mapLayerService, useApiMutation, useApiQuery } from '@/service'
 import { useAuthStore } from '@/stores/common/useAuthStore'
-import type { ApiResponse, MapLayer, MapLayerApi, MapLayerApiListData, Pagination } from '@/types/api'
+import type {
+  ApiResponse,
+  MapLayer,
+  MapLayerApi,
+  MapLayerApiListData,
+  Pagination,
+} from '@/types/api'
 import { formatDateTime } from '@/lib/date'
 import { getMappedErrorMessage } from '@/validators/mapLayerApiValidators'
 import { hasMapLayerApiPermission } from '@/components/map-layer-apis/permissionUtils'
@@ -53,7 +59,9 @@ function getPagination(data: unknown): Partial<Pagination> {
 }
 
 function getLayerItems(data: unknown): MapLayer[] {
-  const response = data as ApiResponse<{ items?: MapLayer[]; mapLayers?: MapLayer[] } | MapLayer[]> | undefined
+  const response = data as
+    | ApiResponse<{ items?: MapLayer[]; mapLayers?: MapLayer[] } | MapLayer[]>
+    | undefined
   const payload = response?.data
   if (Array.isArray(payload)) return payload
   if (Array.isArray(payload?.items)) return payload.items
@@ -103,14 +111,20 @@ export default function MapLayerApiListPage(): JSX.Element {
 
   const layerOptionsQuery = useApiQuery(
     ['map-layers-for-map-api-filter'],
-    () => mapLayerService.getAll({ page: 1, limit: 100, is_active: true }),
+    // /admin/layers không có filter is_active — bảng gis.layers dùng deleted_at
+    // để đánh dấu xoá và isPublic cho hiển thị công khai. Bỏ is_active để tránh
+    // bị Joi reject; nếu cần lọc thêm sau này thì thêm filter camelCase hợp lệ.
+    () => mapLayerService.getAll({ page: 1, limit: 100 }),
     {},
     false,
     false
   )
 
   const apis = getMapApis(listQuery.data)
-  const layerOptions = useMemo(() => getLayerItems(layerOptionsQuery.data), [layerOptionsQuery.data])
+  const layerOptions = useMemo(
+    () => getLayerItems(layerOptionsQuery.data),
+    [layerOptionsQuery.data]
+  )
   const filteredApis = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase()
     if (!keyword) return apis
@@ -217,186 +231,194 @@ export default function MapLayerApiListPage(): JSX.Element {
   return (
     <PageLayout title="Quản lý Map API" description="Cấp và quản lý API key đọc dữ liệu lớp bản đồ">
       <ToolTableCustom
-            searchValue={searchValue}
-            setSearchValue={setSearchValue}
-            filter={
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={layerFilter}
-                  onValueChange={(value) => {
-                    setLayerFilter(value)
-                    setCurrentPage(1)
-                  }}
-                >
-                  <SelectTrigger className="w-60">
-                    <SelectValue placeholder="Lớp bản đồ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả lớp bản đồ</SelectItem>
-                    {layerOptions.map((layer) => (
-                      <SelectItem key={layer.id ?? layer.code} value={String(layer.id)}>
-                        {layerLabel(layer)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        searchValue={searchValue}
+        setSearchValue={setSearchValue}
+        filter={
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={layerFilter}
+              onValueChange={(value) => {
+                setLayerFilter(value)
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-60">
+                <SelectValue placeholder="Lớp bản đồ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả lớp bản đồ</SelectItem>
+                {layerOptions.map((layer) => (
+                  <SelectItem key={layer.id ?? layer.code} value={String(layer.id)}>
+                    {layerLabel(layer)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                <Select
-                  value={activeFilter}
-                  onValueChange={(value) => {
-                    setActiveFilter(value as 'all' | 'true' | 'false')
-                    setCurrentPage(1)
-                  }}
-                >
-                  <SelectTrigger className="w-44">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                    <SelectItem value="true">Đang hoạt động</SelectItem>
-                    <SelectItem value="false">Tạm dừng</SelectItem>
-                  </SelectContent>
-                </Select>
+            <Select
+              value={activeFilter}
+              onValueChange={(value) => {
+                setActiveFilter(value as 'all' | 'true' | 'false')
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="true">Đang hoạt động</SelectItem>
+                <SelectItem value="false">Tạm dừng</SelectItem>
+              </SelectContent>
+            </Select>
 
-                <Select
-                  value={`${limit}`}
-                  onValueChange={(value) => {
-                    setLimit(parseInt(value, 10))
-                    setCurrentPage(1)
-                  }}
-                >
-                  <SelectTrigger className="w-28">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
+            <Select
+              value={`${limit}`}
+              onValueChange={(value) => {
+                setLimit(parseInt(value, 10))
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
 
-                {canCreate && (
-                  <Button onClick={openAddDialog}>
-                    <KeyRound className="size-4" />
-                    Tạo key
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => navigate('/public/map-apis')}>
-                  Public Test
-                </Button>
-              </div>
-            }
-            total={total}
-            pagination={{
-              currentPage,
-              totalPages,
-              onPageChange: (page: number) => setCurrentPage(page),
-            }}
-          >
-            <Table className="relative">
-              <TableHeader className="sticky top-0 z-20">
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Tên key</TableHead>
-                  <TableHead>Lớp dữ liệu</TableHead>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Giới hạn</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Sử dụng</TableHead>
-                  <TableHead className="text-right">Hành động</TableHead>
+            {canCreate && (
+              <Button onClick={openAddDialog}>
+                <KeyRound className="size-4" />
+                Tạo key
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => navigate('/public/map-apis')}>
+              Public Test
+            </Button>
+          </div>
+        }
+        total={total}
+        pagination={{
+          currentPage,
+          totalPages,
+          onPageChange: (page: number) => setCurrentPage(page),
+        }}
+      >
+        <Table className="relative">
+          <TableHeader className="sticky top-0 z-20">
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Tên key</TableHead>
+              <TableHead>Lớp dữ liệu</TableHead>
+              <TableHead>Key</TableHead>
+              <TableHead>Giới hạn</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead>Sử dụng</TableHead>
+              <TableHead className="text-right">Hành động</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {layerFilter === 'all' ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-muted-foreground text-center">
+                  Chọn lớp bản đồ
+                </TableCell>
+              </TableRow>
+            ) : filteredApis.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center">
+                  Không có dữ liệu
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredApis.map((api) => (
+                <TableRow
+                  key={api.id}
+                  className="hover:cursor-pointer"
+                  onClick={() => openDetails(api)}
+                >
+                  <TableCell>{api.id}</TableCell>
+                  <TableCell className="font-medium">{api.name}</TableCell>
+                  <TableCell>
+                    <div className="max-w-56">
+                      <p className="truncate font-medium">
+                        {api.layer_name_vi ?? api.layer_code ?? '-'}
+                      </p>
+                      {api.layer_code && (
+                        <p className="text-muted-foreground truncate text-xs">{api.layer_code}</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {api.key_prefix ? `${api.key_prefix}...${api.key_last4 ?? ''}` : '-'}
+                  </TableCell>
+                  <TableCell>{formatScope(api)}</TableCell>
+                  <TableCell>
+                    <StatusDotBadge
+                      label={ACTIVE_LABEL[String(api.is_active)]}
+                      badgeClass={ACTIVE_CLASS[String(api.is_active)]}
+                      dotClass={ACTIVE_DOT[String(api.is_active)]}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <p>{api.request_count ?? 0} lượt</p>
+                      <p className="text-muted-foreground text-xs">
+                        {api.last_used_at ? formatDateTime(api.last_used_at) : 'Chưa sử dụng'}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      {canUpdate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            openRegenerateDialog(api)
+                          }}
+                          tooltip="Xoay key"
+                        >
+                          <RotateCcw className="size-4" />
+                        </Button>
+                      )}
+                      {canUpdate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            openEditDialog(api)
+                          }}
+                          tooltip="Chỉnh sửa"
+                        >
+                          <Pen className="size-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            openDeleteDialog(api)
+                          }}
+                          tooltip="Xóa"
+                        >
+                          <Trash2 className="text-destructive size-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredApis.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center">
-                      Không có dữ liệu
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredApis.map((api) => (
-                    <TableRow
-                      key={api.id}
-                      className="hover:cursor-pointer"
-                      onClick={() => openDetails(api)}
-                    >
-                      <TableCell>{api.id}</TableCell>
-                      <TableCell className="font-medium">{api.name}</TableCell>
-                      <TableCell>
-                        <div className="max-w-56">
-                          <p className="truncate font-medium">{api.layer_name_vi ?? api.layer_code ?? '-'}</p>
-                          {api.layer_code && (
-                            <p className="text-muted-foreground truncate text-xs">{api.layer_code}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {api.key_prefix ? `${api.key_prefix}...${api.key_last4 ?? ''}` : '-'}
-                      </TableCell>
-                      <TableCell>{formatScope(api)}</TableCell>
-                      <TableCell>
-                        <StatusDotBadge
-                          label={ACTIVE_LABEL[String(api.is_active)]}
-                          badgeClass={ACTIVE_CLASS[String(api.is_active)]}
-                          dotClass={ACTIVE_DOT[String(api.is_active)]}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p>{api.request_count ?? 0} lượt</p>
-                          <p className="text-muted-foreground text-xs">
-                            {api.last_used_at ? formatDateTime(api.last_used_at) : 'Chưa sử dụng'}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {canUpdate && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                openRegenerateDialog(api)
-                              }}
-                              title="Xoay key"
-                            >
-                              <RotateCcw className="size-4" />
-                            </Button>
-                          )}
-                          {canUpdate && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                openEditDialog(api)
-                              }}
-                              title="Chỉnh sửa"
-                            >
-                              <Pen className="size-4" />
-                            </Button>
-                          )}
-                          {canDelete && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                openDeleteDialog(api)
-                              }}
-                              title="Xóa"
-                            >
-                              <Trash2 className="text-destructive size-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </ToolTableCustom>
 
       <MapLayerApiDetailDialog
@@ -419,7 +441,8 @@ export default function MapLayerApiListPage(): JSX.Element {
           <AlertDialogHeader>
             <AlertDialogTitle>Xoay API key</AlertDialogTitle>
             <AlertDialogDescription>
-              Tạo key mới cho "{apiToRegenerate?.name}" và vô hiệu key cũ ngay lập tức. Key mới chỉ hiển thị một lần.
+              Tạo key mới cho "{apiToRegenerate?.name}" và vô hiệu key cũ ngay lập tức. Key mới chỉ
+              hiển thị một lần.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -436,7 +459,8 @@ export default function MapLayerApiListPage(): JSX.Element {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa API key "{apiToDelete?.name}"? Đối tác sẽ không thể dùng key này để đọc dữ liệu.
+              Bạn có chắc chắn muốn xóa API key "{apiToDelete?.name}"? Đối tác sẽ không thể dùng key
+              này để đọc dữ liệu.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

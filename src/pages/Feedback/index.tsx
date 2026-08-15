@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useApiQuery, useApiMutation, citizenFeedbackService } from '@/service'
 import type {
   ApiResponse,
@@ -50,6 +50,44 @@ import { getUserRole, hasPerm, ROLES } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import FeedbackMap from './FeedbackMap'
 
+function normalizeFeedback(item: any): CitizenFeedback {
+  if (!item) return {} as CitizenFeedback
+
+  const lng = item.lng ?? item.longitude ?? null
+  const lat = item.lat ?? item.latitude ?? null
+  const userId = item.userId ?? item.user_id ?? item.sender_user_id ?? null
+  const userName = item.userName ?? item.sender_name ?? item.createdByName ?? null
+  const userEmail = item.userEmail ?? item.sender_email ?? null
+  const title = item.title ?? item.description ?? '-'
+
+  // Map API status to UI status
+  const rawStatus = String(item.status ?? 'pending').toLowerCase()
+  let status: FeedbackStatus = 'new'
+  if (rawStatus === 'pending' || rawStatus === 'new') status = 'new'
+  else if (rawStatus === 'under_review' || rawStatus === 'in_progress') status = 'in_progress'
+  else if (rawStatus === 'approved' || rawStatus === 'resolved') status = 'resolved'
+  else if (rawStatus === 'rejected') status = 'rejected'
+
+  return {
+    ...item,
+    id: item.id ?? 0,
+    lng,
+    lat,
+    userId,
+    userName,
+    userEmail,
+    title,
+    status,
+    priority: item.priority ?? 'normal',
+    category: item.category ?? 'hien_trang',
+    reviewReason: item.reviewReason ?? item.review_reason ?? null,
+    reviewedBy: item.reviewedBy ?? item.reviewed_by ?? null,
+    reviewedAt: item.reviewedAt ?? item.reviewed_at ?? null,
+    photoCount: item.photoCount ?? item.photo_count ?? 0,
+    referenceCode: item.referenceCode ?? item.reference_code ?? null,
+  }
+}
+
 function locationTextOf(item: CitizenFeedback) {
   if (item.location_text) return item.location_text
   if (item.lng != null && item.lat != null) return `${item.lat}, ${item.lng}`
@@ -61,7 +99,7 @@ function createdAtOf(item: CitizenFeedback) {
 }
 
 function userNameOf(item: CitizenFeedback) {
-  return item.userName ?? item.createdByName ?? null
+  return item.userName ?? item.sender_name ?? item.createdByName ?? null
 }
 
 export default function FeedbackPage(): JSX.Element {
@@ -103,9 +141,10 @@ export default function FeedbackPage(): JSX.Element {
   )
 
   const mapParams = {
-    ...(filterCategory !== 'all' && { category: filterCategory }),
-    ...(filterStatus !== 'all' && { status: filterStatus }),
-    ...(filterPriority !== 'all' && { priority: filterPriority }),
+    radiusMeters: 500,
+    minReporters: 2,
+    from: '2026-01-01',
+    to: '2026-12-31',
   }
   const mapQuery = useApiQuery(
     ['feedback-map', mapParams],
@@ -117,7 +156,8 @@ export default function FeedbackPage(): JSX.Element {
 
   const raw = dbQuery.data as ApiResponse<any> | undefined
   const data = raw?.data as any
-  const feedbacks: CitizenFeedback[] = data?.items ?? data?.feedbacks ?? []
+  const rawFeedbacks: any[] = data?.items ?? data?.feedbacks ?? []
+  const feedbacks: CitizenFeedback[] = rawFeedbacks.map(normalizeFeedback)
   const pagination = (raw?.metadata ?? data?.pagination ?? {}) as Partial<Pagination>
 
   const lastTotalPagesRef = useRef(1)
@@ -126,8 +166,30 @@ export default function FeedbackPage(): JSX.Element {
   }
   const totalPages = lastTotalPagesRef.current
   const total = pagination?.total ?? 0
-  const mapData = ((mapQuery.data as ApiResponse<FeedbackFeatureCollection> | undefined)?.data ??
-    null) as FeedbackFeatureCollection | null
+
+  // Transform clusters array to GeoJSON FeatureCollection
+  const clustersRaw = ((mapQuery.data as ApiResponse<any> | undefined)?.data ?? []) as any[]
+  const mapData: FeedbackFeatureCollection | null = useMemo(() => {
+    if (!clustersRaw || clustersRaw.length === 0) return null
+    return {
+      type: 'FeatureCollection',
+      features: clustersRaw.map((cluster) => ({
+        type: 'Feature' as const,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [cluster.longitude ?? 0, cluster.latitude ?? 0],
+        },
+        properties: {
+          id: cluster.cluster_id,
+          category: 'hien_trang',
+          title: `Cụm #${cluster.cluster_id} (${cluster.report_count} báo cáo)`,
+          status: 'new',
+          priority: 'normal',
+          createdAt: new Date().toISOString(),
+        },
+      })),
+    }
+  }, [clustersRaw])
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages)
@@ -267,7 +329,7 @@ export default function FeedbackPage(): JSX.Element {
         </TabsList>
       </Tabs>
 
-      {view === 'table' ? (
+      {view === 'table' && (
         <ToolTableCustom
           searchValue={searchValue}
           setSearchValue={(value) => {
@@ -376,7 +438,7 @@ export default function FeedbackPage(): JSX.Element {
                                 e.stopPropagation()
                                 openUpdateDialog(item)
                               }}
-                              title="Cập nhật xử lý"
+                              tooltip="Cập nhật xử lý"
                               disabled={
                                 !canOverrideTransitions &&
                                 item.status !== 'new' &&
@@ -395,11 +457,13 @@ export default function FeedbackPage(): JSX.Element {
             </TableBody>
           </Table>
         </ToolTableCustom>
-      ) : (
+      )}
+
+      {view === 'map' && (
         <Card className="space-y-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              {mapData?.features.length ?? 0} điểm phản ánh
+              {mapData?.features?.length ?? 0} điểm phản ánh
             </p>
             {filters}
           </div>

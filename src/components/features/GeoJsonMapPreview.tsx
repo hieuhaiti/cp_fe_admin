@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import maplibregl, { type GeoJSONSource, type LngLatBoundsLike } from 'maplibre-gl'
+import { buildBasemapStyle } from '@/lib/basemap'
 
 interface GeoJsonMapPreviewProps {
   geojson: GeoJSON.GeoJSON | null
@@ -7,8 +8,6 @@ interface GeoJsonMapPreviewProps {
 }
 
 const SOURCE_ID = 'preview-source'
-const BASEMAP_SOURCE_ID = 'osm-basemap'
-const BASEMAP_LAYER_ID = 'osm-basemap-layer'
 const FILL_LAYER_ID = 'preview-fill'
 const LINE_LAYER_ID = 'preview-line'
 
@@ -170,24 +169,7 @@ export default function GeoJsonMapPreview({
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          [BASEMAP_SOURCE_ID]: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [
-          {
-            id: BASEMAP_LAYER_ID,
-            type: 'raster',
-            source: BASEMAP_SOURCE_ID,
-          },
-        ],
-      },
+      style: buildBasemapStyle().spec,
       center: [106.5, 11.5],
       zoom: 5,
       attributionControl: false,

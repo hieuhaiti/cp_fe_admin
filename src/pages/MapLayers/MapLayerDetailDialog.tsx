@@ -8,25 +8,18 @@ import type { ApiResponse, MapLayer } from '@/types/api'
 import { formatDateTime } from '@/lib/date'
 import { getMapLayerCategoryLabel } from '@/constant/mapLayerConstant'
 import {
-  buildGeoserverDownloadUrl,
-  buildGeoserverGeoJsonUrl,
+  buildMapProxyExportUrl,
   downloadGeoJsonFile,
   downloadRasterFile,
 } from '@/lib/geoserver'
 import { toast } from 'react-toastify'
 import { useState } from 'react'
-import {
-  CalendarClock,
-  Database,
-  Download,
-  Info,
-  RefreshCw,
-} from 'lucide-react'
+import { CalendarClock, Database, Download, Info, RefreshCw } from 'lucide-react'
 
 interface MapLayerDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  layerCode: string | null
+  layerId: number | string | null
 }
 
 type MapLayerDetailData = MapLayer | { mapLayer?: MapLayer }
@@ -83,14 +76,12 @@ function DetailField({
   )
 }
 
-function JsonValue({
-  value,
-  emptyLabel,
-}: {
-  value?: Record<string, unknown> | GeoJSON.Geometry | null
-  emptyLabel: string
-}) {
-  if (!value || Object.keys(value).length === 0) {
+function JsonValue({ value, emptyLabel }: { value?: unknown; emptyLabel: string }) {
+  if (
+    value === null ||
+    value === undefined ||
+    (typeof value === 'object' && Object.keys(value).length === 0)
+  ) {
     return <p className="text-muted-foreground text-sm">{emptyLabel}</p>
   }
 
@@ -130,12 +121,12 @@ function BooleanBadge({
 export default function MapLayerDetailDialog({
   open,
   onOpenChange,
-  layerCode,
+  layerId,
 }: MapLayerDetailDialogProps) {
   const dbQuery = useApiQuery(
-    ['mapLayer', layerCode],
-    () => mapLayerService.getByCode(layerCode!),
-    { enabled: !!layerCode && open, staleTime: 0 },
+    ['mapLayer', layerId],
+    () => mapLayerService.getById(layerId!),
+    { enabled: layerId !== null && open, staleTime: 0 },
     false,
     false
   )
@@ -151,21 +142,18 @@ export default function MapLayerDetailDialog({
   //     có thể ghi POLYGON (backend đã vectorize để hiển thị, nhưng file gốc
   //     vẫn nằm trên GeoServer dưới dạng coverage store cùng tên).
   //  3. Còn lại → dùng GeoJSON (WFS).
-  const hasTiffSource = /\.(tif|tiff)($|[?#])/i.test(String(layer?.source_url || ''))
   const isRaster = String(layer?.geometry_type || '').toUpperCase() === 'RASTER'
-  const preferTiff = isRaster || hasTiffSource
-  const geoJsonUrl = buildGeoserverGeoJsonUrl(layer?.geoserver_layer)
-  const geoTiffUrl = buildGeoserverDownloadUrl(layer?.geoserver_layer)
-  const downloadUrl = preferTiff ? geoTiffUrl : geoJsonUrl
+  const preferTiff = isRaster
   const downloadFormatLabel = preferTiff ? 'GeoTIFF' : 'GeoJSON'
-  const canDownload = !!(layer && isPublished && downloadUrl)
+  const canDownload = !!(layer?.id && isPublished)
   const [downloading, setDownloading] = useState(false)
 
   async function handleDownload() {
-    if (!layer || !downloadUrl) return
+    if (!layer?.id) return
     const baseName = layer.code || layer.name_vi || 'layer'
     setDownloading(true)
     try {
+      const downloadUrl = await buildMapProxyExportUrl(layer.id, preferTiff ? 'wcs' : 'wfs')
       if (preferTiff) {
         await downloadRasterFile(downloadUrl, baseName)
       } else {
@@ -232,6 +220,12 @@ export default function MapLayerDetailDialog({
                     falseLabel="Nội bộ"
                     tone="info"
                   />
+                  <BooleanBadge
+                    value={layer.is_enable_default}
+                    trueLabel="Bật mặc định"
+                    falseLabel="Tắt mặc định"
+                    tone="warning"
+                  />
                   <Badge
                     variant="outline"
                     className={
@@ -245,16 +239,18 @@ export default function MapLayerDetailDialog({
                     size="sm"
                     disabled={!canDownload || downloading}
                     onClick={handleDownload}
-                    title={
+                    tooltip={
                       canDownload
-                        ? preferTiff
-                          ? 'Tải file GeoTIFF gốc (WCS)'
-                          : 'Tải feature vector dạng GeoJSON (WFS)'
+                          ? preferTiff
+                          ? 'Tải GeoTIFF qua cổng WCS của máy chủ'
+                          : 'Tải feature vector dạng GeoJSON qua cổng WFS của máy chủ'
                         : 'Layer chưa công bố lên GeoServer'
                     }
                   >
                     <Download className="size-4" aria-hidden="true" />
-                    {downloading ? `Đang tải ${downloadFormatLabel}…` : `Tải ${downloadFormatLabel}`}
+                    {downloading
+                      ? `Đang tải ${downloadFormatLabel}…`
+                      : `Tải ${downloadFormatLabel}`}
                   </Button>
                 </div>
               </div>
@@ -288,15 +284,12 @@ export default function MapLayerDetailDialog({
                       <span className="whitespace-pre-wrap">{layer.description_en || '-'}</span>
                     </DetailField>
                     <DetailField label="Danh mục">
-                      {getMapLayerCategoryLabel(layer.category)}
+                      {layer.category_name || getMapLayerCategoryLabel(layer.category)}
                     </DetailField>
                     <DetailField label="Loại lớp">
                       {layer.layer_kind
                         ? (LAYER_KIND_LABEL[layer.layer_kind] ?? layer.layer_kind)
                         : '-'}
-                    </DetailField>
-                    <DetailField label="Nhóm dữ liệu">
-                      <CodeValue>{layer.layer_group}</CodeValue>
                     </DetailField>
                     <DetailField label="Năm dữ liệu">{layer.data_year ?? '-'}</DetailField>
                     <DetailField label="Thứ tự hiển thị">{layer.sort_order ?? '-'}</DetailField>
@@ -317,7 +310,14 @@ export default function MapLayerDetailDialog({
                       <Badge variant="secondary">{layer.geometry_type || '-'}</Badge>
                     </DetailField>
                     <DetailField label="Hệ tọa độ">
-                      {layer.epsg_code ? <CodeValue>EPSG:{layer.epsg_code}</CodeValue> : '-'}
+                      {layer.epsg_code || layer.srid ? (
+                        <CodeValue>EPSG:{layer.epsg_code ?? layer.srid}</CodeValue>
+                      ) : (
+                        '-'
+                      )}
+                    </DetailField>
+                    <DetailField label="Kiểu lưu trữ">
+                      <CodeValue>{layer.storage_kind}</CodeValue>
                     </DetailField>
                     <DetailField label="Schema">
                       <CodeValue>{layer.schema_name}</CodeValue>
@@ -336,8 +336,46 @@ export default function MapLayerDetailDialog({
                     <DetailField label="Trường nhãn">
                       <CodeValue>{layer.label_field}</CodeValue>
                     </DetailField>
+                    <DetailField label="Tệp/đối tượng lưu trữ" wide>
+                      <CodeValue>{layer.object_key}</CodeValue>
+                    </DetailField>
                     <DetailField label="Phạm vi không gian" wide>
-                      <JsonValue value={layer.bbox} emptyLabel="Chưa có thông tin phạm vi." />
+                      <JsonValue
+                        value={layer.bbox ?? layer.metadata?.boundsWgs84}
+                        emptyLabel="Chưa có thông tin phạm vi."
+                      />
+                    </DetailField>
+                  </dl>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Database className="text-primary size-4" aria-hidden="true" />
+                    Metadata và công bố
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+                    <DetailField label="Trạng thái công bố">
+                      <CodeValue>{layer.publish_status}</CodeValue>
+                    </DetailField>
+                    <DetailField label="Trạng thái dọn dẹp">
+                      <CodeValue>{layer.cleanup_status}</CodeValue>
+                    </DetailField>
+                    <DetailField label="Tên style">
+                      <CodeValue>{layer.style_name}</CodeValue>
+                    </DetailField>
+                    <DetailField label="Phiên bản">{layer.version ?? '-'}</DetailField>
+                    <DetailField label="Cấu hình chú giải" wide>
+                      <JsonValue
+                        value={layer.legend_config}
+                        emptyLabel="Chưa có cấu hình chú giải."
+                      />
+                    </DetailField>
+                    <DetailField label="Metadata nguồn" wide>
+                      <JsonValue value={layer.metadata} emptyLabel="Chưa có metadata nguồn." />
                     </DetailField>
                   </dl>
                 </CardContent>

@@ -80,7 +80,6 @@ export interface UpdateProfileBody {
   fullName?: string
   phone?: string
   avatarUrl?: string
-  addressDetail?: string
 }
 
 export interface ChangePasswordBody {

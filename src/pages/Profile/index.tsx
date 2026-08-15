@@ -10,7 +10,6 @@ import {
   Clock3,
   ImageIcon,
   Mail,
-  MapPin,
   Phone,
   Save,
   ShieldCheck,
@@ -22,7 +21,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { authService, useApiMutation } from '@/service'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import type { UpdateProfileBody } from '@/types/api'
@@ -40,12 +38,6 @@ const profileSchema = z.object({
     .string()
     .trim()
     .regex(/^[0-9+\-\s()]{8,20}$/, 'Số điện thoại không hợp lệ')
-    .optional()
-    .or(z.literal('')),
-  addressDetail: z
-    .string()
-    .trim()
-    .max(1000, 'Địa chỉ không được quá 1000 ký tự')
     .optional()
     .or(z.literal('')),
   avatarUrl: z
@@ -105,7 +97,6 @@ export default function ProfilePage() {
     defaultValues: {
       fullName: '',
       phone: '',
-      addressDetail: '',
       avatarUrl: '',
     },
   })
@@ -114,7 +105,6 @@ export default function ProfilePage() {
     reset({
       fullName: user?.fullName ?? user?.full_name ?? '',
       phone: user?.phone ?? '',
-      addressDetail: user?.addressDetail ?? user?.address_detail ?? '',
       avatarUrl: user?.avatarUrl ?? user?.avatar_url ?? '',
     })
   }, [reset, user])
@@ -151,7 +141,6 @@ export default function ProfilePage() {
     const payload: UpdateProfileBody = {}
     if (data.fullName?.trim()) payload.fullName = data.fullName.trim()
     if (data.phone?.trim()) payload.phone = data.phone.trim()
-    if (data.addressDetail?.trim()) payload.addressDetail = data.addressDetail.trim()
     if (data.avatarUrl?.trim()) payload.avatarUrl = data.avatarUrl.trim()
     updateMutation.mutate(payload)
   }
@@ -160,13 +149,12 @@ export default function ProfilePage() {
     reset({
       fullName: user?.fullName ?? user?.full_name ?? '',
       phone: user?.phone ?? '',
-      addressDetail: user?.addressDetail ?? user?.address_detail ?? '',
       avatarUrl: user?.avatarUrl ?? user?.avatar_url ?? '',
     })
   }
 
   const isSaving = isSubmitting || updateMutation.isPending
-  const lastLoginAt = user?.lastLoginAt ?? user?.last_login
+  const lastLoginAt = user?.lastLoginAt ?? user?.last_login_at ?? user?.last_login
   const createdAt = user?.createdAt ?? user?.created_at
 
   return (
@@ -220,24 +208,28 @@ export default function ProfilePage() {
                       : 'Đang hoạt động'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <CalendarDays className="size-4" />
-                    Ngày tạo
-                  </span>
-                  <span className="text-foreground text-right text-xs font-medium">
-                    {formatDate(createdAt)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <Clock3 className="size-4" />
-                    Đăng nhập gần nhất
-                  </span>
-                  <span className="text-foreground text-right text-xs font-medium">
-                    {formatDate(lastLoginAt)}
-                  </span>
-                </div>
+                {createdAt && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <CalendarDays className="size-4" />
+                      Ngày tạo
+                    </span>
+                    <span className="text-foreground text-right text-xs font-medium">
+                      {formatDate(createdAt)}
+                    </span>
+                  </div>
+                )}
+                {lastLoginAt && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <Clock3 className="size-4" />
+                      Đăng nhập gần nhất
+                    </span>
+                    <span className="text-foreground text-right text-xs font-medium">
+                      {formatDate(lastLoginAt)}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -347,22 +339,6 @@ export default function ProfilePage() {
                       <Building2 className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                       <Input value={roleLabel} className="bg-muted/60 pl-10" disabled />
                     </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="addressDetail">Địa chỉ chi tiết</Label>
-                    <div className="relative">
-                      <MapPin className="text-muted-foreground pointer-events-none absolute top-3 left-3 size-4" />
-                      <Textarea
-                        id="addressDetail"
-                        className="min-h-24 resize-y pl-10"
-                        {...register('addressDetail')}
-                        placeholder="Nhập địa chỉ cơ quan hoặc nơi làm việc"
-                        aria-invalid={Boolean(errors.addressDetail)}
-                      />
-                    </div>
-                    {errors.addressDetail && (
-                      <p className="text-destructive text-sm">{errors.addressDetail.message}</p>
-                    )}
                   </div>
                 </div>
               </section>

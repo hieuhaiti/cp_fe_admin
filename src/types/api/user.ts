@@ -23,6 +23,7 @@ export interface User {
   isEmailVerified?: boolean
   email_verified?: boolean
   email_verified_at?: string | null
+  has_password?: boolean
   hasPassword?: boolean
   must_change_password?: boolean
   password_changed_at?: string | null

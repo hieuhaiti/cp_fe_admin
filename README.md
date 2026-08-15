@@ -108,7 +108,18 @@ Tạo file `.env` tại thư mục gốc:
 ```env
 VITE_API_BASE_URL=https://api.example.com
 VITE_MAX_FILE_SIZE=52428800
+
+# Mapbox — dùng cho basemap của các bản đồ admin (ForestMap, GeoJsonMapPreview,
+# FeedbackMap). Cùng token/style với client. Nếu thiếu 1 trong 2, basemap sẽ
+# fallback về OSM để map vẫn boot.
+VITE_MAPBOX_TOKEN=
+VITE_MAPBOX_STYLE_Street=mapbox://styles/<user>/<styleId>
 ```
+
+Admin dùng `maplibre-gl`, không dùng `mapbox-gl` như client, nên style URI
+được translate sang Mapbox raster tiles endpoint qua
+[`src/lib/basemap.ts`](src/lib/basemap.ts). Muốn đổi basemap ở admin thì
+sửa 1 chỗ đó, không cần đụng từng component map.
 
 ---
 

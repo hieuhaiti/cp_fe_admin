@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
+import { buildBasemapStyle } from '@/lib/basemap'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export type RasterLoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -7,7 +9,7 @@ interface ForestMapProps {
   /** WMS raster tile URL — build từ resolveRasterTileUrl (ưu tiên GeoServer,
    *  fallback GEE tile URL có thời hạn). */
   rasterTileUrl?: string | null
-  /** Legend items để hiển thị bảng chú giải 11 lớp góc dưới bản đồ. */
+  /** Legend items để hiển thị bảng Chú giải 12 lớp góc dưới bản đồ. */
   legend?: Array<{ classId: number; name: string; color: string }>
   /** Opacity 0-1 cho raster overlay. */
   opacity?: number
@@ -16,8 +18,6 @@ interface ForestMapProps {
   onRasterStatusChange?: (status: RasterLoadStatus) => void
 }
 
-const BASEMAP_SOURCE_ID = 'osm-basemap'
-const BASEMAP_LAYER_ID = 'osm-basemap-layer'
 const RASTER_SOURCE_ID = 'forest-class-raster'
 const RASTER_LAYER_ID = 'forest-class-raster-layer'
 
@@ -58,18 +58,7 @@ export default function ForestMap({
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          [BASEMAP_SOURCE_ID]: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [{ id: BASEMAP_LAYER_ID, type: 'raster', source: BASEMAP_SOURCE_ID }],
-      },
+      style: buildBasemapStyle().spec,
       center: CAM_PHA_CENTER,
       zoom: 11,
       attributionControl: false,
@@ -173,16 +162,21 @@ export default function ForestMap({
       {/* Legend góc dưới trái */}
       {legend && legend.length > 0 && (
         <div className="absolute bottom-2 left-2 max-h-64 overflow-y-auto rounded-md bg-white/95 p-2 text-xs shadow">
-          <div className="mb-1 font-semibold">Chú giải 11 lớp</div>
+          <div className="mb-1 font-semibold">Chú giải 12 lớp</div>
           {legend.map((c) => (
             <div key={c.classId} className="flex items-center gap-2">
               <span
                 className="inline-block h-3 w-3 rounded-sm border"
                 style={{ backgroundColor: c.color }}
               />
-              <span className="truncate" title={c.name}>
-                {c.classId} – {c.name}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="truncate">
+                    {c.classId} – {c.name}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{c.name}</TooltipContent>
+              </Tooltip>
             </div>
           ))}
         </div>

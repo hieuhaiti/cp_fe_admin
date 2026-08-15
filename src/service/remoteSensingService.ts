@@ -20,6 +20,18 @@ type PatchRemoteSensingCategoryBody = {
   expectedUpdatedAt: string
 }
 
+type PublishRemoteSensingImageBody = {
+  code: string
+  nameVi: string
+  category: string
+  srid: number
+  minZoom?: number | null
+  maxZoom?: number | null
+  legendConfig?: Record<string, unknown>
+  metadata?: Record<string, unknown>
+  isPublic?: boolean
+}
+
 export default {
   /** GET /remote-sensing/images?page=&limit= */
   listPublicImages: (params?: Pick<RemoteImageListParams, 'page' | 'limit'>) =>
@@ -46,6 +58,10 @@ export default {
   /** POST /admin/remote-sensing/images */
   createImage: (data: CreateRemoteSensingImageBody) =>
     apiClient.post<RemoteImage>(`${serviceAdminRemoteSensingPath}/images`, data),
+
+  /** POST /admin/remote-sensing/images/:id/publish — uploads the GeoTIFF to GeoServer and creates a map layer. */
+  publishImage: (imageId: number | string, data: PublishRemoteSensingImageBody) =>
+    apiClient.post(`${serviceAdminRemoteSensingPath}/images/${imageId}/publish`, data),
 
   /** PATCH /admin/remote-sensing/images/:satelliteImageId/category */
   updateCategory: (imageId: number | string, data: PatchRemoteSensingCategoryBody) =>

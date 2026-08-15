@@ -47,12 +47,15 @@ import { CloudOff, CloudUpload, Eye, EyeOff, Pen, Trash2 } from 'lucide-react'
 import PageLayout from '@/layout/pageLayout'
 import MapLayerDetailDialog from './MapLayerDetailDialog'
 import MapLayerFormDialog from './MapLayerFormDialog'
+import GeoTiffUploadDialog from './GeoTiffUploadDialog'
 import { formatDate } from '@/lib/date'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 
 function getLayerItems(data: unknown): MapLayer[] {
-  const response = data as ApiResponse<{ items?: MapLayer[]; mapLayers?: MapLayer[] } | MapLayer[]> | undefined
+  const response = data as
+    | ApiResponse<{ items?: MapLayer[]; mapLayers?: MapLayer[] } | MapLayer[]>
+    | undefined
   const payload = response?.data
   if (Array.isArray(payload)) return payload
   if (Array.isArray(payload?.items)) return payload.items
@@ -68,6 +71,7 @@ function getPagination(data: unknown): Partial<Pagination> {
 export default function MapLayerPage(): JSX.Element {
   const user = useAuthStore((s) => s.user)
   const canCreate = hasPerm(user, 'map_layers', 'create')
+  const canCreateRaster = hasPerm(user, 'raster', 'create') && hasPerm(user, 'layers', 'create')
   const canUpdate = hasPerm(user, 'map_layers', 'update')
   const canDelete = hasPerm(user, 'map_layers', 'delete')
   const canPublish = hasPerm(user, 'map_layers', 'publish')
@@ -111,8 +115,10 @@ export default function MapLayerPage(): JSX.Element {
   }, [currentPage, totalPages])
 
   const [selectedLayerCode, setSelectedLayerCode] = useState<string | null>(null)
+  const [selectedLayerId, setSelectedLayerId] = useState<number | string | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [formDialogOpen, setFormDialogOpen] = useState(false)
+  const [geoTiffDialogOpen, setGeoTiffDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [layerToDelete, setLayerToDelete] = useState<MapLayer | null>(null)
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
@@ -125,6 +131,7 @@ export default function MapLayerPage(): JSX.Element {
         dbQuery.refetch()
         setFormDialogOpen(false)
         setSelectedLayerCode(null)
+        setSelectedLayerId(null)
       },
     },
     true
@@ -138,6 +145,7 @@ export default function MapLayerPage(): JSX.Element {
         dbQuery.refetch()
         setFormDialogOpen(false)
         setSelectedLayerCode(null)
+        setSelectedLayerId(null)
       },
     },
     true
@@ -182,8 +190,8 @@ export default function MapLayerPage(): JSX.Element {
   )
 
   function openDetails(mapLayer: MapLayer) {
-    if (mapLayer?.code) {
-      setSelectedLayerCode(mapLayer.code)
+    if (mapLayer?.id !== undefined && mapLayer.id !== null) {
+      setSelectedLayerId(mapLayer.id)
       setDetailDialogOpen(true)
     }
   }
@@ -200,6 +208,7 @@ export default function MapLayerPage(): JSX.Element {
 
   function openAddDialog() {
     setSelectedLayerCode(null)
+    setSelectedLayerId(null)
     setFormDialogOpen(true)
   }
 
@@ -295,6 +304,11 @@ export default function MapLayerPage(): JSX.Element {
                 Thêm lớp dữ liệu
               </Button>
             )}
+            {canCreateRaster && (
+              <Button variant="outline" onClick={() => setGeoTiffDialogOpen(true)}>
+                Thêm GeoTIFF
+              </Button>
+            )}
           </div>
         }
         total={total}
@@ -330,12 +344,16 @@ export default function MapLayerPage(): JSX.Element {
                   onClick={() => openDetails(layer)}
                 >
                   <TableCell className="max-w-64 font-medium">
-                    <span className="line-clamp-2">{layer.name_vi || layer.name || layer.code}</span>
+                    <span className="line-clamp-2">
+                      {layer.name_vi || layer.name || layer.code}
+                    </span>
                     <span className="text-muted-foreground block truncate font-mono text-xs">
                       {layer.code}
                     </span>
                   </TableCell>
-                  <TableCell>{getMapLayerCategoryLabel(layer.category)}</TableCell>
+                  <TableCell>
+                    {layer.category_name || getMapLayerCategoryLabel(layer.category)}
+                  </TableCell>
                   <TableCell className="uppercase">{layer.geometry_type || '-'}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1">
@@ -365,7 +383,7 @@ export default function MapLayerPage(): JSX.Element {
                                 e.stopPropagation()
                                 openEditDialog(layer)
                               }}
-                              title="Chỉnh sửa"
+                              tooltip="Chỉnh sửa"
                             >
                               <Pen className="size-4" />
                             </Button>
@@ -379,7 +397,9 @@ export default function MapLayerPage(): JSX.Element {
                                   isActive: Boolean(layer.is_active),
                                 })
                               }}
-                              title={layer.is_active ? 'Nhấn để ngừng hoạt động' : 'Nhấn để kích hoạt'}
+                              tooltip={
+                                layer.is_active ? 'Nhấn để ngừng hoạt động' : 'Nhấn để kích hoạt'
+                              }
                             >
                               {layer.is_active ? (
                                 <EyeOff className="size-4" />
@@ -402,7 +422,7 @@ export default function MapLayerPage(): JSX.Element {
                               e.stopPropagation()
                               openPublishDialog(layer)
                             }}
-                            title={
+                            tooltip={
                               layer.geoserver_layer
                                 ? 'Gỡ lớp khỏi dịch vụ bản đồ'
                                 : layer.is_active
@@ -425,7 +445,7 @@ export default function MapLayerPage(): JSX.Element {
                               e.stopPropagation()
                               openDeleteDialog(layer)
                             }}
-                            title="Xóa"
+                            tooltip="Xóa"
                           >
                             <Trash2 className="text-destructive size-4" />
                           </Button>
@@ -443,7 +463,7 @@ export default function MapLayerPage(): JSX.Element {
       <MapLayerDetailDialog
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
-        layerCode={selectedLayerCode}
+        layerId={selectedLayerId}
       />
       <MapLayerFormDialog
         open={formDialogOpen}
@@ -452,6 +472,11 @@ export default function MapLayerPage(): JSX.Element {
         onSubmit={handleFormSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
+      <GeoTiffUploadDialog
+        open={geoTiffDialogOpen}
+        onOpenChange={setGeoTiffDialogOpen}
+        onPublished={() => dbQuery.refetch()}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -459,8 +484,8 @@ export default function MapLayerPage(): JSX.Element {
             <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
             <AlertDialogDescription>
               Bạn có chắc chắn muốn xóa lớp "
-              {layerToDelete?.name_vi || layerToDelete?.name || layerToDelete?.code}"? Hành động
-              này không thể hoàn tác.
+              {layerToDelete?.name_vi || layerToDelete?.name || layerToDelete?.code}"? Hành động này
+              không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

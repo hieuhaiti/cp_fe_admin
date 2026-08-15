@@ -46,6 +46,8 @@ export interface FloodArtifact {
   style_name?: string | null
   resolution_m?: number | null
   crs?: string | null
+  registry_layer_id?: number | string | null
+  registry_is_public?: boolean | null
   published_at?: string | null
   metadata?: {
     label?: { vi?: string; en?: string }
@@ -84,6 +86,8 @@ export interface FloodDashboard {
     role: string
     workspace?: string
     layerName?: string
+    registryLayerId?: number | string | null
+    isPublic?: boolean
     publishedAt?: string
   }>
 }

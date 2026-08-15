@@ -62,7 +62,7 @@ export default {
   /** GET /auth/me */
   getProfile: () => apiClient.get<AuthMeData>(`${serviceAuthPath}/me`),
 
-  /** PATCH /auth/me (JSON body: fullName, phone, avatarUrl, addressDetail) */
+  /** PATCH /auth/me (JSON body: fullName, phone, avatarUrl). */
   updateProfile: (data: UpdateProfileBody | FormData) => {
     if (data instanceof FormData) {
       return apiClient.patch<AuthMeData>(`${serviceAuthPath}/me`, data, { useForm: true })

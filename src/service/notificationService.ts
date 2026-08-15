@@ -6,35 +6,60 @@ import type {
   RegisterDeviceBody,
   UnregisterDeviceBody,
   SendNotificationBody,
+  SendNotificationResult,
 } from '@/types/api'
 import { serviceNotificationPath } from '@/constant/serviceConstant'
-
 const pushTokenPath = '/devices/push-token'
 
-export default {
-  /** GET /notifications */
-  getAll: (params?: NotificationListParams) =>
-    apiClient.get<NotificationListData>(serviceNotificationPath, { params }),
+function normalizeListParams(params: NotificationListParams = {}) {
+  const {
+    onlyUnread,
+    unread_only: unreadOnlyLegacy,
+    isRead,
+    user_id: _userId,
+    ...supported
+  } = params
+  void _userId
+  const unreadOnly =
+    supported.unreadOnly ??
+    onlyUnread ??
+    unreadOnlyLegacy ??
+    (typeof isRead === 'boolean' ? !isRead : undefined)
 
-  /** Legacy alias - same as getAll */
+  return {
+    page: supported.page ?? 1,
+    limit: supported.limit ?? 20,
+    ...(unreadOnly !== undefined && { unreadOnly }),
+  }
+}
+
+export default {
+  /** GET /notifications/mine (the server only exposes the current user's inbox). */
+  getAll: (params?: NotificationListParams) =>
+    apiClient.get<NotificationListData>(`${serviceNotificationPath}/mine`, {
+      params: normalizeListParams(params),
+    }),
+
   getMy: (params?: NotificationListParams) =>
-    apiClient.get<NotificationListData>(serviceNotificationPath, { params }),
+    apiClient.get<NotificationListData>(`${serviceNotificationPath}/mine`, {
+      params: normalizeListParams(params),
+    }),
 
   /** GET /notifications/unread-count */
-  getUnreadCount: () =>
-    apiClient.get<{ unread: number }>(`${serviceNotificationPath}/unread-count`),
+  getUnreadCount: () => apiClient.get<{ count: number }>(`${serviceNotificationPath}/unread-count`),
 
   /** PATCH /notifications/read-all */
-  markAllAsRead: () =>
-    apiClient.patch<{ updatedCount: number }>(`${serviceNotificationPath}/read-all`),
+  markAllAsRead: () => apiClient.patch<{ updated: number }>(`${serviceNotificationPath}/read-all`),
 
   /** PATCH /notifications/:notificationId/read */
   markAsRead: (notificationId: number | string) =>
-    apiClient.patch<Notification>(`${serviceNotificationPath}/${notificationId}/read`),
+    apiClient.patch<Pick<Notification, 'id' | 'read_at'>>(
+      `${serviceNotificationPath}/${notificationId}/read`
+    ),
 
   /** DELETE /notifications/:notificationId */
   delete: (notificationId: number | string) =>
-    apiClient.del<Record<string, never>>(`${serviceNotificationPath}/${notificationId}`),
+    apiClient.del<{ id: number | string }>(`${serviceNotificationPath}/${notificationId}`),
 
   /** PUT /devices/push-token */
   registerDevice: (data: RegisterDeviceBody) =>
@@ -44,7 +69,7 @@ export default {
   unregisterDevice: (data: UnregisterDeviceBody) =>
     apiClient.del<Record<string, never>>(pushTokenPath, data),
 
-  /** POST /notifications/send (admin/so_nnmt) */
+  /** POST /notifications/send — requires notifications.send permission. */
   send: (data: SendNotificationBody) =>
-    apiClient.post<{ id: number }>(`${serviceNotificationPath}/send`, data),
+    apiClient.post<SendNotificationResult>(`${serviceNotificationPath}/send`, data),
 }

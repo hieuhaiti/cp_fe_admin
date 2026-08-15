@@ -1,16 +1,12 @@
 import {
   AlertTriangle,
-  Bell,
-  Cloud,
-  FileText,
-  History,
+  // Bell,
   Image,
   Key,
   LayoutDashboard,
   Map,
   MessageSquare,
   Newspaper,
-  Ruler,
   Trees,
   Users,
   Waves,
@@ -44,12 +40,6 @@ export const navConfig: NavItem[] = [
     ],
   },
   {
-    icon: <History />,
-    name: 'Ảnh theo thời gian',
-    path: '/layer-series',
-    permission: { resource: 'map_layers', action: 'read' },
-  },
-  {
     icon: <Key />,
     name: 'API bản đồ',
     path: '/map-apis',
@@ -75,10 +65,10 @@ export const navConfig: NavItem[] = [
     permission: { resource: 'flood', action: 'read' },
   },
   {
-    icon: <Cloud />,
-    name: 'Thời tiết',
-    path: '/weather',
-    permission: { resource: 'weather', action: 'read' },
+    icon: <Waves />,
+    name: 'Kịch bản thủy văn',
+    path: '/kttv-scenarios',
+    permission: { resource: 'kttv_scenarios', action: 'read' },
   },
   // ── Nội dung ──
   {
@@ -95,13 +85,6 @@ export const navConfig: NavItem[] = [
       },
     ],
   },
-  {
-    icon: <FileText />,
-    name: 'Báo cáo / Văn bản',
-    path: '/documents',
-    permission: { resource: 'documents', action: 'read' },
-  },
-
   // ── Vận hành ──
   {
     icon: <AlertTriangle />,
@@ -109,30 +92,12 @@ export const navConfig: NavItem[] = [
     path: '/feedbacks',
     permission: { resource: 'feedback', action: 'read' },
   },
-  {
-    icon: <Ruler />,
-    name: 'Đo đạc thực địa',
-    path: '/field-measurements',
-    permission: { resource: 'field_measurements', action: 'read' },
-    subItems: [
-      {
-        name: 'Phiên đo thực địa',
-        path: '/field-measurements',
-        permission: { resource: 'field_measurements', action: 'read' },
-      },
-      {
-        name: 'Khu vực theo dõi',
-        path: '/monitored-areas',
-        permission: { resource: 'field_measurements', action: 'read' },
-      },
-    ],
-  },
-  {
-    icon: <Bell />,
-    name: 'Gửi thông báo',
-    path: '/notifications/send',
-    permission: { resource: 'notifications', action: 'send' },
-  },
+  // {
+  //   icon: <Bell />,
+  //   name: 'Gửi thông báo',
+  //   path: '/notifications/send',
+  //   permission: { resource: 'notifications', action: 'send' },
+  // },
 
   // ── Quản trị ──
   {

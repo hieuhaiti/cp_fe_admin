@@ -4,59 +4,59 @@
 
 :root {
   /* ===== Primary Extended ===== */
-  --primary-hover: #1d4ed8; /* blue-700 */
-  --primary-active: #1e40af; /* blue-800 */
-  --primary-light: #dbeafe; /* blue-100 */
-  --primary-dark: #1e3a8a; /* blue-900 */
+  --primary-hover: #4c3c9d;
+  --primary-active: #382b78;
+  --primary-light: #ede9fe;
+  --primary-dark: #2e2362;
 
   /* ===== Secondary Extended ===== */
-  --secondary-hover: #e2e8f0; /* slate-200 */
-  --secondary-active: #cbd5e1; /* slate-300 */
+  --secondary-hover: #f1dfd2;
+  --secondary-active: #e7c7b4;
 
   /* ===== Accent Extended (Cyan) ===== */
-  --accent-hover: #0891b2; /* cyan-600 */
-  --accent-light: #cffafe; /* cyan-100 */
-  --accent-dark: #155e75; /* cyan-800 */
+  --accent-hover: #b95435;
+  --accent-light: #fff0e7;
+  --accent-dark: #7f3929;
 
   /* ===== Destructive Extended ===== */
   --destructive-hover: #b91c1c; /* red-700 */
   --destructive-light: #fee2e2; /* red-100 */
 
   /* ===== Success Extended ===== */
-  --success-hover: #15803d; /* green-700 */
-  --success-light: #dcfce7; /* green-100 */
+  --success-hover: #1f6859;
+  --success-light: #dff3ed;
 
   /* ===== Warning Extended ===== */
-  --warning-hover: #78350f; /* amber-900 */
-  --warning-light: #fef3c7; /* amber-100 */
+  --warning-hover: #874012;
+  --warning-light: #fff0dd;
 
   /* ===== Info Extended ===== */
-  --info-hover: #0891b2; /* cyan-600 */
-  --info-light: #cffafe; /* cyan-100 */
+  --info-hover: #285e88;
+  --info-light: #e4f0f7;
 
   /* ===== Border Extended ===== */
-  --border-hover: #cbd5e1; /* slate-300 */
-  --border-focus: #2563eb; /* blue-600 */
+  --border-hover: #d8c8b9;
+  --border-focus: #5b4bb0;
 
   /* ===== Input Extended ===== */
-  --input-focus: #2563eb; /* blue-600 */
+  --input-focus: #5b4bb0;
 
   /* ===== Ring Extended ===== */
   --ring-offset: #ffffff;
 
   /* ===== Foreground Extended ===== */
-  --foreground-muted: #64748b; /* slate-500 */
+  --foreground-muted: #6d6a7a;
 
   /* ===== Card Extended ===== */
-  --card-hover: #f8fafc; /* slate-50 */
+  --card-hover: #fffaf5;
 
   /* ===== Error Page Colors ===== */
   --error-400: #f87171; /* red-400 */
   --error-401: #92400e; /* amber-800 — readable on white and with white text */
   --error-403: #9a3412; /* orange-800 — readable on white and with white text */
-  --error-404: #3b82f6; /* blue-500 */
+  --error-404: #6d5cc3;
   --error-500: #dc2626; /* red-600 */
-  --error-503: #06b6d4; /* cyan-500 */
+  --error-503: #3d789d;
 
   /* Aliases used by error page components (bg-(--error-XXX-bg-color)) */
   --error-400-bg-color: var(--error-400);

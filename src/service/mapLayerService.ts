@@ -1,11 +1,20 @@
 import apiClient from './common/apiClient'
-import type { ApiResponse, ImportJob, MapLayer, MapLayerListData, MapLayerListParams } from '@/types/api'
+import type {
+  ApiResponse,
+  ImportJob,
+  MapLayer,
+  MapLayerListData,
+  MapLayerListParams,
+} from '@/types/api'
 import { serviceMapLayerPath, serviceMapImportJobPath } from '@/constant/serviceConstant'
 
 type CanonicalLayerPatch = {
   expectedUpdatedAt: string
   nameVi?: string
+  category?: string | null
+  categoryName?: string | null
   isPublic?: boolean
+  isEnableDefault?: boolean
   minZoom?: number
   maxZoom?: number
 }
@@ -19,7 +28,9 @@ function listItems(response: ApiResponse<MapLayerListData>): MapLayer[] {
 async function resolveLayerId(idOrCode: number | string): Promise<number | string> {
   if (typeof idOrCode === 'number' || /^\d+$/.test(String(idOrCode))) return idOrCode
   const response = await apiClient.get<MapLayerListData>(serviceMapLayerPath, {
-    params: { page: 1, limit: 1000 },
+    // The API caps `limit`; querying by code avoids the former invalid
+    // `limit=1000` request and only fetches the small result set we need.
+    params: { page: 1, limit: 10, q: String(idOrCode) },
   })
   const layer = listItems(response).find((item) => item.code === idOrCode)
   if (!layer?.id) throw new Error(`Không tìm thấy layer có mã "${idOrCode}".`)
@@ -27,14 +38,19 @@ async function resolveLayerId(idOrCode: number | string): Promise<number | strin
 }
 
 function canonicalPatch(data: Record<string, unknown>): CanonicalLayerPatch {
-  const expectedUpdatedAt = String(data.expectedUpdatedAt ?? data.updatedAt ?? data.updated_at ?? '')
+  const expectedUpdatedAt = String(
+    data.expectedUpdatedAt ?? data.updatedAt ?? data.updated_at ?? ''
+  )
   if (!expectedUpdatedAt) {
     throw new Error('Cập nhật lớp bản đồ cần expectedUpdatedAt từ dữ liệu chi tiết mới nhất.')
   }
   return {
     expectedUpdatedAt,
     nameVi: (data.nameVi ?? data.name_vi) as string | undefined,
+    category: data.category as string | null | undefined,
+    categoryName: (data.categoryName ?? data.category_name) as string | null | undefined,
     isPublic: (data.isPublic ?? data.is_public) as boolean | undefined,
+    isEnableDefault: (data.isEnableDefault ?? data.is_enable_default) as boolean | undefined,
     minZoom: (data.minZoom ?? data.min_zoom) as number | undefined,
     maxZoom: (data.maxZoom ?? data.max_zoom) as number | undefined,
   }
@@ -49,7 +65,8 @@ export default {
     apiClient.get<MapLayerListData>(serviceMapLayerPath, { params }),
 
   /** GET /admin/layers/:layerId */
-  getById: (layerId: number | string) => apiClient.get<MapLayer>(`${serviceMapLayerPath}/${layerId}`),
+  getById: (layerId: number | string) =>
+    apiClient.get<MapLayer>(`${serviceMapLayerPath}/${layerId}`),
 
   /** Compatibility helper that resolves a legacy layer code to its canonical ID. */
   getByCode: async (code: string) => {
@@ -71,7 +88,13 @@ export default {
   /** PUT /admin/layers/:layerId/permissions */
   setPermissions: async (
     idOrCode: number | string,
-    permissions: Array<{ roleCode: string; canView: boolean; canExport: boolean; canEdit: boolean; canDelete: boolean }>
+    permissions: Array<{
+      roleCode: string
+      canView: boolean
+      canExport: boolean
+      canEdit: boolean
+      canDelete: boolean
+    }>
   ) => {
     const layerId = await resolveLayerId(idOrCode)
     return apiClient.put<MapLayer>(`${serviceMapLayerPath}/${layerId}/permissions`, { permissions })
@@ -90,7 +113,8 @@ export default {
       const detail = await apiClient.get<MapLayer>(`${serviceMapLayerPath}/${layerId}`)
       expectedUpdatedAt = detail.data?.updatedAt ?? detail.data?.updated_at ?? undefined
     }
-    if (!expectedUpdatedAt) throw new Error('Xóa lớp bản đồ cần expectedUpdatedAt từ dữ liệu chi tiết mới nhất.')
+    if (!expectedUpdatedAt)
+      throw new Error('Xóa lớp bản đồ cần expectedUpdatedAt từ dữ liệu chi tiết mới nhất.')
     return apiClient.del(`${serviceMapLayerPath}/${layerId}`, { expectedUpdatedAt })
   },
 

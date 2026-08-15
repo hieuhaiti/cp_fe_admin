@@ -17,7 +17,7 @@ export type ImportMode = 'overwrite' | 'append'
 export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 export interface MapLayer {
-  id?: number
+  id?: number | string
   code: string
   name_vi?: string | null
   name_en?: string | null
@@ -28,6 +28,17 @@ export interface MapLayer {
   geometry_column?: string | null
   geometry_type?: GeometryType | null
   epsg_code?: number | null
+  srid?: number | null
+  storage_kind?: string | null
+  object_key?: string | null
+  style_name?: string | null
+  legend_config?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
+  source_file_id?: number | string | null
+  publish_status?: string | null
+  cleanup_status?: string | null
+  version?: number | null
+  deleted_at?: string | null
   geoserver_layer?: string | null
   geoserver_store?: string | null
   source_url?: string | null
@@ -36,13 +47,14 @@ export interface MapLayer {
   max_zoom?: number | null
   label_field?: string | null
   category?: string | null
+  category_name?: string | null
   layer_kind?: LayerKind | null
-  layer_group?: string | null
   data_year?: number | null
   source_dataset?: string | null
   source_layer_name?: string | null
   is_active?: boolean
   is_public?: boolean
+  is_enable_default?: boolean
   is_editable?: boolean
   is_published?: boolean
   sort_order?: number | null
@@ -73,7 +85,6 @@ export interface MapLayerListData {
 export interface MapLayerListParams {
   category?: string
   layer_kind?: LayerKind
-  layer_group?: string
   data_year?: number
   geometry_type?: string
   is_active?: boolean
@@ -96,11 +107,13 @@ export interface CreateMapLayerBody {
   geometry_type: GeometryType
   epsg_code?: number
   category?: string
+  category_name?: string | null
   layer_kind?: LayerKind
-  layer_group?: string | null
   is_active?: boolean
   is_public?: boolean
+  is_enable_default?: boolean
   is_editable?: boolean
+  expectedUpdatedAt?: string
 
   name?: string
   geometry_data?: object | string
@@ -112,7 +125,7 @@ export interface PatchMapLayerBody {
   name_en?: string | null
   is_public?: boolean
   category?: string
-  layer_group?: string | null
+  category_name?: string | null
   data_year?: number | null
   sort_order?: number
 }

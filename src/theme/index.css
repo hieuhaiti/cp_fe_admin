@@ -19,7 +19,7 @@
 /* ===== CSS VARIABLES ===== */
 :root {
   /* ===== Border Radius ===== */
-  --radius: 0.625rem;
+  --radius: 0.875rem;
   --radius-xs: 0.125rem;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
@@ -39,7 +39,7 @@
   --spacing-3xl: 4rem;
 
   /* ===== Typography ===== */
-  --font-sans: "Roboto Slab", "Noto Sans", system-ui, -apple-system, sans-serif;
+  --font-sans: "Manrope", "Noto Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "Fira Code", "Consolas", monospace;
 
   --text-xs: 0.75rem;
@@ -67,36 +67,36 @@
   --tracking-widest: 0.1em;
 
   /* ===== Base Colors (HSL) ===== */
-  --background: 210 40% 98%; /* #F8FAFC - Slate 50 */
-  --foreground: 222 47% 11%; /* #0F172A - Slate 900 */
+  --background: 35 40% 97%;
+  --foreground: 239 34% 16%;
 
   --card: 0 0% 100%; /* #FFFFFF */
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 239 34% 16%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 239 34% 16%;
 
   /* --- Màu chủ đạo (Trust Blue) --- */
-  --primary: 217 91% 53%; /* #2563EB - Blue 600 */
+  --primary: 248 45% 42%;
   --primary-foreground: 0 0% 100%;
 
   /* --- Màu phụ trợ --- */
-  --secondary: 210 40% 96%; /* #F1F5F9 - Slate 100 */
-  --secondary-foreground: 222 47% 20%; /* Slate 800 */
+  --secondary: 30 38% 92%;
+  --secondary-foreground: 239 29% 24%;
 
   /* --- Màu làm mờ/Vô hiệu hóa --- */
-  --muted: 210 40% 96%; /* Slate 100 */
-  --muted-foreground: 215 16% 47%; /* #64748B - Slate 500 */
+  --muted: 31 25% 93%;
+  --muted-foreground: 235 12% 45%;
 
   /* --- Màu nhấn (Cyan) --- */
-  --accent: 188 94% 93%; /* cyan-50 subtle bg */
-  --accent-foreground: 188 94% 30%; /* cyan-800 */
+  --accent: 19 68% 93%;
+  --accent-foreground: 14 57% 31%;
 
   /* --- Trạng thái hành động --- */
   --destructive: 0 72% 51%; /* #DC2626 - Red 600 */
   --destructive-foreground: 0 0% 98%;
 
-  --success: 142 76% 36%; /* #16A34A - Green 600 */
+  --success: 162 53% 34%;
   --success-foreground: 0 0% 98%;
 
   /*
@@ -104,36 +104,36 @@
    * filled controls. Amber 500 remains available as --chart-4 for data
    * visualization, but is too light for small text on white surfaces.
    */
-  --warning: 32 83% 31%; /* #92400E - Amber 800 */
+  --warning: 27 77% 38%;
   --warning-foreground: 0 0% 98%;
 
-  --info: 188 94% 43%; /* #06B6D4 - Cyan 500 */
+  --info: 205 56% 42%;
   --info-foreground: 0 0% 98%;
 
   /* --- Đường viền & Input --- */
-  --border: 214 32% 91%; /* #E2E8F0 - Slate 200 */
-  --input: 214 32% 91%;
-  --ring: 217 91% 53%; /* Focus ring = Primary */
+  --border: 28 22% 85%;
+  --input: 28 22% 85%;
+  --ring: 248 45% 42%;
 
   /* ===== Chart Colors (Data Visualization) ===== */
-  --chart-1: 217 91% 53%; /* Blue 600 - Primary */
-  --chart-2: 188 94% 43%; /* Cyan 500 - Accent */
-  --chart-3: 142 76% 36%; /* Green 600 - Success */
-  --chart-4: 38 92% 50%; /* Amber 500 - Warning */
+  --chart-1: 248 45% 42%;
+  --chart-2: 17 67% 48%;
+  --chart-3: 162 53% 34%;
+  --chart-4: 39 76% 46%;
   --chart-5: 0 72% 51%; /* Red 600 - Destructive */
   --chart-6: 262 83% 58%; /* Violet 500 */
   --chart-7: 173 80% 40%; /* Teal 600 */
   --chart-8: 330 81% 60%; /* Pink 500 */
 
   /* ===== Sidebar (Dark Command Center) ===== */
-  --sidebar-background: 222 47% 11%; /* #0F172A - Dark Navy */
-  --sidebar-foreground: 213 31% 91%; /* #CBD5E1 - Slate 300 */
-  --sidebar-primary: 217 91% 60%; /* #3B82F6 - Blue 500 (lighter for dark bg) */
+  --sidebar-background: 241 32% 14%;
+  --sidebar-foreground: 35 42% 94%;
+  --sidebar-primary: 21 82% 61%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217 33% 17%; /* #1E293B - Slate 800 */
-  --sidebar-accent-foreground: 213 31% 91%;
-  --sidebar-border: 217 33% 17%;
-  --sidebar-ring: 217 91% 53%;
+  --sidebar-accent: 241 24% 21%;
+  --sidebar-accent-foreground: 35 42% 94%;
+  --sidebar-border: 241 18% 27%;
+  --sidebar-ring: 21 82% 61%;
   --sidebar-width: 260px;
   --sidebar-width-collapsed: 64px;
 }

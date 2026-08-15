@@ -5,7 +5,6 @@ import type {
   ForestClassHistoryParams,
   ForestClassRefreshBody,
   ForestClassRefreshData,
-  ForestClassDistrictExportsData,
   ForestClassPublishRasterData,
 } from '@/types/api'
 import { serviceForestClassificationPath } from '@/constant/serviceConstant'
@@ -33,17 +32,8 @@ export default {
   refresh: (data: ForestClassRefreshBody) =>
     apiClient.post<ForestClassRefreshData>(`${serviceForestClassificationPath}/refresh`, data),
 
-  /** GET /forest-classification/snapshots/:id/districts — list N per-district
-   *  download URL + status (migration 040 chia GEE export theo huyện).
-   *  Trả về `{ snapshotId, year, month, attempt, scaleM, total, completed,
-   *  failed, aggregate:{totalHa,forestHa,byClass}, districts:[{...}] }`.
-   */
-  getDistrictExports: (snapshotId: number | string) =>
-    apiClient.get<ForestClassDistrictExportsData>(
-      `${serviceForestClassificationPath}/snapshots/${snapshotId}/districts`
-    ),
-
-  /** POST /forest-classification/snapshots/:id/publish-raster — publish district rasters. */
+  /** POST /forest-classification/snapshots/:id/publish-raster — publish
+   *  snapshot raster (single AOI: toàn TP Cẩm Phả). */
   publishSnapshotRaster: (id: number | string, force?: boolean) =>
     apiClient.post<ForestClassPublishRasterData>(
       `${serviceForestClassificationPath}/snapshots/${id}/publish-raster${force ? '?force=1' : ''}`

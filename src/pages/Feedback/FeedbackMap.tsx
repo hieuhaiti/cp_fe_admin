@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import maplibregl, { type GeoJSONSource, type LngLatBoundsLike } from 'maplibre-gl'
 import type { FeedbackFeatureCollection } from '@/types/api'
+import { buildBasemapStyle } from '@/lib/basemap'
 
 interface FeedbackMapProps {
   data: FeedbackFeatureCollection | null
@@ -63,18 +64,7 @@ export default function FeedbackMap({ data, isLoading, isError, onSelect }: Feed
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          basemap: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
-          },
-        },
-        layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
-      },
+      style: buildBasemapStyle().spec,
       center: [107.95, 14.35],
       zoom: 7,
     })
@@ -142,7 +132,7 @@ export default function FeedbackMap({ data, isLoading, isError, onSelect }: Feed
     }
   }, [data])
 
-  const isEmpty = !isLoading && !isError && (data?.features.length ?? 0) === 0
+  const isEmpty = !isLoading && !isError && (!data || (data?.features?.length ?? 0) === 0)
 
   return (
     <div className="relative h-[min(68vh,680px)] min-h-96 w-full overflow-hidden rounded-md border">

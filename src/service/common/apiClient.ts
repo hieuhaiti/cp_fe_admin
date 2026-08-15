@@ -359,4 +359,8 @@ export function clearTokens() {
   } catch {}
 }
 
+export function getApiBaseUrl() {
+  return API_BASE
+}
+
 export default { get, post, put, patch, del, setTokens, clearTokens }

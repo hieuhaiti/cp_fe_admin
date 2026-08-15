@@ -4,7 +4,7 @@ export type StorageCategory = 'layers' | 'raster' | 'documents' | 'field-photos'
 
 interface PresignedUpload {
   uploadUrl: string
-  objectId: number | string
+  id: number | string
 }
 
 /**
@@ -18,9 +18,9 @@ async function upload(file: File, category: StorageCategory): Promise<number | s
     contentType: file.type || 'application/octet-stream',
     expireSeconds: 900,
   })
-  const { uploadUrl, objectId } = presign.data ?? {}
+  const { uploadUrl, id } = presign.data ?? {}
 
-  if (!uploadUrl || objectId === undefined || objectId === null) {
+  if (!uploadUrl || id === undefined || id === null) {
     throw new Error('Máy chủ không trả về URL tải tệp hoặc mã đối tượng lưu trữ.')
   }
 
@@ -33,8 +33,8 @@ async function upload(file: File, category: StorageCategory): Promise<number | s
     throw new Error(`Tải tệp lên thất bại (${uploadResponse.status}).`)
   }
 
-  await apiClient.post(`/storage/uploads/${encodeURIComponent(String(objectId))}/commit`)
-  return objectId
+  await apiClient.post(`/storage/uploads/${encodeURIComponent(String(id))}/commit`)
+  return id
 }
 
 export default { upload }

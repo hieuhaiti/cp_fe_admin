@@ -1,4 +1,5 @@
 import { useForm, type SubmitHandler } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import PageLayout from '@/layout/pageLayout'
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authService, useApiMutation } from '@/service'
+import { useAuthStore } from '@/stores/common/useAuthStore'
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/
 
@@ -39,6 +41,8 @@ const passwordSchema = z
 type ChangePasswordForm = z.infer<typeof passwordSchema>
 
 export default function ChangePasswordPage() {
+  const navigate = useNavigate()
+  const storeLogout = useAuthStore((s) => s.logout)
   const {
     register,
     handleSubmit,
@@ -62,6 +66,8 @@ export default function ChangePasswordPage() {
     {
       onSuccess: () => {
         reset()
+        storeLogout()
+        navigate('/login', { replace: true })
       },
     },
     true

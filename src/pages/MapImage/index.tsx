@@ -180,8 +180,8 @@ export default function MapImagePage() {
                 <TableCell>{item.createdAt ? formatDate(item.createdAt) : '-'}</TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    {canUpdate && <Button variant="ghost" size="icon" title="Chỉnh sửa" onClick={(event) => { event.stopPropagation(); setSelectedId(item.id); setFormOpen(true) }}><Pencil className="size-4" /></Button>}
-                    {canDelete && <Button variant="ghost" size="icon" title="Xóa" onClick={(event) => { event.stopPropagation(); setDeleteItem(item) }}><Trash2 className="size-4 text-destructive" /></Button>}
+                    {canUpdate && <Button variant="ghost" size="icon" tooltip="Chỉnh sửa" onClick={(event) => { event.stopPropagation(); setSelectedId(item.id); setFormOpen(true) }}><Pencil className="size-4" /></Button>}
+                    {canDelete && <Button variant="ghost" size="icon" tooltip="Xóa" onClick={(event) => { event.stopPropagation(); setDeleteItem(item) }}><Trash2 className="size-4 text-destructive" /></Button>}
                   </div>
                 </TableCell>
               </TableRow>

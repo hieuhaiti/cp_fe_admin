@@ -343,10 +343,10 @@ export default function FieldMeasurementsPage() {
                 <SelectItem value="50">50</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={exportGeoJson} title="Xuất GeoJSON đã xác minh">
+            <Button variant="outline" onClick={exportGeoJson} tooltip="Xuất GeoJSON đã xác minh">
               <Download className="size-4" /> GeoJSON
             </Button>
-            <Button variant="outline" onClick={exportXlsx} title="Xuất Excel đã xác minh">
+            <Button variant="outline" onClick={exportXlsx} tooltip="Xuất Excel đã xác minh">
               <Download className="size-4" /> Excel
             </Button>
           </div>

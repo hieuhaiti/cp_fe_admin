@@ -1,407 +1,664 @@
-import { floodService, statisticsService, useApiQuery } from '@/service'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Trees, Waves, Layers3, MessageSquareWarning, RefreshCcw, ExternalLink } from 'lucide-react'
-import { buildGeoserverPreviewUrl } from '@/lib/geoserver'
+import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts'
+import {
+  citizenFeedbackService,
+  floodService,
+  forestClassificationService,
+  newsCommentService,
+  userService,
+  useApiQuery,
+} from '@/service'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  MessageSquareWarning,
+  MessagesSquare,
+  Users,
+  Trees,
+  Mountain,
+  Waves,
+  RefreshCcw,
+  ArrowRight,
+  Loader2,
+} from 'lucide-react'
 import { formatDateTime } from '@/lib/date'
 import type {
-  DashboardDistrictCoverage,
-  DashboardForestClassificationBlock,
-  DashboardStats,
+  ApiResponse,
+  CitizenFeedback,
+  CitizenFeedbackListData,
   FloodDashboard,
+  ForestClassLatestData,
+  NewsComment,
+  NewsCommentListData,
+  User,
+  UserListData,
 } from '@/types/api'
+
+/**
+ * Dashboard tổng hợp cho admin.
+ *
+ * 5 khối theo yêu cầu:
+ * 1. Phản ánh hiện trường  — count + list mới nhất
+ * 2. Comment chờ duyệt      — count + list mới nhất
+ * 3. Người dùng             — total + chart tăng trưởng theo tháng
+ * 4. Rừng + Mỏ              — KPI diện tích, tỉ lệ, kỳ
+ * 5. Ngập lụt & thủy văn    — trạng thái 5 mô-đun M1–M5
+ *
+ * Dashboard chỉ đọc dữ liệu — mọi thao tác quản trị nằm ở trang chuyên đề tương
+ * ứng. Mỗi khối có link "Xem chi tiết →" mở page quản lý.
+ */
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 const FEEDBACK_STATUS_LABEL: Record<string, string> = {
   new: 'Mới',
+  pending: 'Chờ xử lý',
   in_progress: 'Đang xử lý',
+  under_review: 'Đang xem xét',
   resolved: 'Đã xử lý',
+  approved: 'Đã tiếp nhận',
   rejected: 'Từ chối',
 }
-
-const FEEDBACK_STATUS_CLASS: Record<string, string> = {
-  new: 'border-warning/30 bg-warning/10 text-warning',
-  in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
-  resolved: 'bg-green-50 text-green-700 border-green-200',
-  rejected: 'bg-red-50 text-red-700 border-red-200',
+const FEEDBACK_STATUS_TONE: Record<string, string> = {
+  new: 'bg-amber-100 text-amber-900 border-amber-200',
+  pending: 'bg-amber-100 text-amber-900 border-amber-200',
+  in_progress: 'bg-sky-100 text-sky-900 border-sky-200',
+  under_review: 'bg-sky-100 text-sky-900 border-sky-200',
+  resolved: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+  approved: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+  rejected: 'bg-red-100 text-red-900 border-red-200',
 }
 
-function formatHa(v?: number) {
-  if (v == null) return '—'
-  // Từ 100 ha trở lên đổi sang km² (1 km² = 100 ha) — thống nhất với client.
-  if (Math.abs(v) >= 100) {
-    return (v / 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' km²'
+const FLOOD_MODULE_INFO: Array<{ code: string; short: string; name: string }> = [
+  { code: 'event', short: 'M1', name: 'Hiện trạng ngập' },
+  { code: 'hand', short: 'M2', name: 'Nhạy cảm địa hình' },
+  { code: 'rain', short: 'M3', name: 'Chỉ số nguy cơ theo mưa' },
+  { code: 'impact', short: 'M4', name: 'Tác động ngập' },
+  { code: 'trend', short: 'M5', name: 'Xu thế nhiều năm' },
+]
+const FLOOD_STATUS_LABEL: Record<string, string> = {
+  QUEUED: 'Đang chờ',
+  COMPUTING: 'Đang tính',
+  EXPORTING: 'Đang xuất',
+  HARVESTING: 'Đang thu nhận',
+  VALIDATING: 'Đang kiểm định',
+  ARCHIVING: 'Đang lưu',
+  PUBLISHING: 'Đang công bố',
+  SUCCEEDED: 'Hoàn thành',
+  FAILED: 'Thất bại',
+  CANCELLED: 'Đã hủy',
+  DLQ: 'Cần xử lý',
+}
+const FLOOD_STATUS_TONE: Record<string, string> = {
+  SUCCEEDED: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+  FAILED: 'bg-red-100 text-red-900 border-red-200',
+  CANCELLED: 'bg-slate-100 text-slate-700 border-slate-200',
+  DLQ: 'bg-red-100 text-red-900 border-red-200',
+}
+
+const formatHa = (v: number | null | undefined) =>
+  v == null || Number.isNaN(Number(v))
+    ? '—'
+    : `${Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha`
+const formatPct = (v: number | null | undefined) =>
+  v == null || Number.isNaN(Number(v))
+    ? '—'
+    : `${Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`
+const formatCount = (v: number | null | undefined) =>
+  v == null || Number.isNaN(Number(v)) ? '—' : Number(v).toLocaleString('vi-VN')
+const formatPeriod = (year?: number, month?: number) =>
+  year && month ? `${String(month).padStart(2, '0')}/${year}` : '—'
+
+// Aggregate `User.createdAt` into `{ month: 'MM/YY', count }` for last N months.
+function bucketUsersByMonth(users: User[], monthsBack = 6) {
+  const now = new Date()
+  const buckets: Array<{ key: string; label: string; count: number }> = []
+  for (let i = monthsBack - 1; i >= 0; i -= 1) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    const label = `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCFullYear()).slice(-2)}`
+    buckets.push({ key, label, count: 0 })
   }
-  return v.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' ha'
+  const byKey = new Map(buckets.map((b) => [b.key, b]))
+  for (const u of users) {
+    const iso = u.createdAt || u.created_at
+    if (!iso) continue
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) continue
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    const bucket = byKey.get(key)
+    if (bucket) bucket.count += 1
+  }
+  return buckets
 }
 
-function formatPct(v?: number) {
-  if (v == null) return '—'
-  return v.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + '%'
-}
+// ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const dashboardQuery = useApiQuery(['stats-dashboard'], () =>
-    statisticsService.getDashboard({ force: false })
+  // 1. Feedback — pull top 5 for list + tổng qua metadata.total
+  const feedbackQuery = useApiQuery(
+    ['dashboard', 'feedback'],
+    () => citizenFeedbackService.getAll({ page: 1, limit: 5 }),
+    {},
+    false,
+    false
   )
-  const floodQuery = useApiQuery(['flood', 'dashboard'], () => floodService.getDashboard(), {}, false)
-  const forceRefetch = () =>
-    statisticsService.getDashboard({ force: true }).then(() => dashboardQuery.refetch())
 
-  const data = (dashboardQuery.data?.data ?? {}) as DashboardStats
-  const forest = data.forest
-  const feedback = data.feedback
-  const forestClassification = data.forestClassification
-  const flood = floodQuery.data?.data
+  // 2. Unmoderated comments — status='pending'
+  const commentQuery = useApiQuery(
+    ['dashboard', 'unmoderated-comments'],
+    () => newsCommentService.getAll({ page: 1, limit: 5, status: 'pending' }),
+    {},
+    false,
+    false
+  )
+
+  // 3. Users — pull latest 100 (backend cap) để dựng chart 6 tháng gần nhất
+  const userQuery = useApiQuery(
+    ['dashboard', 'users'],
+    () => userService.getAll({ page: 1, limit: 100, sortBy: 'created_at', sortOrder: 'DESC' }),
+    {},
+    false,
+    false
+  )
+
+  // 4. Forest classification latest snapshot
+  const forestQuery = useApiQuery(
+    ['dashboard', 'forest'],
+    () => forestClassificationService.getLatest(),
+    {},
+    false,
+    false
+  )
+
+  // 5. Flood dashboard (modules + published layers)
+  const floodQuery = useApiQuery(['dashboard', 'flood'], () => floodService.getDashboard(), {}, false)
+
+  const feedbackRes = feedbackQuery.data as ApiResponse<CitizenFeedbackListData> | undefined
+  const commentRes = commentQuery.data as ApiResponse<NewsCommentListData> | undefined
+  const userRes = userQuery.data as ApiResponse<UserListData> | undefined
+  const forestRes = forestQuery.data as ApiResponse<ForestClassLatestData> | undefined
+  const floodRes = floodQuery.data as ApiResponse<FloodDashboard> | undefined
+
+  const feedbackItems = (feedbackRes?.data?.items ?? []) as CitizenFeedback[]
+  const feedbackTotal = Number(feedbackRes?.metadata?.total ?? feedbackItems.length) || 0
+
+  const commentItems = (commentRes?.data?.items ?? commentRes?.data?.comments ?? []) as NewsComment[]
+  const commentTotal =
+    Number(commentRes?.metadata?.total ?? commentRes?.data?.pagination?.total ?? 0) || 0
+
+  const users = (userRes?.data?.items ?? userRes?.data?.users ?? []) as User[]
+  const userTotal =
+    Number(userRes?.metadata?.total ?? userRes?.data?.pagination?.total ?? users.length) || 0
+  const userBuckets = useMemo(() => bucketUsersByMonth(users, 6), [users])
+
+  const forestSnapshot = forestRes?.data?.snapshot ?? null
+  const forestSummary = forestSnapshot?.provinceSummary ?? undefined
+  const forestHa = Number(forestSummary?.forestHa ?? 0)
+  const forestPct = Number(forestSummary?.forestPercent ?? 0)
+  const mineHa = Number(forestSummary?.mineHa ?? 0)
+  const minePct = Number(forestSummary?.minePercent ?? 0)
+  const totalHa = Number(forestSummary?.totalHa ?? 0)
+
+  const flood = floodRes?.data
+  const floodModules = (flood?.modules ?? {}) as FloodDashboard['modules']
+  const floodPublishedCount = flood?.layers?.length ?? 0
+  const floodSucceededCount = Object.values(floodModules).filter(
+    (m) => m?.status === 'SUCCEEDED'
+  ).length
+
+  const anyLoading =
+    feedbackQuery.isLoading ||
+    commentQuery.isLoading ||
+    userQuery.isLoading ||
+    forestQuery.isLoading ||
+    floodQuery.isLoading
+  const refetchAll = () => {
+    feedbackQuery.refetch()
+    commentQuery.refetch()
+    userQuery.refetch()
+    forestQuery.refetch()
+    floodQuery.refetch()
+  }
 
   return (
     <div className="flex-1 space-y-6 overflow-y-auto p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold">Bảng điều khiển</h1>
           <p className="text-muted-foreground text-sm">
-            Tổng hợp phân loại rừng, phản ánh và ngập lụt tại thành phố Cẩm Phả
+            Tổng hợp phản ánh, bình luận, người dùng, rừng/mỏ và ngập lụt của TP Cẩm Phả.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {data.computedAt && (
-            <span className="text-muted-foreground text-xs">
-              Cập nhật {formatDateTime(data.computedAt)}
-            </span>
-          )}
-          <Button variant="outline" onClick={forceRefetch} disabled={dashboardQuery.isFetching}>
-            <RefreshCcw className="mr-1 size-4" /> Làm mới
-          </Button>
-        </div>
+        <Button variant="outline" onClick={refetchAll} disabled={anyLoading}>
+          <RefreshCcw className={`size-4 ${anyLoading ? 'animate-spin' : ''}`} /> Làm mới
+        </Button>
       </div>
 
-      {/* Rừng */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
-          icon={<Trees className="text-emerald-600" />}
-          label="Tổng diện tích rừng"
-          value={formatHa(forest?.totalForestHa)}
+      {/* ── Hàng KPI: 5 số nổi bật ─────────────────────────────────────────── */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <KpiCard
+          icon={<MessageSquareWarning className="size-5 text-amber-600" />}
+          label="Phản ánh hiện trường"
+          value={formatCount(feedbackTotal)}
+          hint="Tổng số phản ánh của người dân"
+          tone="bg-amber-50"
         />
-        <StatCard
-          icon={<Trees className="text-emerald-500" />}
-          label="Rừng tự nhiên"
-          value={formatHa(forest?.naturalForestHa)}
+        <KpiCard
+          icon={<MessagesSquare className="size-5 text-sky-600" />}
+          label="Bình luận chờ duyệt"
+          value={formatCount(commentTotal)}
+          hint="Bình luận báo chí chưa kiểm duyệt"
+          tone="bg-sky-50"
         />
-        <StatCard
-          icon={<Trees className="text-lime-600" />}
-          label="Rừng trồng"
-          value={formatHa(forest?.plantedForestHa)}
+        <KpiCard
+          icon={<Users className="size-5 text-indigo-600" />}
+          label="Người dùng"
+          value={formatCount(userTotal)}
+          hint="Tổng tài khoản trên hệ thống"
+          tone="bg-indigo-50"
         />
-        <StatCard
-          icon={<Trees className="text-emerald-700" />}
-          label="Độ che phủ toàn tỉnh"
-          value={formatPct(forest?.provinceCoveragePct)}
+        <KpiCard
+          icon={<Trees className="size-5 text-emerald-600" />}
+          label="Diện tích rừng"
+          value={forestSummary ? formatHa(forestHa) : '—'}
+          hint={
+            forestSummary
+              ? `${formatPct(forestPct)} · Kỳ ${formatPeriod(forestSnapshot?.year, forestSnapshot?.month)}`
+              : 'Chưa có kết quả phân loại'
+          }
+          tone="bg-emerald-50"
+        />
+        <KpiCard
+          icon={<Mountain className="size-5 text-stone-700" />}
+          label="Diện tích khu mỏ"
+          value={forestSummary ? formatHa(mineHa) : '—'}
+          hint={
+            forestSummary
+              ? `${formatPct(minePct)} · Tổng ${formatHa(totalHa)}`
+              : 'Chưa có kết quả phân loại'
+          }
+          tone="bg-stone-50"
         />
       </div>
 
-      {/* Feedback + forest classification + flood */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-3 flex items-center gap-2">
-              <MessageSquareWarning className="text-warning size-5" />
-              <h2 className="text-lg font-semibold">Phản ánh</h2>
-              <span className="text-muted-foreground ml-auto text-sm">
-                Tổng: <strong>{feedback?.total ?? 0}</strong>
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(feedback?.byStatus ?? {}).map(([k, v]) => (
-                <div
-                  key={k}
-                  className={`rounded-md border px-3 py-2 text-sm ${
-                    FEEDBACK_STATUS_CLASS[k] ?? 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <span>{FEEDBACK_STATUS_LABEL[k] ?? k}</span>
-                  <span className="ml-2 font-bold">{v}</span>
-                </div>
-              ))}
-              {!Object.keys(feedback?.byStatus ?? {}).length && (
-                <p className="text-muted-foreground text-sm">Chưa có phản ánh nào.</p>
-              )}
-            </div>
+      {/* ── Hàng 2: Chart người dùng + trạng thái ngập lụt ───────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="size-4 text-indigo-600" />
+              Người dùng đăng ký mới theo tháng
+            </CardTitle>
+            <CardDescription>
+              6 tháng gần nhất — tổng hợp từ {formatCount(users.length)} tài khoản mới nhất.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {userQuery.isLoading ? (
+              <div className="flex h-48 items-center justify-center">
+                <Loader2 className="text-muted-foreground size-6 animate-spin" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={userBuckets} margin={{ top: 8, right: 12, bottom: 4, left: -12 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <RechartsTooltip
+                    formatter={(value) => [`${Number(value) || 0} tài khoản`, 'Đăng ký mới']}
+                    labelFormatter={(label) => `Tháng ${label}`}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {userBuckets.map((_, index) => (
+                      <Cell key={index} fill="#6366f1" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
-        <ForestClassificationDashboardCard data={forestClassification} />
-        <FloodDashboardCard flood={flood} />
+        <FloodStatusCard
+          modules={floodModules}
+          publishedCount={floodPublishedCount}
+          succeededCount={floodSucceededCount}
+          loading={floodQuery.isLoading}
+        />
       </div>
 
-      {/* Districts tables */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="mb-3 text-lg font-semibold text-emerald-700">
-              Huyện có độ che phủ cao nhất
-            </h2>
-            <DistrictTable districts={forest?.topCoverageDistricts ?? []} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="mb-3 text-lg font-semibold text-red-700">
-              Huyện có độ che phủ thấp nhất
-            </h2>
-            <DistrictTable districts={forest?.lowCoverageDistricts ?? []} />
-          </CardContent>
-        </Card>
+      {/* ── Hàng 3: Chart rừng/mỏ + danh sách phản ánh + comment ───────────── */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <ForestVsMineCard
+          forestHa={forestHa}
+          mineHa={mineHa}
+          totalHa={totalHa}
+          period={formatPeriod(forestSnapshot?.year, forestSnapshot?.month)}
+          loading={forestQuery.isLoading}
+        />
+        <RecentFeedbackCard
+          items={feedbackItems}
+          total={feedbackTotal}
+          loading={feedbackQuery.isLoading}
+        />
+        <UnmoderatedCommentsCard
+          items={commentItems}
+          total={commentTotal}
+          loading={commentQuery.isLoading}
+        />
       </div>
     </div>
   )
 }
 
-function FloodDashboardCard({ flood }: { flood?: FloodDashboard }) {
-  const modules = Object.values(flood?.modules ?? {})
-  const succeeded = modules.filter((item) => item?.status === 'SUCCEEDED').length
-  const running = modules.filter((item) =>
-    item && !['SUCCEEDED', 'FAILED', 'CANCELLED', 'DLQ'].includes(item.status)
-  ).length
-  const latest = modules
-    .filter((item) => item?.finishedAt)
-    .sort((a, b) => Date.parse(b?.finishedAt || '') - Date.parse(a?.finishedAt || ''))[0]
+// ─── Sub-components ────────────────────────────────────────────────────────
 
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="mb-3 flex items-center gap-2">
-          <Waves className="size-5 text-sky-600" />
-          <h2 className="text-lg font-semibold">Ngập lụt và thủy văn</h2>
-          <span className="ml-auto rounded bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700">
-            M1–M5
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <Metric label="Hoàn thành" value={`${succeeded}/5`} />
-          <Metric label="Đang chạy" value={String(running)} />
-          <Metric label="Lớp công bố" value={String(flood?.layers?.length ?? 0)} />
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Cập nhật gần nhất: {latest?.finishedAt ? formatDateTime(latest.finishedAt) : 'chưa có dữ liệu'}
-        </p>
-        <p className="mt-1 text-[11px] text-sky-800">
-          M3 là chỉ số nguy cơ tương đối, không phải xác suất.
-        </p>
-        <div className="mt-3">
-          <a href="/flood" className="text-primary text-xs font-medium hover:underline">
-            Mở trung tâm vận hành →
-          </a>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ForestClassificationDashboardCard({
-  data,
+function KpiCard({
+  icon,
+  label,
+  value,
+  hint,
+  tone,
 }: {
-  data?: DashboardForestClassificationBlock
+  icon: React.ReactNode
+  label: string
+  value: string
+  hint?: string
+  tone?: string
 }) {
-  if (!data?.available) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="mb-3 flex items-center gap-2">
-            <Layers3 className="size-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold">Phân loại rừng</h2>
-          </div>
-          <p className="text-muted-foreground text-sm">Chưa có dữ liệu phân loại rừng.</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const comparison = data.comparison
-  const change = comparison?.forestDeltaHa
-  const changeClass =
-    change == null ? 'text-muted-foreground' : change < 0 ? 'text-destructive' : 'text-success'
-  // Ưu tiên field mới `mapReady` + đếm huyện (migration 040 chia per-district),
-  // fallback legacy `geoserverLayer`/`geeDownloadUrl` cho snapshot cũ.
-  const drTotal = data.districtRasterTotal ?? 0
-  const drReady = data.districtRasterReady ?? 0
-  const mapReady =
-    data.mapReady === true || (drTotal > 0 && drReady === drTotal) || Boolean(data.geoserverLayer)
-
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="mb-3 flex items-center gap-2">
-          <Layers3 className="size-5 text-emerald-600" />
-          <h2 className="text-lg font-semibold">Phân loại rừng</h2>
-          {mapReady ? (
-            <span className="bg-success/10 text-success ml-auto rounded px-2 py-0.5 text-[10px] font-medium">
-              {drTotal > 0 ? `Bản đồ sẵn sàng · ${drReady}/${drTotal} huyện` : 'Bản đồ sẵn sàng'}
-            </span>
-          ) : null}
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <Metric label="Rừng" value={formatHa(data.forestAreaHa ?? undefined)} />
-          <Metric label="Độ phủ rừng" value={formatPct(data.forestCoveragePct ?? undefined)} />
-          <Metric
-            label="Độ chính xác"
-            value={data.oobAccuracy != null ? `${data.oobAccuracy.toFixed(1)}%` : '—'}
-          />
-        </div>
-
-        <div className="mt-3 space-y-1 text-xs">
-          <p className="text-muted-foreground">
-            Kỳ:{' '}
-            <strong className="text-foreground">
-              {data.year}-{String(data.month ?? '').padStart(2, '0')}
-            </strong>
-            {' · '}Tổng vùng:{' '}
-            <strong className="text-foreground">{formatHa(data.totalAreaHa ?? undefined)}</strong>
-          </p>
-          <p className="text-muted-foreground">
-            Lớp chiếm ưu thế:{' '}
-            <strong className="text-foreground">{data.dominantClassName ?? '—'}</strong>
-          </p>
-          {comparison && (
-            <p className="text-muted-foreground">
-              So với {comparison.previousYear}-{String(comparison.previousMonth).padStart(2, '0')}:{' '}
-              <strong className={changeClass}>
-                {change == null ? '—' : `${change > 0 ? '+' : ''}${formatHa(change)}`}
-                {comparison.forestChangePct != null
-                  ? ` (${comparison.forestChangePct > 0 ? '+' : ''}${comparison.forestChangePct.toFixed(2)}%)`
-                  : ''}
-              </strong>
-            </p>
-          )}
-        </div>
-
-        {/* List link mở xem trước từng huyện trên máy chủ bản đồ. */}
-        <PublishedDistrictLinks
-          districts={data.publishedDistricts}
-          emptyHint="Chưa có huyện nào được phân phát ảnh bản đồ."
-        />
-
-        <div className="mt-3">
-          <a
-            href="/forest-classification"
-            className="text-primary text-xs font-medium hover:underline"
-          >
-            Xem chi tiết phân loại →
-          </a>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-/**
- * Danh sách link mở xem trước từng huyện trên máy chủ bản đồ.
- * Nhận `publishedDistricts` từ dashboard block; mỗi huyện có `layer` FQN
- * (dạng `workspace:store_name`). FE build preview URL qua `buildGeoserverPreviewUrl`
- * — trả về OpenLayers viewer, mở tab mới. Nếu server chưa cấu hình
- * `VITE_GEOSERVER_URL` (URL null) thì bỏ qua huyện đó.
- */
-function PublishedDistrictLinks({
-  districts,
-  emptyHint,
-}: {
-  districts?: Array<{ code: string | null; name: string | null; layer: string }>
-  emptyHint?: string
-}) {
-  const items = (districts || [])
-    .map((d) => ({
-      key: d.code || d.name || d.layer,
-      label: d.name || d.code || d.layer,
-      url: buildGeoserverPreviewUrl(d.layer),
-    }))
-    .filter((it): it is { key: string; label: string; url: string } => Boolean(it.url))
-
-  if (!items.length) {
-    return emptyHint ? (
-      <p className="text-muted-foreground mt-3 text-[11px] italic">{emptyHint}</p>
-    ) : null
-  }
-
-  return (
-    <div className="mt-3">
-      <p className="text-muted-foreground mb-1 text-[10px] tracking-wider uppercase">
-        Mở xem trước theo huyện
-      </p>
-      <div className="flex flex-wrap gap-1">
-        {items.map((it) => (
-          <a
-            key={it.key}
-            href={it.url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="border-primary/20 hover:bg-primary/10 hover:text-primary text-foreground/80 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] transition-colors"
-            title={`Mở ${it.label} trên máy chủ bản đồ`}
-          >
-            <span className="max-w-32 truncate">{it.label}</span>
-            <ExternalLink size={10} />
-          </a>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border p-2">
-      <p className="text-muted-foreground text-[10px]">{label}</p>
-      <p className="truncate text-sm font-bold" title={value}>
-        {value}
-      </p>
-    </div>
-  )
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <Card>
+    <Card className={tone}>
       <CardContent className="p-4">
-        <div className="mb-1 flex items-center gap-2">
+        <div className="text-muted-foreground flex items-center gap-2 text-xs uppercase">
           {icon}
-          <p className="text-muted-foreground text-xs">{label}</p>
+          <span>{label}</span>
         </div>
-        <p className="text-2xl font-bold">{value}</p>
+        <div className="mt-2 truncate text-2xl font-semibold" title={value}>
+          {value}
+        </div>
+        {hint ? <div className="text-muted-foreground mt-1 truncate text-xs">{hint}</div> : null}
       </CardContent>
     </Card>
   )
 }
 
-function DistrictTable({ districts }: { districts: DashboardDistrictCoverage[] }) {
-  if (!districts.length) {
-    return <p className="text-muted-foreground text-sm">Chưa có dữ liệu.</p>
-  }
+function FloodStatusCard({
+  modules,
+  publishedCount,
+  succeededCount,
+  loading,
+}: {
+  modules: FloodDashboard['modules']
+  publishedCount: number
+  succeededCount: number
+  loading: boolean
+}) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Huyện</TableHead>
-          <TableHead className="text-right">Độ che phủ</TableHead>
-          <TableHead className="text-right">Diện tích rừng</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {districts.map((d) => (
-          <TableRow key={d.unitCode}>
-            <TableCell className="font-medium">{d.name}</TableCell>
-            <TableCell className="text-right">{formatPct(d.coveragePct)}</TableCell>
-            <TableCell className="text-right">
-              {d.forestAreaHa != null ? formatHa(d.forestAreaHa) : '—'}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Waves className="size-4 text-sky-600" />
+          Ngập lụt & thủy văn
+        </CardTitle>
+        <CardDescription>
+          {succeededCount}/5 mô-đun hoàn thành · {publishedCount} lớp đã công bố
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-2">
+        {loading ? (
+          <div className="flex h-48 items-center justify-center">
+            <Loader2 className="text-muted-foreground size-5 animate-spin" />
+          </div>
+        ) : (
+          <>
+            {FLOOD_MODULE_INFO.map((info) => {
+              const module = modules?.[info.code as keyof typeof modules]
+              const status = module?.status
+              const label = status ? FLOOD_STATUS_LABEL[status] || status : 'Chưa có'
+              return (
+                <div
+                  key={info.code}
+                  className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground text-xs">{info.short}</span>
+                    <span className="ml-2 font-medium">{info.name}</span>
+                  </div>
+                  <Badge variant="outline" className={status ? FLOOD_STATUS_TONE[status] || '' : ''}>
+                    {label}
+                  </Badge>
+                </div>
+              )
+            })}
+            <Link
+              to="/flood"
+              className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+            >
+              Mở trung tâm vận hành <ArrowRight className="size-3" />
+            </Link>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ForestVsMineCard({
+  forestHa,
+  mineHa,
+  totalHa,
+  period,
+  loading,
+}: {
+  forestHa: number
+  mineHa: number
+  totalHa: number
+  period: string
+  loading: boolean
+}) {
+  const data = [
+    { label: 'Rừng', value: forestHa, fill: '#059669' },
+    { label: 'Khu mỏ', value: mineHa, fill: '#57534e' },
+    { label: 'Khác', value: Math.max(totalHa - forestHa - mineHa, 0), fill: '#94a3b8' },
+  ]
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Trees className="size-4 text-emerald-600" />
+          Rừng & Mỏ tại Cẩm Phả
+        </CardTitle>
+        <CardDescription>
+          Kỳ {period} · Tổng phân loại {formatHa(totalHa)}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-2">
+        {loading ? (
+          <div className="flex h-48 items-center justify-center">
+            <Loader2 className="text-muted-foreground size-5 animate-spin" />
+          </div>
+        ) : totalHa === 0 ? (
+          <p className="text-muted-foreground py-6 text-center text-sm">
+            Chưa có kết quả phân loại rừng.
+          </p>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -12 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(v) => Number(v).toLocaleString('vi-VN')}
+                />
+                <RechartsTooltip formatter={(value) => [formatHa(Number(value) || 0), 'Diện tích']} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {data.map((entry, index) => (
+                    <Cell key={index} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <Link
+              to="/forest-classification"
+              className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+            >
+              Xem chi tiết phân loại <ArrowRight className="size-3" />
+            </Link>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function RecentFeedbackCard({
+  items,
+  total,
+  loading,
+}: {
+  items: CitizenFeedback[]
+  total: number
+  loading: boolean
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MessageSquareWarning className="size-4 text-amber-600" />
+          Phản ánh mới nhất
+        </CardTitle>
+        <CardDescription>
+          Tổng {formatCount(total)} phản ánh — hiển thị 5 mục gần nhất
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-2">
+        {loading ? (
+          <div className="flex h-48 items-center justify-center">
+            <Loader2 className="text-muted-foreground size-5 animate-spin" />
+          </div>
+        ) : items.length === 0 ? (
+          <p className="text-muted-foreground py-6 text-center text-sm">Chưa có phản ánh nào.</p>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((item) => {
+              const iso = item.createdAt || item.created_at
+              return (
+                <li key={item.id} className="rounded-md border p-2 text-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate font-medium" title={item.title}>
+                      {item.title || 'Không tiêu đề'}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={FEEDBACK_STATUS_TONE[item.status] || 'border-slate-200'}
+                    >
+                      {FEEDBACK_STATUS_LABEL[item.status] || item.status}
+                    </Badge>
+                  </div>
+                  {iso ? (
+                    <p className="text-muted-foreground mt-1 text-xs">{formatDateTime(iso)}</p>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        <Link
+          to="/feedbacks"
+          className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+        >
+          Xem toàn bộ phản ánh <ArrowRight className="size-3" />
+        </Link>
+      </CardContent>
+    </Card>
+  )
+}
+
+function UnmoderatedCommentsCard({
+  items,
+  total,
+  loading,
+}: {
+  items: NewsComment[]
+  total: number
+  loading: boolean
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MessagesSquare className="size-4 text-sky-600" />
+          Bình luận chờ duyệt
+        </CardTitle>
+        <CardDescription>
+          Tổng {formatCount(total)} bình luận đang chờ — hiển thị 5 mục gần nhất
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-2">
+        {loading ? (
+          <div className="flex h-48 items-center justify-center">
+            <Loader2 className="text-muted-foreground size-5 animate-spin" />
+          </div>
+        ) : items.length === 0 ? (
+          <p className="text-muted-foreground py-6 text-center text-sm">
+            Không có bình luận nào chờ duyệt.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((comment) => {
+              const c = comment as NewsComment & {
+                content?: string
+                userName?: string
+                user_name?: string
+                createdAt?: string
+                created_at?: string
+                newsTitle?: string | null
+                news_title?: string | null
+              }
+              const name = c.userName || c.user_name || 'Ẩn danh'
+              const iso = c.createdAt || c.created_at
+              const newsTitle = c.newsTitle || c.news_title
+              return (
+                <li key={comment.id} className="rounded-md border p-2 text-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 flex-1 font-medium">{name}</span>
+                    {iso ? (
+                      <span className="text-muted-foreground text-xs">{formatDateTime(iso)}</span>
+                    ) : null}
+                  </div>
+                  {c.content ? (
+                    <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{c.content}</p>
+                  ) : null}
+                  {newsTitle ? (
+                    <p className="text-muted-foreground mt-1 truncate text-[11px] italic">
+                      Bài viết: {newsTitle}
+                    </p>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        <Link
+          to="/news-comments"
+          className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+        >
+          Vào trang duyệt bình luận <ArrowRight className="size-3" />
+        </Link>
+      </CardContent>
+    </Card>
   )
 }

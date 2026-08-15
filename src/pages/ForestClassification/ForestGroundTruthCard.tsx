@@ -5,15 +5,16 @@ import { forestClassificationService, useApiQuery, useApiMutation } from '@/serv
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDate } from '@/lib/date'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 
 /**
- * Ground truth card cho phân loại lớp phủ schema v5.3.
+ * Ground truth card cho phân loại lớp phủ Cẩm Phả 12 lớp.
  *
  * Đặc thù ground truth phân loại rừng:
- *   - Thang: class_id 0-12 thay vì severity 1-5
+ *   - Thang: class_id 0-11 thay vì severity 1-5
  *   - "observedAt" thay vì "occurredAt" (đo đạc chứ không phải sự cố)
  *   - Point vẫn có class_id — điểm mẫu đơn lẻ (ranger đo tại tọa độ X,Y)
  *
@@ -21,21 +22,20 @@ import { useAuthStore } from '@/stores/common/useAuthStore'
  * blend vào RF training với trọng số 50% → tăng accuracy khi có nhãn thật.
  */
 
-// Palette + name lấy từ configs/forest-classification.js.
+// Đồng bộ với CLASS_DEFINITIONS của server/src/services/forest-classification/pipeline.js.
 const CLASSES: Array<{ id: number; name: string; color: string }> = [
-  { id: 0,  name: 'Không có ảnh',                    color: '#D9D9D9' },
-  { id: 1,  name: 'Đất khác',                        color: '#FFBEE8' },
-  { id: 2,  name: 'Cây công nghiệp',                 color: '#FFEBB0' },
-  { id: 3,  name: 'Đất nông nghiệp',                 color: '#F0E442' },
-  { id: 4,  name: 'Rừng hỗn giao lá rộng, lá kim',   color: '#FEFF73' },
-  { id: 5,  name: 'Rừng lá rộng thường xanh',        color: '#AAFF03' },
-  { id: 6,  name: 'Rừng lá kim',                     color: '#D0FF73' },
-  { id: 7,  name: 'Rừng lá rộng rụng lá',            color: '#E7E600' },
-  { id: 8,  name: 'Rừng tre nứa',                    color: '#4DE600' },
-  { id: 9,  name: 'Rừng trồng',                      color: '#FFAA01' },
-  { id: 10, name: 'Sông, suối, hồ',                  color: '#73B2FF' },
-  { id: 11, name: 'Trảng cỏ, cây bụi',               color: '#55FF00' },
-  { id: 12, name: 'Không xác định',                  color: '#8C8C8C' },
+  { id: 0,  name: 'Nước mặt',                        color: '#1A73E8' },
+  { id: 1,  name: 'Rừng tự nhiên',                   color: '#2D7B2E' },
+  { id: 2,  name: 'Rừng trồng',                      color: '#85C946' },
+  { id: 3,  name: 'Cây bụi / trảng cỏ',              color: '#BFD760' },
+  { id: 4,  name: 'Cây hàng năm',                    color: '#F5E642' },
+  { id: 5,  name: 'Cây lâu năm',                     color: '#F9A825' },
+  { id: 6,  name: 'Khu dân cư',                      color: '#E91E63' },
+  { id: 7,  name: 'Công trình - hạ tầng',            color: '#B71C1C' },
+  { id: 8,  name: 'Đất trống',                       color: '#D7CCC8' },
+  { id: 9,  name: 'Khai trường mỏ',                  color: '#000000' },
+  { id: 10, name: 'Bãi thải mỏ',                     color: '#795548' },
+  { id: 11, name: 'Đất ngập nước / ven biển',        color: '#00BCD4' },
 ]
 
 const classLabel = (id: number) => {
@@ -62,7 +62,7 @@ export default function ForestGroundTruthCard() {
         >
           <div className="flex items-center gap-2">
             <Trees className="h-4 w-4 text-emerald-600" />
-            <h2 className="text-lg font-semibold">Dữ liệu mẫu thực địa (13 lớp)</h2>
+            <h2 className="text-lg font-semibold">Dữ liệu mẫu thực địa (12 lớp)</h2>
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700">
               Cải thiện độ chính xác
             </span>
@@ -122,7 +122,7 @@ function ClassLegend() {
   return (
     <div className="rounded-md border p-2">
       <p className="mb-1.5 text-xs font-semibold text-muted-foreground">
-        13 nhóm lớp phủ (chọn khi thêm dữ liệu)
+        12 nhóm lớp phủ (chọn khi thêm dữ liệu)
       </p>
       <div className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2 md:grid-cols-3">
         {CLASSES.map((c) => (
@@ -144,7 +144,7 @@ function ClassLegend() {
 
 function ZonesSection() {
   const [geojsonText, setGeojsonText] = useState('')
-  const [classId, setClassId] = useState(5)  // mặc định "Rừng lá rộng thường xanh"
+  const [classId, setClassId] = useState(1)  // mặc định "Rừng tự nhiên"
   const [observedAt, setObservedAt] = useState(
     new Date().toISOString().slice(0, 16),
   )
@@ -276,9 +276,14 @@ function ZonesSection() {
                 className="inline-block h-3 w-3 shrink-0 rounded"
                 style={{ backgroundColor: c?.color }}
               />
-              <span className="flex-1 truncate" title={z.name || `Vùng ${z.id}`}>
-                {z.name || `Vùng #${z.id}`} · {classLabel(z.class_id)}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex-1 truncate">
+                    {z.name || `Vùng #${z.id}`} · {classLabel(z.class_id)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{z.name || `Vùng ${z.id}`}</TooltipContent>
+              </Tooltip>
               <span className="text-muted-foreground">{formatDate(z.observed_at)}</span>
               <span className="text-muted-foreground tabular-nums">
                 {Number(z.area_ha).toLocaleString('vi')} ha
@@ -303,7 +308,7 @@ function PointsSection() {
   const now = new Date().toISOString().slice(0, 16)
   const [form, setForm] = useState({
     observedAt: now,
-    classId: 5,
+    classId: 1,
     lng: '',
     lat: '',
     source: 'field_report',

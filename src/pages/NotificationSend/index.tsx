@@ -12,7 +12,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import type {
@@ -30,14 +29,20 @@ import type {
  */
 const CHANNEL_OPTIONS: { value: string; label: string }[] = [
   { value: 'system', label: 'Hệ thống' },
+  { value: 'forest', label: 'Phân loại rừng' },
   { value: 'flood', label: 'Ngập lụt' },
   { value: 'feedback', label: 'Phản ánh' },
   { value: 'comment', label: 'Bình luận' },
   { value: 'news', label: 'Tin tức' },
 ]
 
-const TYPE_GROUPS: { group: string; items: { value: string; label: string }[] }[] = [
+const TYPE_GROUPS: {
+  channel: string
+  group: string
+  items: { value: string; label: string }[]
+}[] = [
   {
+    channel: 'system',
     group: 'Hệ thống',
     items: [
       { value: 'announcement', label: 'Thông báo chung (announcement)' },
@@ -47,13 +52,27 @@ const TYPE_GROUPS: { group: string; items: { value: string; label: string }[] }[
     ],
   },
   {
+    channel: 'forest',
+    group: 'Phân loại rừng',
+    items: [
+      {
+        value: 'forest_classification_published',
+        label: 'Kết quả phân loại rừng mới (forest_classification_published)',
+      },
+      { value: 'forest_change_alert', label: 'Cảnh báo biến động rừng (forest_change_alert)' },
+    ],
+  },
+  {
+    channel: 'flood',
     group: 'Ngập lụt và thủy văn',
     items: [
       { value: 'flood_risk_alert', label: 'Cảnh báo chỉ số nguy cơ ngập (flood_risk_alert)' },
       { value: 'flood_warning', label: 'Cảnh báo ngập (flood_warning)' },
+      { value: 'flood_layer_published', label: 'Lớp ngập mới công bố (flood_layer_published)' },
     ],
   },
   {
+    channel: 'feedback',
     group: 'Phản ánh',
     items: [
       { value: 'feedback_created', label: 'Phản ánh mới (feedback_created)' },
@@ -66,6 +85,7 @@ const TYPE_GROUPS: { group: string; items: { value: string; label: string }[] }[
     ],
   },
   {
+    channel: 'comment',
     group: 'Bình luận',
     items: [
       { value: 'comment_created', label: 'Bình luận mới (comment_created)' },
@@ -75,6 +95,7 @@ const TYPE_GROUPS: { group: string; items: { value: string; label: string }[] }[
     ],
   },
   {
+    channel: 'news',
     group: 'Tin tức',
     items: [{ value: 'news_published', label: 'Tin mới xuất bản (news_published)' }],
   },
@@ -108,8 +129,10 @@ export default function NotificationSendPage() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
 
-  const sendMutation = useApiMutation((payload: SendNotificationBody) =>
-    notificationService.send(payload)
+  const sendMutation = useApiMutation(
+    (payload: SendNotificationBody) => notificationService.send(payload),
+    {},
+    false
   )
 
   const userQueryParams = {
@@ -129,7 +152,7 @@ export default function NotificationSendPage() {
   )
 
   const userData = (usersQuery.data as ApiResponse<UserListData> | undefined)?.data
-  const users = userData?.users ?? userData?.items ?? []
+  const users = useMemo(() => userData?.users ?? userData?.items ?? [], [userData])
 
   const typeLabel = useMemo(() => {
     for (const g of TYPE_GROUPS) {
@@ -143,6 +166,19 @@ export default function NotificationSendPage() {
     () => CHANNEL_OPTIONS.find((c) => c.value === channel)?.label ?? channel,
     [channel]
   )
+
+  const selectedTypeGroup = useMemo(
+    () => TYPE_GROUPS.find((group) => group.channel === channel) ?? TYPE_GROUPS[0],
+    [channel]
+  )
+
+  const onChannelChange = (nextChannel: string) => {
+    setChannel(nextChannel)
+    const group = TYPE_GROUPS.find((item) => item.channel === nextChannel)
+    if (group && !group.items.some((item) => item.value === type)) {
+      setType(group.items[0].value)
+    }
+  }
 
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
@@ -195,8 +231,13 @@ export default function NotificationSendPage() {
     }
 
     sendMutation.mutate(payload, {
-      onSuccess: () => {
-        toast.success('Đã gửi thông báo')
+      onSuccess: (response) => {
+        const recipientCount = Number(response?.data?.recipientCount ?? 0)
+        toast.success(
+          recipientCount > 0
+            ? `Đã gửi thông báo tới ${recipientCount.toLocaleString('vi-VN')} người nhận`
+            : 'Đã xử lý yêu cầu nhưng không có người nhận phù hợp'
+        )
         setTitle('')
         setBody('')
       },
@@ -208,8 +249,8 @@ export default function NotificationSendPage() {
       <div>
         <h1 className="text-2xl font-bold">Gửi thông báo</h1>
         <p className="text-muted-foreground text-sm">
-          Gửi thông báo hệ thống, phản ánh, bình luận, tin tức hoặc cảnh báo ngập tới người dùng cụ
-          thể, theo vai trò hoặc tất cả.
+          Gửi thông báo hệ thống, phân loại rừng, ngập lụt, phản ánh, bình luận hoặc tin tức tới
+          người dùng cụ thể, theo vai trò hoặc tất cả.
         </p>
       </div>
 
@@ -336,7 +377,7 @@ export default function NotificationSendPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width)">
                   {CHANNEL_OPTIONS.map((c) => (
-                    <DropdownMenuItem key={c.value} onSelect={() => setChannel(c.value)}>
+                    <DropdownMenuItem key={c.value} onSelect={() => onChannelChange(c.value)}>
                       {c.label}
                       <span className="text-muted-foreground ml-auto text-xs">{c.value}</span>
                     </DropdownMenuItem>
@@ -355,23 +396,18 @@ export default function NotificationSendPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="max-h-80 w-(--radix-dropdown-menu-trigger-width) overflow-y-auto">
-                  {TYPE_GROUPS.map((g, gi) => (
-                    <div key={g.group}>
-                      {gi > 0 && <DropdownMenuSeparator />}
-                      <DropdownMenuLabel>{g.group}</DropdownMenuLabel>
-                      {g.items.map((it) => (
-                        <DropdownMenuItem
-                          key={it.value}
-                          onSelect={() => setType(it.value)}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <span>{it.label.replace(/\s*\(.*\)$/, '')}</span>
-                          <code className="bg-muted text-muted-foreground rounded px-1 py-0.5 text-[10px]">
-                            {it.value}
-                          </code>
-                        </DropdownMenuItem>
-                      ))}
-                    </div>
+                  <DropdownMenuLabel>{selectedTypeGroup.group}</DropdownMenuLabel>
+                  {selectedTypeGroup.items.map((it) => (
+                    <DropdownMenuItem
+                      key={it.value}
+                      onSelect={() => setType(it.value)}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span>{it.label.replace(/\s*\(.*\)$/, '')}</span>
+                      <code className="bg-muted text-muted-foreground rounded px-1 py-0.5 text-[10px]">
+                        {it.value}
+                      </code>
+                    </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>

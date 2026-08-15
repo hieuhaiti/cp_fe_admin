@@ -22,11 +22,14 @@ export default {
     apiClient.post<NewsComment>(`${serviceNewsPath}/${newsId}/comments`, data),
 
   /** GET /admin/cms/news/:newsId/comments */
-  getAll: (params?: NewsCommentAdminListParams) =>
-    apiClient.get<NewsCommentListData>(
-      `${serviceAdminNewsPath}/${params?.newsId ?? params?.targetId ?? 1}/comments`,
-      { params },
-    ),
+  getAll: (params?: NewsCommentAdminListParams) => {
+    const { newsId, targetId, ...query } = params ?? {}
+    const pathId = newsId ?? targetId ?? 1
+    return apiClient.get<NewsCommentListData>(
+      `${serviceAdminNewsPath}/${pathId}/comments`,
+      { params: query },
+    )
+  },
 
   /** PATCH /admin/cms/news/comments/:commentId */
   approve: (commentId: number | string, data: ApproveCommentBody = { isApproved: true }) =>
