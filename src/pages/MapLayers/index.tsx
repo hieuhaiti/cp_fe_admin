@@ -19,9 +19,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import {
-  ACTIVE_LABEL,
-  ACTIVE_CLASS,
-  ACTIVE_DOT,
+  PUBLISHED_LABEL,
+  PUBLISHED_CLASS,
+  PUBLISHED_DOT,
   getMapLayerCategoryLabel,
 } from '@/constant/mapLayerConstant'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
@@ -87,7 +87,7 @@ export default function MapLayerPage(): JSX.Element {
     sortBy: 'created_at',
     sortOrder: 'DESC' as const,
     ...(searchValue && { q: searchValue }),
-    ...(statusFilter !== 'all' && { is_active: statusFilter === 'true' }),
+    ...(statusFilter !== 'all' && { publish_status: statusFilter }),
     ...(geometryFilter !== 'all' && { geometry_type: geometryFilter }),
   }
 
@@ -219,8 +219,8 @@ export default function MapLayerPage(): JSX.Element {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="true">Đang hoạt động</SelectItem>
-                <SelectItem value="false">Ngừng hoạt động</SelectItem>
+                <SelectItem value="published">Đã công bố</SelectItem>
+                <SelectItem value="draft">Chưa công bố</SelectItem>
               </SelectContent>
             </Select>
 
@@ -313,9 +313,9 @@ export default function MapLayerPage(): JSX.Element {
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1">
                       <StatusDotBadge
-                        label={ACTIVE_LABEL[String(layer.is_active)]}
-                        badgeClass={ACTIVE_CLASS[String(layer.is_active)]}
-                        dotClass={ACTIVE_DOT[String(layer.is_active)]}
+                        label={PUBLISHED_LABEL[String(layer.publish_status === 'published')]}
+                        badgeClass={PUBLISHED_CLASS[String(layer.publish_status === 'published')]}
+                        dotClass={PUBLISHED_DOT[String(layer.publish_status === 'published')]}
                       />
                       <Badge variant={layer.geoserver_layer ? 'default' : 'outline'}>
                         {layer.geoserver_layer ? 'Đã công bố' : 'Chưa công bố'}

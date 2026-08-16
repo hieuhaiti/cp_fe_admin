@@ -509,10 +509,7 @@ export default function ForestClassificationPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Chạy lại phân loại đối tượng</AlertDialogTitle>
-            <AlertDialogDescription>
-              Chọn kỳ phân tích theo mùa (Xuân/Hạ/Thu/Đông). Hệ thống xử lý tuần tự — một kỳ mỗi
-              lần.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Chọn kỳ phân tích theo mùa</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-3">
             <RecentSeasonsPicker

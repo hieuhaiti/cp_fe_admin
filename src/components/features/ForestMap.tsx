@@ -107,7 +107,7 @@ export default function ForestMap({
           type: 'raster',
           tiles: [rasterTileUrl],
           tileSize: 256,
-          attribution: 'Bản đồ phân loại lớp phủ rừng',
+          attribution: 'Bản đồ phân loại LỚP PHỦ ĐỐI TƯỢNG',
         })
         map.addLayer({
           id: RASTER_LAYER_ID,

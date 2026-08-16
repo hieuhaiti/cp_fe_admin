@@ -19,7 +19,7 @@ const THEME_LABEL: Record<string, string> = {
   ngap_lut: 'Ngập lụt và thủy văn',
   khac: 'Khác',
   lop_phu_nhiet: 'Lớp phủ nhiệt',
-  lop_phu_rung: 'Lớp phủ rừng',
+  lop_phu_rung: 'Lớp phủ đối tượng',
 }
 
 function formatFileSize(bytes?: number | string | null): string {

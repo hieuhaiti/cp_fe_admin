@@ -511,12 +511,6 @@ export default function FloodPage() {
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-3 sm:space-y-6 sm:p-6">
-        <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
-          <b>M3 là chỉ số nguy cơ tương đối, không phải xác suất.</b> Sản phẩm kiểm định chất lượng
-          không thay thế kiểm tra hiện trường. Sản phẩm ở chế độ hiệu chuẩn chỉ lưu trữ nội bộ,
-          không được công bố trực tiếp lên bản đồ.
-        </div>
-
         {canRun && (
           <ScenarioPresets
             onPickScenario={(scenarioModule) => {
@@ -890,7 +884,7 @@ export default function FloodPage() {
             {historyExpanded && selectedRunId ? (
               <>
                 <ImpactMetricsCard runDetail={runDetail} />
-                <RunDetail
+                {/* <RunDetail
                   run={runDetail}
                   loading={detailQuery.isFetching}
                   canPublish={canPublish}
@@ -898,7 +892,7 @@ export default function FloodPage() {
                   onArtifactAction={(artifact, action) =>
                     publishMutation.mutate({ id: artifact.id, action })
                   }
-                />
+                /> */}
               </>
             ) : null}
           </TabsContent>
@@ -1418,177 +1412,177 @@ function configExplanation(module: FloodModule, defaults?: Record<string, unknow
   }
 }
 
-function RunDetail({
-  run,
-  loading,
-  canPublish,
-  mutationPending,
-  onArtifactAction,
-}: {
-  run: FloodRunDetail | undefined
-  loading: boolean
-  canPublish: boolean
-  mutationPending: boolean
-  onArtifactAction: (artifact: FloodArtifact, action: 'publish' | 'unpublish') => void
-}) {
-  const [previewArtifactId, setPreviewArtifactId] = useState<number | null>(null)
-  const previewableArtifacts = (run?.artifacts || []).filter(
-    (artifact) => artifact.publish_status === 'published' && Number(artifact.registry_layer_id) > 0
-  )
-  const previewArtifact =
-    previewableArtifacts.find((artifact) => artifact.id === previewArtifactId) ||
-    previewableArtifacts[0]
+// function RunDetail({
+//   run,
+//   loading,
+//   canPublish,
+//   mutationPending,
+//   onArtifactAction,
+// }: {
+//   run: FloodRunDetail | undefined
+//   loading: boolean
+//   canPublish: boolean
+//   mutationPending: boolean
+//   onArtifactAction: (artifact: FloodArtifact, action: 'publish' | 'unpublish') => void
+// }) {
+//   const [previewArtifactId, setPreviewArtifactId] = useState<number | null>(null)
+//   const previewableArtifacts = (run?.artifacts || []).filter(
+//     (artifact) => artifact.publish_status === 'published' && Number(artifact.registry_layer_id) > 0
+//   )
+//   const previewArtifact =
+//     previewableArtifacts.find((artifact) => artifact.id === previewArtifactId) ||
+//     previewableArtifacts[0]
 
-  if (loading && !run)
-    return (
-      <Card>
-        <CardContent className="flex items-center gap-2 p-6">
-          <Loader2 className="animate-spin" />
-          Đang tải chi tiết...
-        </CardContent>
-      </Card>
-    )
-  if (!run) return null
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <CardTitle className="text-lg">Chi tiết lượt chạy #{run.id}</CardTitle>
-            <CardDescription>
-              {moduleLabel(run.module)} · {run.pipeline_version}
-            </CardDescription>
-          </div>
-          <StatusBadge status={run.status} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {run.error_message_safe ? (
-          <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-            <span>
-              {run.error_code ? `${run.error_code}: ` : ''}
-              {run.error_message_safe}
-            </span>
-          </div>
-        ) : null}
-        <div>
-          <h3 className="mb-2 font-medium">Giai đoạn xử lý</h3>
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {(run.stages || []).map((stage: FloodStageEvent) => (
-              <div key={stage.id} className="rounded-md border p-3 text-sm">
-                <p className="font-medium">
-                  {stage.stage} · {stage.event_type}
-                </p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {stage.elapsed_ms != null
-                    ? `${stage.elapsed_ms} ms`
-                    : formatDateTime(stage.emitted_at)}
-                </p>
-              </div>
-            ))}
-            {!run.stages?.length ? (
-              <p className="text-muted-foreground text-sm">Chưa có sự kiện giai đoạn.</p>
-            ) : null}
-          </div>
-        </div>
-        <div>
-          <h3 className="mb-2 font-medium">Sản phẩm và trạng thái công bố</h3>
-          <div className="space-y-2">
-            {(run.artifacts || []).map((artifact: FloodArtifact) => (
-              <div
-                key={artifact.id}
-                className="flex flex-col gap-3 rounded-md border p-3 lg:flex-row lg:items-center lg:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">
-                      {artifact.metadata?.label?.vi || artifact.artifact_code}
-                    </p>
-                    <Badge variant="outline">
-                      {ARTIFACT_ROLE_LABELS[artifact.artifact_role] || artifact.artifact_role}
-                    </Badge>
-                    <Badge
-                      variant={artifact.publish_status === 'failed' ? 'destructive' : 'secondary'}
-                    >
-                      {PUBLISH_STATUS_LABELS[artifact.publish_status] || artifact.publish_status}
-                    </Badge>
-                  </div>
-                  <p className="text-muted-foreground mt-1 truncate text-xs">
-                    {artifact.publish_status === 'published'
-                      ? 'Đã công bố lên bản đồ'
-                      : artifact.minio_object_key
-                        ? 'Đã lưu trữ, sẵn sàng công bố'
-                        : 'Chưa có dữ liệu lưu trữ'}
-                    {artifact.resolution_m ? ` · độ phân giải ${artifact.resolution_m} m` : ''}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  {artifact.publish_status === 'published' &&
-                  Number(artifact.registry_layer_id) > 0 ? (
-                    <Button
-                      size="sm"
-                      variant={previewArtifact?.id === artifact.id ? 'default' : 'outline'}
-                      onClick={() => setPreviewArtifactId(artifact.id)}
-                    >
-                      <MapIcon />
-                      Xem trên bản đồ
-                    </Button>
-                  ) : null}
-                  {canPublish ? (
-                    <>
-                      {artifact.publish_status === 'published' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={mutationPending}
-                          onClick={() => {
-                            if (window.confirm(`Gỡ công bố sản phẩm này khỏi bản đồ?`))
-                              onArtifactAction(artifact, 'unpublish')
-                          }}
-                        >
-                          <Archive />
-                          Gỡ công bố
-                        </Button>
-                      ) : artifact.artifact_role !== 'CALIBRATION' && artifact.minio_object_key ? (
-                        <Button
-                          size="sm"
-                          disabled={mutationPending}
-                          onClick={() => onArtifactAction(artifact, 'publish')}
-                        >
-                          <CloudUpload />
-                          {artifact.publish_status === 'failed' ? 'Thử lại' : 'Công bố'}
-                        </Button>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-            {!run.artifacts?.length ? (
-              <p className="text-muted-foreground text-sm">Chưa có sản phẩm.</p>
-            ) : null}
-          </div>
-        </div>
-        {previewArtifact ? (
-          <div className="space-y-2">
-            <div>
-              <h3 className="font-medium">Bản xem trước lớp đã công bố</h3>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {previewArtifact.metadata?.label?.vi || previewArtifact.artifact_code}
-              </p>
-            </div>
-            <FloodRasterPreview
-              key={`${previewArtifact.registry_layer_id}-${previewArtifact.registry_is_public}`}
-              layerId={previewArtifact.registry_layer_id as number | string}
-              isPublic={previewArtifact.registry_is_public === true}
-            />
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  )
-}
+//   if (loading && !run)
+//     return (
+//       <Card>
+//         <CardContent className="flex items-center gap-2 p-6">
+//           <Loader2 className="animate-spin" />
+//           Đang tải chi tiết...
+//         </CardContent>
+//       </Card>
+//     )
+//   if (!run) return null
+//   return (
+//     <Card>
+//       <CardHeader>
+//         <div className="flex flex-wrap items-center justify-between gap-2">
+//           <div>
+//             <CardTitle className="text-lg">Chi tiết lượt chạy #{run.id}</CardTitle>
+//             <CardDescription>
+//               {moduleLabel(run.module)} · {run.pipeline_version}
+//             </CardDescription>
+//           </div>
+//           <StatusBadge status={run.status} />
+//         </div>
+//       </CardHeader>
+//       <CardContent className="space-y-5">
+//         {run.error_message_safe ? (
+//           <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+//             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+//             <span>
+//               {run.error_code ? `${run.error_code}: ` : ''}
+//               {run.error_message_safe}
+//             </span>
+//           </div>
+//         ) : null}
+//         <div>
+//           <h3 className="mb-2 font-medium">Giai đoạn xử lý</h3>
+//           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+//             {(run.stages || []).map((stage: FloodStageEvent) => (
+//               <div key={stage.id} className="rounded-md border p-3 text-sm">
+//                 <p className="font-medium">
+//                   {stage.stage} · {stage.event_type}
+//                 </p>
+//                 <p className="text-muted-foreground mt-1 text-xs">
+//                   {stage.elapsed_ms != null
+//                     ? `${stage.elapsed_ms} ms`
+//                     : formatDateTime(stage.emitted_at)}
+//                 </p>
+//               </div>
+//             ))}
+//             {!run.stages?.length ? (
+//               <p className="text-muted-foreground text-sm">Chưa có sự kiện giai đoạn.</p>
+//             ) : null}
+//           </div>
+//         </div>
+//         <div>
+//           <h3 className="mb-2 font-medium">Sản phẩm và trạng thái công bố</h3>
+//           <div className="space-y-2">
+//             {(run.artifacts || []).map((artifact: FloodArtifact) => (
+//               <div
+//                 key={artifact.id}
+//                 className="flex flex-col gap-3 rounded-md border p-3 lg:flex-row lg:items-center lg:justify-between"
+//               >
+//                 <div className="min-w-0">
+//                   <div className="flex flex-wrap items-center gap-2">
+//                     <p className="font-medium">
+//                       {artifact.metadata?.label?.vi || artifact.artifact_code}
+//                     </p>
+//                     <Badge variant="outline">
+//                       {ARTIFACT_ROLE_LABELS[artifact.artifact_role] || artifact.artifact_role}
+//                     </Badge>
+//                     <Badge
+//                       variant={artifact.publish_status === 'failed' ? 'destructive' : 'secondary'}
+//                     >
+//                       {PUBLISH_STATUS_LABELS[artifact.publish_status] || artifact.publish_status}
+//                     </Badge>
+//                   </div>
+//                   <p className="text-muted-foreground mt-1 truncate text-xs">
+//                     {artifact.publish_status === 'published'
+//                       ? 'Đã công bố lên bản đồ'
+//                       : artifact.minio_object_key
+//                         ? 'Đã lưu trữ, sẵn sàng công bố'
+//                         : 'Chưa có dữ liệu lưu trữ'}
+//                     {artifact.resolution_m ? ` · độ phân giải ${artifact.resolution_m} m` : ''}
+//                   </p>
+//                 </div>
+//                 <div className="flex shrink-0 flex-wrap gap-2">
+//                   {artifact.publish_status === 'published' &&
+//                   Number(artifact.registry_layer_id) > 0 ? (
+//                     <Button
+//                       size="sm"
+//                       variant={previewArtifact?.id === artifact.id ? 'default' : 'outline'}
+//                       onClick={() => setPreviewArtifactId(artifact.id)}
+//                     >
+//                       <MapIcon />
+//                       Xem trên bản đồ
+//                     </Button>
+//                   ) : null}
+//                   {canPublish ? (
+//                     <>
+//                       {artifact.publish_status === 'published' ? (
+//                         <Button
+//                           size="sm"
+//                           variant="outline"
+//                           disabled={mutationPending}
+//                           onClick={() => {
+//                             if (window.confirm(`Gỡ công bố sản phẩm này khỏi bản đồ?`))
+//                               onArtifactAction(artifact, 'unpublish')
+//                           }}
+//                         >
+//                           <Archive />
+//                           Gỡ công bố
+//                         </Button>
+//                       ) : artifact.artifact_role !== 'CALIBRATION' && artifact.minio_object_key ? (
+//                         <Button
+//                           size="sm"
+//                           disabled={mutationPending}
+//                           onClick={() => onArtifactAction(artifact, 'publish')}
+//                         >
+//                           <CloudUpload />
+//                           {artifact.publish_status === 'failed' ? 'Thử lại' : 'Công bố'}
+//                         </Button>
+//                       ) : null}
+//                     </>
+//                   ) : null}
+//                 </div>
+//               </div>
+//             ))}
+//             {!run.artifacts?.length ? (
+//               <p className="text-muted-foreground text-sm">Chưa có sản phẩm.</p>
+//             ) : null}
+//           </div>
+//         </div>
+//         {previewArtifact ? (
+//           <div className="space-y-2">
+//             <div>
+//               <h3 className="font-medium">Bản xem trước lớp đã công bố</h3>
+//               <p className="text-muted-foreground mt-1 text-xs">
+//                 {previewArtifact.metadata?.label?.vi || previewArtifact.artifact_code}
+//               </p>
+//             </div>
+//             <FloodRasterPreview
+//               key={`${previewArtifact.registry_layer_id}-${previewArtifact.registry_is_public}`}
+//               layerId={previewArtifact.registry_layer_id as number | string}
+//               isPublic={previewArtifact.registry_is_public === true}
+//             />
+//           </div>
+//         ) : null}
+//       </CardContent>
+//     </Card>
+//   )
+// }
 
 function MetricCard({
   icon: Icon,
