@@ -132,7 +132,7 @@ function App() {
                 <Route path="/map-images" element={<MapImagePage />} />
               </Route>
 
-              {/* Phân loại rừng / ngập lụt - thủy văn */}
+              {/* Phân loại đối tượng / ngập lụt - thủy văn */}
               <Route
                 element={
                   <ProtectedRoute

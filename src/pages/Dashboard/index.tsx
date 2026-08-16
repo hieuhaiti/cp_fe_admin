@@ -491,7 +491,7 @@ function ForestVsMineCard({
           </div>
         ) : totalHa === 0 ? (
           <p className="text-muted-foreground py-6 text-center text-sm">
-            Chưa có kết quả phân loại rừng.
+            Chưa có kết quả Phân loại đối tượng.
           </p>
         ) : (
           <>

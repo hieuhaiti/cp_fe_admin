@@ -25,7 +25,7 @@ const RASTER_LAYER_ID = 'forest-class-raster-layer'
 const CAM_PHA_CENTER: [number, number] = [107.303749, 21.002361]
 
 /**
- * Bản đồ preview raster phân loại rừng 11 lớp. Skeleton tối giản so với
+ * Bản đồ preview raster Phân loại đối tượng 11 lớp. Skeleton tối giản so với
  * Preview tối giản: không vector lớp quận/phường, không popup
  * click, không reproject UTM (server serve WMS 3857 sẵn).
  *

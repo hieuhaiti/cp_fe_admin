@@ -13,7 +13,7 @@ import { useAuthStore } from '@/stores/common/useAuthStore'
 /**
  * Ground truth card cho phân loại lớp phủ Cẩm Phả 12 lớp.
  *
- * Đặc thù ground truth phân loại rừng:
+ * Đặc thù ground truth Phân loại đối tượng:
  *   - Thang: class_id 0-11 thay vì severity 1-5
  *   - "observedAt" thay vì "occurredAt" (đo đạc chứ không phải sự cố)
  *   - Point vẫn có class_id — điểm mẫu đơn lẻ (ranger đo tại tọa độ X,Y)

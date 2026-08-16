@@ -191,6 +191,7 @@ export default function MapLayerFormDialog({
   const [longitude, setLongitude] = useState<string>('')
   const [geometryDataText, setGeometryDataText] = useState<string>('')
   const [propertiesText, setPropertiesText] = useState<string>('')
+  const [legendConfigText, setLegendConfigText] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function isTiffFile(file: File): boolean {
@@ -296,6 +297,7 @@ export default function MapLayerFormDialog({
       setLongitude('')
       setGeometryDataText('')
       setPropertiesText('')
+      setLegendConfigText('')
       return
     }
 
@@ -321,6 +323,7 @@ export default function MapLayerFormDialog({
         setGeometryDataText(stringifyJson(layer.geometry_data))
       }
       setPropertiesText(stringifyJson(layer.properties))
+      setLegendConfigText(stringifyJson(layer.legend_config))
     }
   }, [open, isEdit, layer])
 
@@ -393,6 +396,22 @@ export default function MapLayerFormDialog({
       }
     }
 
+    let legendConfig: Record<string, any> | null | undefined
+    if (legendConfigText.trim()) {
+      try {
+        const parsed = JSON.parse(legendConfigText.trim())
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          legendConfig = parsed as Record<string, any>
+        } else {
+          toast.error('Cấu hình chú giải phải là JSON object hợp lệ')
+          return
+        }
+      } catch {
+        toast.error('Cấu hình chú giải phải là JSON hợp lệ')
+        return
+      }
+    }
+
     const fullValidation = mapLayerSchema.safeParse({
       category,
       category_name: categoryName.trim(),
@@ -424,10 +443,11 @@ export default function MapLayerFormDialog({
       is_public: isPublic === 'true',
       is_enable_default: isEnableDefault,
       is_editable: true,
+      ...(legendConfig !== undefined ? { legend_config: legendConfig ?? null } : {}),
       ...(isEdit && (layer?.updatedAt || layer?.updated_at)
         ? { expectedUpdatedAt: layer.updatedAt || layer.updated_at || undefined }
         : {}),
-    })
+    } as any)
   }
 
   return (
@@ -651,6 +671,23 @@ export default function MapLayerFormDialog({
                 <GeoJsonMapPreview geojson={geometryPreview.geojson} />
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="legend-config">Cấu hình chú giải (JSON, tùy chọn)</Label>
+            <Textarea
+              id="legend-config"
+              rows={6}
+              value={legendConfigText}
+              onChange={(e) => setLegendConfigText(e.target.value)}
+              placeholder='{"entries":[{"color":"#1A73E8","label":"Mặt nước"},{"color":"#2D7B2E","label":"Rừng"}]}'
+              className="font-mono text-xs"
+            />
+            <p className="text-muted-foreground text-xs">
+              Định nghĩa bảng màu chú giải hiển thị trên bản đồ. Mỗi mục gồm{' '}
+              <code className="bg-muted rounded px-1">color</code> và{' '}
+              <code className="bg-muted rounded px-1">label</code>.
+            </p>
           </div>
 
           <div className="space-y-2">

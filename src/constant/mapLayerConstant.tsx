@@ -52,7 +52,7 @@ export const MAP_LAYER_CATEGORY_LABEL_VI: Record<string, string> = {
   flood_risk: 'Chỉ số nguy cơ ngập',
   flood_impact: 'Tác động ngập lụt',
   flood_trend: 'Xu thế ngập lụt',
-  forest_district: 'Phân loại rừng theo huyện',
+  forest_district: 'Phân loại đối tượng theo huyện',
   administrative: 'Ranh giới hành chính',
   hydrology: 'Thủy văn',
   transportation: 'Giao thông',

@@ -124,7 +124,7 @@ export default function LandingPage() {
           />
           <KpiCard
             icon={<LayoutDashboard className="h-5 w-5 text-emerald-600" />}
-            label="Phân loại rừng"
+            label="Phân loại đối tượng"
             value={
               classification?.year && classification?.month
                 ? `${String(classification.month).padStart(2, '0')}/${classification.year}`

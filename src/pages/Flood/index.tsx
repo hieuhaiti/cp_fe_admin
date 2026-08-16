@@ -313,7 +313,7 @@ function exclusiveEndDate(value: string) {
 
 function moduleLabel(module: FloodModule) {
   const item = MODULES.find(({ code }) => code === module)
-  return item ? `${item.short} · ${item.name}` : module
+  return item ? `${item.name}` : module
 }
 
 function StatusBadge({ status }: { status: FloodRunStatus }) {
@@ -549,9 +549,7 @@ export default function FloodPage() {
               >
                 <CardHeader className="p-4 pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm">
-                      {item.short} · {item.name}
-                    </CardTitle>
+                    <CardTitle className="text-sm">{item.name}</CardTitle>
                     {latest ? (
                       <StatusBadge status={latest.status} />
                     ) : (
@@ -668,7 +666,7 @@ export default function FloodPage() {
                               <SelectItem value="all">Tất cả mô-đun</SelectItem>
                               {MODULES.map((item) => (
                                 <SelectItem key={item.code} value={item.code}>
-                                  {item.short} · {item.name}
+                                  {item.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -928,7 +926,7 @@ export default function FloodPage() {
                       <SelectContent>
                         {MODULES.map((item) => (
                           <SelectItem key={item.code} value={item.code}>
-                            {item.short} · {item.name}
+                            {item.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1042,9 +1040,7 @@ export default function FloodPage() {
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                   {MODULES.map((item) => (
                     <div key={item.code} className="rounded-lg border p-4">
-                      <p className="font-medium">
-                        {item.short} · {item.name}
-                      </p>
+                      <p className="font-medium">{item.name}</p>
                       <p className="text-muted-foreground mt-1 text-xs">
                         {configExplanation(item.code, configDefaults?.[item.code])}
                       </p>
@@ -1849,7 +1845,7 @@ function ScenarioPresets({ onPickScenario }: { onPickScenario: (module: FloodMod
             <p className="text-muted-foreground mt-1 text-[10px]">
               Sẽ dùng mô-đun{' '}
               <span className="font-mono text-slate-700">
-                {MODULES.find((m) => m.code === s.module)?.short}
+                {MODULES.find((m) => m.code === s.module)?.name}
               </span>
             </p>
           </button>

@@ -99,24 +99,21 @@ const STATUS_TONE: Record<string, string> = {
   failed: 'bg-red-100 text-red-800 border-red-200',
 }
 
+/** 8-class object taxonomy calibrated for Cẩm Phả terrain/vegetation (2026). */
 const FOREST_CLASS_DEFINITIONS = [
-  { classId: 0, nameVi: 'Nước mặt', nameEn: 'Surface water', color: '#1A73E8' },
-  { classId: 1, nameVi: 'Rừng tự nhiên', nameEn: 'Natural forest', color: '#2D7B2E' },
-  { classId: 2, nameVi: 'Rừng trồng', nameEn: 'Planted forest', color: '#85C946' },
-  { classId: 3, nameVi: 'Cây bụi / trảng cỏ', nameEn: 'Shrub / grassland', color: '#BFD760' },
-  { classId: 4, nameVi: 'Cây hàng năm', nameEn: 'Annual crop', color: '#F5E642' },
-  { classId: 5, nameVi: 'Cây lâu năm', nameEn: 'Perennial crop', color: '#F9A825' },
-  { classId: 6, nameVi: 'Khu dân cư', nameEn: 'Residential', color: '#E91E63' },
-  { classId: 7, nameVi: 'Công trình - hạ tầng', nameEn: 'Infrastructure', color: '#B71C1C' },
-  { classId: 8, nameVi: 'Đất trống', nameEn: 'Bare ground', color: '#D7CCC8' },
-  { classId: 9, nameVi: 'Khai trường mỏ', nameEn: 'Open-pit mine', color: '#000000' },
-  { classId: 10, nameVi: 'Bãi thải mỏ', nameEn: 'Mine waste dump', color: '#795548' },
+  { classId: 0, nameVi: 'Mặt nước', nameEn: 'Water surface', color: '#1A73E8' },
   {
-    classId: 11,
-    nameVi: 'Đất ngập nước / ven biển',
-    nameEn: 'Wetlands / coastal',
-    color: '#00BCD4',
+    classId: 1,
+    nameVi: 'Rừng lá rộng thường xanh (thưa)',
+    nameEn: 'Sparse evergreen broadleaf forest',
+    color: '#2D7B2E',
   },
+  { classId: 2, nameVi: 'Dân cư đô thị', nameEn: 'Urban / built-up', color: '#E91E63' },
+  { classId: 3, nameVi: 'Đất trống khô', nameEn: 'Dry bare land', color: '#C8B097' },
+  { classId: 4, nameVi: 'Bãi khai thác than', nameEn: 'Coal mining area', color: '#1A1A1A' },
+  { classId: 5, nameVi: 'Cây bụi', nameEn: 'Shrubland', color: '#85C946' },
+  { classId: 6, nameVi: 'Đất trống trảng cỏ', nameEn: 'Grassland / bare grass', color: '#BFD760' },
+  { classId: 7, nameVi: 'Đất nông nghiệp', nameEn: 'Agricultural land', color: '#F5E642' },
 ] as const
 
 const finiteNumber = (value: unknown): number | null => {
@@ -136,8 +133,8 @@ function normalizeSummary(
     0
   )
   const totalHa = finiteNumber(source.totalHa) ?? classTotal
-  const forestHa = finiteNumber(source.forestHa) ?? classHa(1) + classHa(2)
-  const mineHa = finiteNumber(source.mineHa) ?? classHa(9) + classHa(10)
+  const forestHa = finiteNumber(source.forestHa) ?? classHa(1)
+  const mineHa = finiteNumber(source.mineHa) ?? classHa(4)
   const percentOfTotal = (ha: number) => (totalHa > 0 ? (ha / totalHa) * 100 : 0)
   const legend =
     source.legend && source.legend.length > 0
@@ -169,7 +166,21 @@ const formatPercent = (value: number | null | undefined) =>
     ? '—'
     : `${Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} %`
 
-const formatPeriod = (year: number, month: number) => `${String(month).padStart(2, '0')}/${year}`
+const getSeasonName = (month: number): string => {
+  if (month <= 3) return 'Xuân'
+  if (month <= 6) return 'Hạ'
+  if (month <= 9) return 'Thu'
+  return 'Đông'
+}
+
+const getSeasonRepresentativeMonth = (month: number): number => {
+  if (month <= 3) return 3
+  if (month <= 6) return 6
+  if (month <= 9) return 9
+  return 12
+}
+
+const formatPeriod = (year: number, month: number) => `${getSeasonName(month)} ${year}`
 
 const latestCompletedYearMonth = () => {
   const now = new Date()
@@ -193,12 +204,16 @@ const validPeriod = (year: number, month: number) => {
   )
 }
 
-const selectableMonthsForYear = (year: number) => {
+const selectableSeasonsForYear = (year: number) => {
   if (!Number.isInteger(year) || year < 1984) return []
   const latestCompleted = latestCompletedYearMonth()
-  const lastMonth =
-    year < latestCompleted.year ? 12 : year === latestCompleted.year ? latestCompleted.month : 0
-  return Array.from({ length: lastMonth }, (_, index) => index + 1)
+  const lastRepresentativeMonth =
+    year < latestCompleted.year
+      ? 12
+      : year === latestCompleted.year
+        ? getSeasonRepresentativeMonth(latestCompleted.month)
+        : 0
+  return [3, 6, 9, 12].filter((m) => m <= lastRepresentativeMonth)
 }
 
 function resolveRasterTileUrl(snapshot: ForestClassSnapshot | null): string | null {
@@ -299,7 +314,7 @@ export default function ForestClassificationPage() {
   )
 
   const openRefresh = (period = latestCompletedYearMonth()) => {
-    setRefreshPeriod(period)
+    setRefreshPeriod({ year: period.year, month: getSeasonRepresentativeMonth(period.month) })
     // Seed cloudCover from the currently selected snapshot if it has one,
     // otherwise use the server default (50%).
     const seed = snapshot?.cloudCover
@@ -307,8 +322,8 @@ export default function ForestClassificationPage() {
     setRefreshDialogOpen(true)
   }
   const refreshPeriodIsValid = validPeriod(refreshPeriod.year, refreshPeriod.month)
-  const refreshMonthOptions = useMemo(
-    () => selectableMonthsForYear(refreshPeriod.year),
+  const refreshSeasonOptions = useMemo(
+    () => selectableSeasonsForYear(refreshPeriod.year),
     [refreshPeriod.year]
   )
   const confirmRefresh = () => {
@@ -382,9 +397,9 @@ export default function ForestClassificationPage() {
       <header className="flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <TreePine className="size-6 text-emerald-600" /> Phân loại lớp phủ rừng · TP Cẩm Phả
+            <TreePine className="size-6 text-emerald-600" /> Phân loại đối tượng · TP Cẩm Phả
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Kết quả phân loại 12 lớp phủ.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Kết quả phân loại 8 đối tượng.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -493,15 +508,15 @@ export default function ForestClassificationPage() {
       <AlertDialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Chạy lại phân loại rừng</AlertDialogTitle>
+            <AlertDialogTitle>Chạy lại phân loại đối tượng</AlertDialogTitle>
             <AlertDialogDescription>
-              Chọn kỳ phân tích từ 12 tháng đã hoàn tất gần nhất, hoặc nhập tay. Hệ thống xử lý tuần
-              tự — một kỳ mỗi lần.
+              Chọn kỳ phân tích theo mùa (Xuân/Hạ/Thu/Đông). Hệ thống xử lý tuần tự — một kỳ mỗi
+              lần.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-3">
-            <RecentMonthsPicker
-              months={buildRecentMonths(historyItems)}
+            <RecentSeasonsPicker
+              seasons={buildRecentSeasons(historyItems)}
               value={refreshPeriod}
               onPick={(next) => setRefreshPeriod(next)}
             />
@@ -516,31 +531,31 @@ export default function ForestClassificationPage() {
                   value={refreshPeriod.year}
                   onChange={(e) => {
                     const year = Number(e.target.value)
-                    const selectableMonths = selectableMonthsForYear(year)
+                    const selectableSeasons = selectableSeasonsForYear(year)
                     setRefreshPeriod((prev) => ({
                       year,
-                      month: selectableMonths.includes(prev.month)
+                      month: selectableSeasons.includes(prev.month)
                         ? prev.month
-                        : (selectableMonths[selectableMonths.length - 1] ?? prev.month),
+                        : (selectableSeasons[selectableSeasons.length - 1] ?? prev.month),
                     }))
                   }}
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="refresh-month">Tháng</Label>
+                <Label htmlFor="refresh-season">Mùa</Label>
                 <Select
                   value={String(refreshPeriod.month)}
                   onValueChange={(next) =>
                     setRefreshPeriod((prev) => ({ ...prev, month: Number(next) }))
                   }
                 >
-                  <SelectTrigger id="refresh-month">
+                  <SelectTrigger id="refresh-season">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {refreshMonthOptions.map((m) => (
+                    {refreshSeasonOptions.map((m) => (
                       <SelectItem key={m} value={String(m)}>
-                        Tháng {String(m).padStart(2, '0')}
+                        {getSeasonName(m)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -585,50 +600,50 @@ export default function ForestClassificationPage() {
  * status of the freshest snapshot for that period so the picker can hint
  * "đã có, chạy lại" vs "chưa có".
  */
-function buildRecentMonths(history: ForestClassHistoryItem[]) {
+function buildRecentSeasons(history: ForestClassHistoryItem[]) {
   const byKey = new Map<string, ForestClassHistoryItem>()
   for (const item of history) {
-    const key = `${item.year}-${item.month}`
+    const key = `${item.year}-${getSeasonRepresentativeMonth(item.month)}`
     if (!byKey.has(key)) byKey.set(key, item)
   }
   const latestCompleted = latestCompletedYearMonth()
-  const months: Array<{
-    year: number
-    month: number
-    status?: string
-    exists: boolean
-  }> = []
-  for (let i = 0; i < 12; i += 1) {
-    const d = new Date(Date.UTC(latestCompleted.year, latestCompleted.month - 1 - i, 1))
-    const year = d.getUTCFullYear()
-    const month = d.getUTCMonth() + 1
-    const key = `${year}-${month}`
+  const latestSeason = getSeasonRepresentativeMonth(latestCompleted.month)
+  const seasons: Array<{ year: number; month: number; status?: string; exists: boolean }> = []
+  let year = latestCompleted.year
+  let seasonMonth = latestSeason
+  for (let i = 0; i < 8; i += 1) {
+    const key = `${year}-${seasonMonth}`
     const existing = byKey.get(key)
-    months.push({ year, month, status: existing?.status, exists: Boolean(existing) })
+    seasons.push({ year, month: seasonMonth, status: existing?.status, exists: Boolean(existing) })
+    seasonMonth -= 3
+    if (seasonMonth < 3) {
+      seasonMonth = 12
+      year -= 1
+    }
   }
-  return months
+  return seasons
 }
 
-function RecentMonthsPicker({
-  months,
+function RecentSeasonsPicker({
+  seasons,
   value,
   onPick,
 }: {
-  months: ReturnType<typeof buildRecentMonths>
+  seasons: ReturnType<typeof buildRecentSeasons>
   value: { year: number; month: number }
   onPick: (next: { year: number; month: number }) => void
 }) {
   return (
     <div className="space-y-1">
-      <Label>12 tháng đã hoàn tất gần đây</Label>
-      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-        {months.map((m) => {
-          const isSelected = m.year === value.year && m.month === value.month
+      <Label>8 kỳ gần đây</Label>
+      <div className="grid grid-cols-4 gap-1.5">
+        {seasons.map((s) => {
+          const isSelected = s.year === value.year && s.month === value.month
           return (
             <button
-              key={`${m.year}-${m.month}`}
+              key={`${s.year}-${s.month}`}
               type="button"
-              onClick={() => onPick({ year: m.year, month: m.month })}
+              onClick={() => onPick({ year: s.year, month: s.month })}
               className={
                 'rounded-md border p-1.5 text-xs transition ' +
                 (isSelected
@@ -637,12 +652,12 @@ function RecentMonthsPicker({
               }
             >
               <div className="font-medium">
-                {String(m.month).padStart(2, '0')}/{m.year}
+                {getSeasonName(s.month)} {s.year}
               </div>
               <div className="text-muted-foreground mt-0.5">
-                {m.exists ? (
-                  <span className={STATUS_TONE[m.status || ''] || 'text-slate-500'}>
-                    {STATUS_LABEL[m.status || ''] || m.status}
+                {s.exists ? (
+                  <span className={STATUS_TONE[s.status || ''] || 'text-slate-500'}>
+                    {STATUS_LABEL[s.status || ''] || s.status}
                   </span>
                 ) : (
                   'Chưa có'
@@ -770,14 +785,14 @@ function KpiCards({ summary }: { summary: ForestClassSnapshot['provinceSummary']
       icon: <TreePine className="size-5 text-emerald-600" />,
       label: 'Diện tích rừng',
       value: formatHa(summary?.forestHa ?? null),
-      hint: `Tỷ lệ ${formatPercent(summary?.forestPercent ?? null)} · Rừng tự nhiên + Rừng trồng`,
+      hint: `Tỷ lệ ${formatPercent(summary?.forestPercent ?? null)} · Rừng lá rộng thường xanh (thưa)`,
       tone: 'bg-emerald-50',
     },
     {
       icon: <Mountain className="size-5 text-slate-700" />,
       label: 'Diện tích khu mỏ',
       value: formatHa(summary?.mineHa ?? null),
-      hint: `Tỷ lệ ${formatPercent(summary?.minePercent ?? null)} · Khai trường + Bãi thải`,
+      hint: `Tỷ lệ ${formatPercent(summary?.minePercent ?? null)} · Bãi khai thác than`,
       tone: 'bg-stone-50',
     },
     {
@@ -819,8 +834,8 @@ function LegendCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bảng chú giải 12 lớp</CardTitle>
-        <CardDescription>Diện tích và tỷ lệ từng lớp phủ.</CardDescription>
+        <CardTitle>Bảng chú giải 8 đối tượng</CardTitle>
+        <CardDescription>Diện tích và tỷ lệ từng đối tượng phân loại.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-hidden rounded-md border [&>div]:max-h-[24rem] [&>div]:overflow-x-hidden [&>div]:overflow-y-auto sm:[&>div]:max-h-[32rem]">

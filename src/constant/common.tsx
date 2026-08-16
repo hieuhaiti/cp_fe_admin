@@ -54,7 +54,7 @@ export const navConfig: NavItem[] = [
   },
   {
     icon: <Trees />,
-    name: 'Phân loại rừng',
+    name: 'Phân loại đối tượng',
     path: '/forest-classification',
     permission: { resource: 'forest_classification', action: 'read' },
   },

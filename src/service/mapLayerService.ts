@@ -17,6 +17,7 @@ type CanonicalLayerPatch = {
   isEnableDefault?: boolean
   minZoom?: number
   maxZoom?: number
+  legendConfig?: Record<string, unknown> | null
 }
 
 function listItems(response: ApiResponse<MapLayerListData>): MapLayer[] {
@@ -53,6 +54,10 @@ function canonicalPatch(data: Record<string, unknown>): CanonicalLayerPatch {
     isEnableDefault: (data.isEnableDefault ?? data.is_enable_default) as boolean | undefined,
     minZoom: (data.minZoom ?? data.min_zoom) as number | undefined,
     maxZoom: (data.maxZoom ?? data.max_zoom) as number | undefined,
+    legendConfig: (data.legendConfig ?? data.legend_config) as
+      | Record<string, unknown>
+      | null
+      | undefined,
   }
 }
 

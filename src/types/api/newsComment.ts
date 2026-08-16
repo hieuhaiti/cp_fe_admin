@@ -19,20 +19,26 @@ export interface NewsComment {
   newsSlug?: string | null
   content: string
   isApproved?: boolean
+  /** API v2: status enum replaces is_approved boolean */
+  status?: 'approved' | 'pending' | 'rejected' | string
   parentCommentId?: number | string | null
   replies?: NewsComment[]
   createdAt?: string
   updatedAt?: string
 
-  // legacy snake_case
+  // snake_case (API response)
   news_id?: number | string
   user_id?: number | string | null
+  /** API v2: full display name returned by the backend directly */
+  full_name?: string | null
   user_name?: string
   user_email?: string
   is_approved?: boolean
   parent_comment_id?: number | string | null
   created_at?: string
   updated_at?: string
+  moderated_by?: number | string | null
+  moderated_at?: string | null
 }
 
 /** Wrapper returned by GET /news-comments/:id */

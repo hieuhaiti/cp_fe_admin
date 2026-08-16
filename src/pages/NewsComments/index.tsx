@@ -266,8 +266,11 @@ export default function NewsComments(): JSX.Element {
                 const newsId = c.newsId ?? c.news_id
                 const userId = c.userId ?? c.user_id
                 const userName =
-                  c.userName ?? c.user_name ?? c.user?.fullName ?? c.user?.full_name
-                const isApproved = c.isApproved ?? c.is_approved
+                  c.userName ?? c.full_name ?? c.user_name ?? c.user?.fullName ?? c.user?.full_name
+                const isApproved =
+                  c.status !== undefined
+                    ? c.status === 'approved'
+                    : (c.isApproved ?? c.is_approved)
                 const createdAt = c.createdAt ?? c.created_at
 
                 return (

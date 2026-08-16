@@ -29,7 +29,7 @@ import type {
  */
 const CHANNEL_OPTIONS: { value: string; label: string }[] = [
   { value: 'system', label: 'Hệ thống' },
-  { value: 'forest', label: 'Phân loại rừng' },
+  { value: 'forest', label: 'Phân loại đối tượng' },
   { value: 'flood', label: 'Ngập lụt' },
   { value: 'feedback', label: 'Phản ánh' },
   { value: 'comment', label: 'Bình luận' },
@@ -53,11 +53,11 @@ const TYPE_GROUPS: {
   },
   {
     channel: 'forest',
-    group: 'Phân loại rừng',
+    group: 'Phân loại đối tượng',
     items: [
       {
         value: 'forest_classification_published',
-        label: 'Kết quả phân loại rừng mới (forest_classification_published)',
+        label: 'Kết quả Phân loại đối tượng mới (forest_classification_published)',
       },
       { value: 'forest_change_alert', label: 'Cảnh báo biến động rừng (forest_change_alert)' },
     ],
@@ -249,7 +249,7 @@ export default function NotificationSendPage() {
       <div>
         <h1 className="text-2xl font-bold">Gửi thông báo</h1>
         <p className="text-muted-foreground text-sm">
-          Gửi thông báo hệ thống, phân loại rừng, ngập lụt, phản ánh, bình luận hoặc tin tức tới
+          Gửi thông báo hệ thống, Phân loại đối tượng, ngập lụt, phản ánh, bình luận hoặc tin tức tới
           người dùng cụ thể, theo vai trò hoặc tất cả.
         </p>
       </div>
