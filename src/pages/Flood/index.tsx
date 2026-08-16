@@ -25,10 +25,13 @@ import { useAuthStore } from '@/stores/common/useAuthStore'
 import { hasPerm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import type {
+  FloodLegend,
+  FloodLegendModule,
   FloodModule,
   FloodRunDetail,
   FloodRunMode,
   FloodRunStatus,
+  UpdateLegendBody,
 } from '@/types/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -105,7 +108,6 @@ const STATUS_LABELS: Record<FloodRunStatus, string> = {
   CANCELLED: 'Đã hủy',
   DLQ: 'Cần xử lý',
 }
-
 
 type FloodRunForm = Record<string, string | boolean>
 type FloodConfigDefaults = Partial<Record<FloodModule, Record<string, unknown>>>
@@ -271,6 +273,7 @@ export default function FloodPage() {
   const user = useAuthStore((state) => state.user)
   const canRun = hasPerm(user, 'flood', 'run')
   const canCalibrate = hasPerm(user, 'flood', 'calibrate')
+  const canPublish = hasPerm(user, 'flood', 'publish')
   const [activeTab, setActiveTab] = useState('submit')
   const [module, setModule] = useState<FloodModule>('event')
   const [mode, setMode] = useState<FloodRunMode>('product')
@@ -285,6 +288,9 @@ export default function FloodPage() {
   const [fromFilter, setFromFilter] = useState('')
   const [toFilter, setToFilter] = useState('')
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
+  const [legendModuleFilter, setLegendModuleFilter] = useState<FloodLegendModule | 'all'>('all')
+  const [editingCode, setEditingCode] = useState<string | null>(null)
+  const [legendForm, setLegendForm] = useState<UpdateLegendBody>({})
 
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ['flood'] })
@@ -348,6 +354,38 @@ export default function FloodPage() {
     { enabled: activeTab === 'runs' && historyExpanded && selectedRunId != null },
     false
   )
+
+  const legendsQuery = useApiQuery(
+    ['flood', 'legends', legendModuleFilter],
+    () => floodService.getLegends(legendModuleFilter === 'all' ? undefined : legendModuleFilter),
+    { enabled: activeTab === 'legends' },
+    false
+  )
+  const legends = useMemo<FloodLegend[]>(() => legendsQuery.data?.data ?? [], [legendsQuery.data])
+
+  const updateLegendMutation = useApiMutation(
+    ({ code, body }: { code: string; body: UpdateLegendBody }) =>
+      floodService.updateLegend(code, body),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['flood', 'legends'] })
+        setEditingCode(null)
+      },
+    }
+  )
+  const resetLegendMutation = useApiMutation((code: string) => floodService.resetLegend(code), {
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'legends'] }),
+  })
+
+  const openLegendEditor = (legend: FloodLegend) => {
+    setEditingCode(legend.code)
+    setLegendForm({
+      label: { vi: legend.label.vi, en: legend.label.en },
+      palette: legend.entries.map((e) => e.color.replace('#', '')),
+      min: legend.min,
+      max: legend.max,
+    })
+  }
 
   const submitMutation = useApiMutation(
     (payload: { module: FloodModule; mode: FloodRunMode; config: Record<string, unknown> }) =>
@@ -447,7 +485,7 @@ export default function FloodPage() {
           />
         )}
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {MODULES.map((item) => {
             const latest = dashboard?.modules?.[item.code]
             const publishedCount = layerCounts[item.code] || 0
@@ -520,7 +558,7 @@ export default function FloodPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid h-auto w-full grid-cols-2">
+          <TabsList className="grid h-auto w-full grid-cols-4">
             <TabsTrigger value="runs">
               <span className="sm:hidden">Lịch sử</span>
               <span className="hidden sm:inline">Lịch sử chạy</span>
@@ -528,6 +566,14 @@ export default function FloodPage() {
             <TabsTrigger value="submit">
               <span className="sm:hidden">Tạo lượt</span>
               <span className="hidden sm:inline">Tạo lượt chạy</span>
+            </TabsTrigger>
+            <TabsTrigger value="legends">
+              <span className="sm:hidden">Chú giải</span>
+              <span className="hidden sm:inline">Chú giải bản đồ</span>
+            </TabsTrigger>
+            <TabsTrigger value="config">
+              <span className="sm:hidden">Cấu hình</span>
+              <span className="hidden sm:inline">Cấu hình mô hình</span>
             </TabsTrigger>
           </TabsList>
 
@@ -732,7 +778,7 @@ export default function FloodPage() {
                             <TableCell>{moduleLabel(run.module)}</TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {run.mode === 'product' ? 'Product' : 'Calibration'}
+                                {run.mode === 'product' ? 'Sản phẩm' : 'Hiệu chuẩn'}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -887,7 +933,8 @@ export default function FloodPage() {
                     2. Nhập thông tin cần thiết
                   </CardTitle>
                   <CardDescription>
-                    Các trường bên dưới thay thế JSON. Trường có dấu * là dữ liệu cần cho lượt chạy.
+                    Điền thông tin thời gian và tham số cho lượt phân tích. Trường có dấu * là bắt
+                    buộc.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
@@ -927,6 +974,266 @@ export default function FloodPage() {
             </div>
           </TabsContent>
 
+          <TabsContent value="legends">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <MapPin className="size-5 text-sky-600" />
+                      Chú giải bản đồ ngập lụt
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Chỉnh sửa nhãn, bảng màu và ngưỡng hiển thị cho từng lớp. Thay đổi có hiệu lực
+                      ngay, không cần triển khai lại.
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={legendModuleFilter}
+                      onValueChange={(v) => setLegendModuleFilter(v as FloodLegendModule | 'all')}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Tất cả mô-đun" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tất cả mô-đun</SelectItem>
+                        <SelectItem value="event">M1 · Hiện trạng</SelectItem>
+                        <SelectItem value="hand">M2 · HAND</SelectItem>
+                        <SelectItem value="rain">M3 · Mưa</SelectItem>
+                        <SelectItem value="impact">M4 · Tác động</SelectItem>
+                        <SelectItem value="trend">M5 · Xu thế</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() =>
+                        queryClient.invalidateQueries({ queryKey: ['flood', 'legends'] })
+                      }
+                      tooltip="Làm mới"
+                    >
+                      <RefreshCcw
+                        className={cn('size-4', legendsQuery.isFetching && 'animate-spin')}
+                      />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {legendsQuery.isFetching && !legends.length ? (
+                  <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
+                    <Loader2 className="size-4 animate-spin" />
+                    Đang tải chú giải...
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader className="bg-background sticky top-0 z-10 shadow-sm">
+                      <TableRow>
+                        <TableHead>Mã artifact</TableHead>
+                        <TableHead>Mô-đun</TableHead>
+                        <TableHead>Nhãn (vi)</TableHead>
+                        <TableHead>Nhãn (en)</TableHead>
+                        <TableHead>Bảng màu</TableHead>
+                        <TableHead>Min / Max</TableHead>
+                        <TableHead>Loại</TableHead>
+                        {canPublish ? <TableHead className="text-right">Thao tác</TableHead> : null}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {legends.map((legend) =>
+                        editingCode === legend.code ? (
+                          <TableRow key={legend.code} className="bg-sky-50">
+                            <TableCell className="font-mono text-xs">{legend.code}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{legend.module ?? '—'}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="h-7 text-xs"
+                                value={legendForm.label?.vi ?? ''}
+                                onChange={(e) =>
+                                  setLegendForm((f) => ({
+                                    ...f,
+                                    label: { ...f.label, vi: e.target.value },
+                                  }))
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="h-7 text-xs"
+                                value={legendForm.label?.en ?? ''}
+                                onChange={(e) =>
+                                  setLegendForm((f) => ({
+                                    ...f,
+                                    label: { ...f.label, en: e.target.value },
+                                  }))
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="h-7 font-mono text-xs"
+                                value={(legendForm.palette ?? []).join(',')}
+                                placeholder="hex1,hex2,..."
+                                onChange={(e) =>
+                                  setLegendForm((f) => ({
+                                    ...f,
+                                    palette: e.target.value
+                                      .split(',')
+                                      .map((s) => s.trim())
+                                      .filter(Boolean),
+                                  }))
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Input
+                                  className="h-7 w-16 text-xs"
+                                  type="number"
+                                  value={legendForm.min ?? ''}
+                                  onChange={(e) =>
+                                    setLegendForm((f) => ({ ...f, min: Number(e.target.value) }))
+                                  }
+                                />
+                                <span className="text-muted-foreground self-center">/</span>
+                                <Input
+                                  className="h-7 w-16 text-xs"
+                                  type="number"
+                                  value={legendForm.max ?? ''}
+                                  onChange={(e) =>
+                                    setLegendForm((f) => ({ ...f, max: Number(e.target.value) }))
+                                  }
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{legend.kind}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  size="xs"
+                                  variant="default"
+                                  disabled={updateLegendMutation.isPending}
+                                  onClick={() =>
+                                    updateLegendMutation.mutate({
+                                      code: legend.code,
+                                      body: legendForm,
+                                    })
+                                  }
+                                >
+                                  Lưu
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() => setEditingCode(null)}
+                                >
+                                  Hủy
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          <TableRow key={legend.code}>
+                            <TableCell className="font-mono text-xs">
+                              {legend.code}
+                              {legend.hasOverride ? (
+                                <Badge
+                                  variant="outline"
+                                  className="ml-2 border-amber-300 text-[10px] text-amber-600"
+                                >
+                                  đã sửa
+                                </Badge>
+                              ) : null}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{legend.module ?? '—'}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">{legend.label.vi}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {legend.label.en}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-0.5">
+                                {legend.entries.slice(0, 6).map((entry, i) => (
+                                  <Tooltip key={i}>
+                                    <TooltipTrigger>
+                                      <span
+                                        className="inline-block h-4 w-4 rounded-sm border border-black/10"
+                                        style={{ background: entry.color }}
+                                      />
+                                    </TooltipTrigger>
+                                    <TooltipContent>{entry.color}</TooltipContent>
+                                  </Tooltip>
+                                ))}
+                                {legend.entries.length > 6 ? (
+                                  <span className="text-muted-foreground self-center text-xs">
+                                    +{legend.entries.length - 6}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground font-mono text-xs">
+                              {legend.min} / {legend.max}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{legend.kind}</Badge>
+                            </TableCell>
+                            {canPublish ? (
+                              <TableCell>
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    size="icon-xs"
+                                    variant="outline"
+                                    tooltip="Chỉnh sửa"
+                                    onClick={() => openLegendEditor(legend)}
+                                  >
+                                    <Settings2 />
+                                  </Button>
+                                  {legend.hasOverride ? (
+                                    <Button
+                                      size="icon-xs"
+                                      variant="outline"
+                                      tooltip="Khôi phục mặc định"
+                                      onClick={() => {
+                                        if (
+                                          window.confirm(
+                                            `Khôi phục chú giải '${legend.code}' về mặc định?`
+                                          )
+                                        )
+                                          resetLegendMutation.mutate(legend.code)
+                                      }}
+                                    >
+                                      <RotateCcw />
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </TableCell>
+                            ) : null}
+                          </TableRow>
+                        )
+                      )}
+                      {!legends.length && !legendsQuery.isFetching ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-muted-foreground py-10 text-center"
+                          >
+                            Không có chú giải phù hợp.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="config">
             <Card>
               <CardHeader>
@@ -950,7 +1257,7 @@ export default function FloodPage() {
                     value={floodConfig?.versions?.event || 'Đang tải'}
                   />
                 </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   {MODULES.map((item) => (
                     <div key={item.code} className="rounded-lg border p-4">
                       <p className="font-medium">{item.name}</p>
@@ -963,13 +1270,7 @@ export default function FloodPage() {
                     </div>
                   ))}
                 </div>
-                <p className="bg-muted/30 text-muted-foreground rounded-lg border p-3 text-sm">
-                  Tài liệu chi tiết dành cho cán bộ kỹ thuật:{' '}
-                  <span className="text-foreground font-mono">
-                    server/docs/FLOOD_MODEL_CONFIGURATION.md
-                  </span>
-                  .
-                </p>
+
                 <details className="rounded-lg border p-4">
                   <summary className="cursor-pointer font-medium">
                     Xem dữ liệu kỹ thuật (JSON)
@@ -1389,7 +1690,6 @@ function MetricCard({
   )
 }
 
-
 /**
  * Preset scenario buttons — one click preps the run form for a common
  * operational case. Instead of forcing users to remember which module to pick,
@@ -1435,7 +1735,7 @@ function ScenarioPresets({ onPickScenario }: { onPickScenario: (module: FloodMod
       <p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
         Bắt đầu nhanh theo tình huống
       </p>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-3">
         {scenarios.map((s) => (
           <button
             key={s.key}
@@ -1496,7 +1796,9 @@ export function ImpactMetricsCard({ runDetail }: { runDetail: FloodRunDetail | u
         <CardTitle className="flex items-center gap-2 text-base">
           <MapPin className="size-4 text-rose-600" /> Tác động ngập (M4)
         </CardTitle>
-        <CardDescription>Thống kê không phát hành raster, chỉ số liệu.</CardDescription>
+        <CardDescription>
+          Kết quả M4 thể hiện dưới dạng chỉ số thống kê; không có lớp bản đồ raster.
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border p-3">

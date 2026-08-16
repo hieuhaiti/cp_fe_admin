@@ -111,13 +111,10 @@ function normalizeSummary(
   if (!source) return undefined
   const byClass = source.byClass ?? {}
   const classHa = (classId: number) => finiteNumber(byClass[String(classId)]) ?? 0
-  const classTotal = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].reduce(
-    (sum, id) => sum + classHa(id),
-    0
-  )
+  const classTotal = [0, 1, 2, 3, 4, 5, 6, 7].reduce((sum, id) => sum + classHa(id), 0)
   const totalHa = finiteNumber(source.totalHa) ?? classTotal
-  const forestHa = finiteNumber(source.forestHa) ?? (classHa(1) + classHa(2))
-  const mineHa = finiteNumber(source.mineHa) ?? (classHa(9) + classHa(10))
+  const forestHa = finiteNumber(source.forestHa) ?? classHa(1)
+  const mineHa = finiteNumber(source.mineHa) ?? classHa(4)
   const percentOfTotal = (ha: number) => (totalHa > 0 ? (ha / totalHa) * 100 : 0)
   const legend = source.legend && source.legend.length > 0 ? source.legend : []
 
@@ -393,7 +390,7 @@ export default function ForestClassificationPage() {
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
             <TreePine className="size-6 text-emerald-600" /> Phân loại đối tượng · TP Cẩm Phả
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Kết quả phân loại 12 đối tượng.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Kết quả phân loại 8 đối tượng.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -790,14 +787,14 @@ function KpiCards({ summary }: { summary: ForestClassSnapshot['provinceSummary']
       icon: <TreePine className="size-5 text-emerald-600" />,
       label: 'Diện tích rừng',
       value: formatHa(summary?.forestHa ?? null),
-      hint: `Tỷ lệ ${formatPercent(summary?.forestPercent ?? null)} · Rừng tự nhiên + Rừng trồng (lớp 1–2)`,
+      hint: `Tỷ lệ ${formatPercent(summary?.forestPercent ?? null)} · Rừng LRTX có độ che phủ thưa (lớp 1)`,
       tone: 'bg-emerald-50',
     },
     {
       icon: <Mountain className="size-5 text-slate-700" />,
       label: 'Diện tích khu mỏ',
       value: formatHa(summary?.mineHa ?? null),
-      hint: `Tỷ lệ ${formatPercent(summary?.minePercent ?? null)} · Khai trường mỏ + Bãi thải mỏ (lớp 9–10)`,
+      hint: `Tỷ lệ ${formatPercent(summary?.minePercent ?? null)} · Bãi khai thác than (lớp 4)`,
       tone: 'bg-stone-50',
     },
     {
@@ -839,7 +836,7 @@ function LegendCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bảng chú giải 12 đối tượng</CardTitle>
+        <CardTitle>Bảng chú giải 8 đối tượng</CardTitle>
         <CardDescription>Diện tích và tỷ lệ từng đối tượng phân loại.</CardDescription>
       </CardHeader>
       <CardContent>

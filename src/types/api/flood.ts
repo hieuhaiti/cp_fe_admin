@@ -1,4 +1,29 @@
 export type FloodModule = 'event' | 'hand' | 'impact' | 'trend'
+export type FloodLegendModule = 'event' | 'hand' | 'rain' | 'impact' | 'trend'
+
+export interface FloodLegendEntry {
+  color: string
+  value?: number
+  label?: { vi?: string; en?: string }
+}
+
+export interface FloodLegend {
+  code: string
+  module: FloodLegendModule | null
+  label: { vi: string; en: string }
+  kind: 'binary' | 'continuous' | 'class'
+  entries: FloodLegendEntry[]
+  min?: number
+  max?: number
+  hasOverride: boolean
+}
+
+export interface UpdateLegendBody {
+  label?: { vi?: string; en?: string }
+  palette?: string[]
+  min?: number
+  max?: number
+}
 export type FloodRunMode = 'product' | 'calibration'
 export type FloodRunStatus =
   | 'QUEUED'
