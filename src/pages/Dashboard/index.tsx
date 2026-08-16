@@ -83,7 +83,6 @@ const FEEDBACK_STATUS_TONE: Record<string, string> = {
 const FLOOD_MODULE_INFO: Array<{ code: string; short: string; name: string }> = [
   { code: 'event', short: 'M1', name: 'Hiện trạng ngập' },
   { code: 'hand', short: 'M2', name: 'Nhạy cảm địa hình' },
-  { code: 'rain', short: 'M3', name: 'Chỉ số nguy cơ theo mưa' },
   { code: 'impact', short: 'M4', name: 'Tác động ngập' },
   { code: 'trend', short: 'M5', name: 'Xu thế nhiều năm' },
 ]

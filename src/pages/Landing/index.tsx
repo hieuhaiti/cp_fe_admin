@@ -112,7 +112,7 @@ export default function LandingPage() {
             icon={<Waves className="h-5 w-5 text-sky-600" />}
             label="Mô-đun ngập hoàn thành"
             value={`${Object.values(flood?.modules ?? {}).filter((item) => item?.status === 'SUCCEEDED').length}/5`}
-            hint={`${flood?.layers?.length ?? 0} lớp đã công bố · M3 không phải xác suất`}
+            hint={`${flood?.layers?.length ?? 0} lớp đã công bố`}
           />
           <KpiCard
             icon={<MessageSquareWarning className="h-5 w-5 text-blue-500" />}

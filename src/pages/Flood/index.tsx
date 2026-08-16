@@ -1095,7 +1095,6 @@ function RunFormFields({
               <SelectContent>
                 <SelectItem value="M1">M1 · Hiện trạng ngập</SelectItem>
                 <SelectItem value="M2">M2 · Kịch bản địa hình</SelectItem>
-                <SelectItem value="M3">M3 · Chỉ số nguy cơ</SelectItem>
               </SelectContent>
             </Select>
           </div>

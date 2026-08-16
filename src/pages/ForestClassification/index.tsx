@@ -99,23 +99,6 @@ const STATUS_TONE: Record<string, string> = {
   failed: 'bg-red-100 text-red-800 border-red-200',
 }
 
-/** 8-class object taxonomy calibrated for Cẩm Phả terrain/vegetation (2026). */
-const FOREST_CLASS_DEFINITIONS = [
-  { classId: 0, nameVi: 'Mặt nước', nameEn: 'Water surface', color: '#0886FB' },
-  {
-    classId: 1,
-    nameVi: 'Rừng LRTX có độ che phủ thưa',
-    nameEn: 'Sparse evergreen broadleaf forest',
-    color: '#036403',
-  },
-  { classId: 2, nameVi: 'Dân cư đô thị', nameEn: 'Urban / built-up', color: '#FA9497' },
-  { classId: 3, nameVi: 'Đất trống khô', nameEn: 'Dry bare land', color: '#FDFE98' },
-  { classId: 4, nameVi: 'Bãi khai thác than', nameEn: 'Coal mining area', color: '#8C5C07' },
-  { classId: 5, nameVi: 'Cây bụi', nameEn: 'Shrubland', color: '#318A07' },
-  { classId: 6, nameVi: 'Đất trống trảng cỏ', nameEn: 'Grassland / bare grass', color: '#CFFC15' },
-  { classId: 7, nameVi: 'Đất nông nghiệp', nameEn: 'Agricultural land', color: '#FBC695' },
-] as const
-
 const finiteNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
   const number = Number(value)
@@ -128,21 +111,15 @@ function normalizeSummary(
   if (!source) return undefined
   const byClass = source.byClass ?? {}
   const classHa = (classId: number) => finiteNumber(byClass[String(classId)]) ?? 0
-  const classTotal = FOREST_CLASS_DEFINITIONS.reduce(
-    (sum, definition) => sum + classHa(definition.classId),
+  const classTotal = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].reduce(
+    (sum, id) => sum + classHa(id),
     0
   )
   const totalHa = finiteNumber(source.totalHa) ?? classTotal
-  const forestHa = finiteNumber(source.forestHa) ?? classHa(1)
-  const mineHa = finiteNumber(source.mineHa) ?? classHa(4)
+  const forestHa = finiteNumber(source.forestHa) ?? (classHa(1) + classHa(2))
+  const mineHa = finiteNumber(source.mineHa) ?? (classHa(9) + classHa(10))
   const percentOfTotal = (ha: number) => (totalHa > 0 ? (ha / totalHa) * 100 : 0)
-  const legend =
-    source.legend && source.legend.length > 0
-      ? source.legend
-      : FOREST_CLASS_DEFINITIONS.map((definition) => {
-          const ha = classHa(definition.classId)
-          return { ...definition, ha, percent: percentOfTotal(ha) }
-        })
+  const legend = source.legend && source.legend.length > 0 ? source.legend : []
 
   return {
     ...source,
@@ -416,7 +393,7 @@ export default function ForestClassificationPage() {
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
             <TreePine className="size-6 text-emerald-600" /> Phân loại đối tượng · TP Cẩm Phả
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Kết quả phân loại 8 đối tượng.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Kết quả phân loại 12 đối tượng.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -813,14 +790,14 @@ function KpiCards({ summary }: { summary: ForestClassSnapshot['provinceSummary']
       icon: <TreePine className="size-5 text-emerald-600" />,
       label: 'Diện tích rừng',
       value: formatHa(summary?.forestHa ?? null),
-      hint: `Tỷ lệ ${formatPercent(summary?.forestPercent ?? null)} · Rừng lá rộng thường xanh (thưa)`,
+      hint: `Tỷ lệ ${formatPercent(summary?.forestPercent ?? null)} · Rừng tự nhiên + Rừng trồng (lớp 1–2)`,
       tone: 'bg-emerald-50',
     },
     {
       icon: <Mountain className="size-5 text-slate-700" />,
       label: 'Diện tích khu mỏ',
       value: formatHa(summary?.mineHa ?? null),
-      hint: `Tỷ lệ ${formatPercent(summary?.minePercent ?? null)} · Bãi khai thác than`,
+      hint: `Tỷ lệ ${formatPercent(summary?.minePercent ?? null)} · Khai trường mỏ + Bãi thải mỏ (lớp 9–10)`,
       tone: 'bg-stone-50',
     },
     {
@@ -862,7 +839,7 @@ function LegendCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bảng chú giải 8 đối tượng</CardTitle>
+        <CardTitle>Bảng chú giải 12 đối tượng</CardTitle>
         <CardDescription>Diện tích và tỷ lệ từng đối tượng phân loại.</CardDescription>
       </CardHeader>
       <CardContent>
