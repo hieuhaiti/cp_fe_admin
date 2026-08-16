@@ -85,6 +85,20 @@ const MODULES: Array<{
   },
 ]
 
+const LEGEND_MODULE_LABELS: Record<string, string> = {
+  event: 'M1 · Hiện trạng ngập',
+  hand: 'M2 · Kịch bản HAND',
+  rain: 'M3 · Rủi ro mưa',
+  impact: 'M4 · Tác động ngập',
+  trend: 'M5 · Xu thế nhiều năm',
+}
+
+const LEGEND_KIND_LABELS: Record<string, string> = {
+  binary: 'Nhị phân (1 màu)',
+  class: 'Phân lớp (mỗi màu 1 cấp)',
+  continuous: 'Dải liên tục (bước nhảy đều)',
+}
+
 const LIVE_STATUSES = new Set<FloodRunStatus>([
   'QUEUED',
   'COMPUTING',
@@ -977,32 +991,40 @@ export default function FloodPage() {
           <TabsContent value="legends">
             <Card>
               <CardHeader className="p-4 sm:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <MapPin className="size-5 text-sky-600" />
                       Chú giải bản đồ ngập lụt
                     </CardTitle>
-                    <CardDescription className="mt-1">
-                      Chỉnh sửa nhãn, bảng màu và ngưỡng hiển thị cho từng lớp. Thay đổi có hiệu lực
-                      ngay, không cần triển khai lại.
+                    <CardDescription>
+                      Chỉ có thể thay đổi <strong>bảng màu (hex)</strong> và <strong>nhãn tiếng Việt</strong>.
+                      Kiểu legend (binary / continuous / class) do hệ thống tự xác định theo số màu và
+                      khoảng min–max — không thay đổi trực tiếp được.
                     </CardDescription>
+                    <p className="text-muted-foreground text-xs">
+                      Màu nhập dạng hex không có dấu <code>#</code>, cách nhau bởi dấu phẩy. Ví dụ:{' '}
+                      <code>deebf7,9ecae1,4292c6</code>. Số màu quyết định bước nhảy trên bản đồ.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Select
                       value={legendModuleFilter}
-                      onValueChange={(v) => setLegendModuleFilter(v as FloodLegendModule | 'all')}
+                      onValueChange={(v) => {
+                        setLegendModuleFilter(v as FloodLegendModule | 'all')
+                        setEditingCode(null)
+                      }}
                     >
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Tất cả mô-đun" />
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tất cả mô-đun</SelectItem>
-                        <SelectItem value="event">M1 · Hiện trạng</SelectItem>
-                        <SelectItem value="hand">M2 · HAND</SelectItem>
-                        <SelectItem value="rain">M3 · Mưa</SelectItem>
-                        <SelectItem value="impact">M4 · Tác động</SelectItem>
-                        <SelectItem value="trend">M5 · Xu thế</SelectItem>
+                        <SelectItem value="event">M1 · Hiện trạng ngập</SelectItem>
+                        <SelectItem value="hand">M2 · Kịch bản HAND</SelectItem>
+                        <SelectItem value="rain">M3 · Rủi ro mưa</SelectItem>
+                        <SelectItem value="impact">M4 · Tác động ngập</SelectItem>
+                        <SelectItem value="trend">M5 · Xu thế nhiều năm</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
@@ -1030,27 +1052,27 @@ export default function FloodPage() {
                   <Table>
                     <TableHeader className="bg-background sticky top-0 z-10 shadow-sm">
                       <TableRow>
-                        <TableHead>Mã artifact</TableHead>
-                        <TableHead>Mô-đun</TableHead>
-                        <TableHead>Nhãn (vi)</TableHead>
-                        <TableHead>Nhãn (en)</TableHead>
+                        <TableHead className="w-48">Lớp bản đồ</TableHead>
+                        <TableHead>Nhãn hiển thị</TableHead>
                         <TableHead>Bảng màu</TableHead>
-                        <TableHead>Min / Max</TableHead>
-                        <TableHead>Loại</TableHead>
-                        {canPublish ? <TableHead className="text-right">Thao tác</TableHead> : null}
+                        <TableHead className="w-28">Min / Max</TableHead>
+                        {canPublish ? <TableHead className="w-24 text-right">Thao tác</TableHead> : null}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {legends.map((legend) =>
                         editingCode === legend.code ? (
-                          <TableRow key={legend.code} className="bg-sky-50">
-                            <TableCell className="font-mono text-xs">{legend.code}</TableCell>
+                          <TableRow key={legend.code} className="bg-sky-50/60">
                             <TableCell>
-                              <Badge variant="outline">{legend.module ?? '—'}</Badge>
+                              <p className="font-mono text-xs text-sky-700">{legend.code}</p>
+                              <p className="text-muted-foreground mt-0.5 text-xs">
+                                {LEGEND_MODULE_LABELS[legend.module ?? ''] ?? legend.module}
+                              </p>
                             </TableCell>
                             <TableCell>
                               <Input
                                 className="h-7 text-xs"
+                                placeholder="Nhãn tiếng Việt"
                                 value={legendForm.label?.vi ?? ''}
                                 onChange={(e) =>
                                   setLegendForm((f) => ({
@@ -1059,48 +1081,50 @@ export default function FloodPage() {
                                   }))
                                 }
                               />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                className="h-7 text-xs"
-                                value={legendForm.label?.en ?? ''}
-                                onChange={(e) =>
-                                  setLegendForm((f) => ({
-                                    ...f,
-                                    label: { ...f.label, en: e.target.value },
-                                  }))
-                                }
-                              />
+                              <p className="text-muted-foreground mt-1 text-[11px]">
+                                Kiểu:{' '}
+                                <span className="font-medium">{LEGEND_KIND_LABELS[legend.kind]}</span>{' '}
+                                · không thay đổi được
+                              </p>
                             </TableCell>
                             <TableCell>
                               <Input
                                 className="h-7 font-mono text-xs"
                                 value={(legendForm.palette ?? []).join(',')}
-                                placeholder="hex1,hex2,..."
+                                placeholder="deebf7,9ecae1,4292c6"
                                 onChange={(e) =>
                                   setLegendForm((f) => ({
                                     ...f,
                                     palette: e.target.value
                                       .split(',')
-                                      .map((s) => s.trim())
+                                      .map((s) => s.trim().replace(/^#/, ''))
                                       .filter(Boolean),
                                   }))
                                 }
                               />
+                              <div className="mt-1 flex gap-0.5">
+                                {(legendForm.palette ?? []).slice(0, 10).map((hex, i) => (
+                                  <span
+                                    key={i}
+                                    className="inline-block h-3 w-5 rounded-sm border border-black/10"
+                                    style={{ background: `#${hex}` }}
+                                  />
+                                ))}
+                              </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-1">
+                              <div className="flex items-center gap-1">
                                 <Input
-                                  className="h-7 w-16 text-xs"
+                                  className="h-7 w-14 text-xs"
                                   type="number"
                                   value={legendForm.min ?? ''}
                                   onChange={(e) =>
                                     setLegendForm((f) => ({ ...f, min: Number(e.target.value) }))
                                   }
                                 />
-                                <span className="text-muted-foreground self-center">/</span>
+                                <span className="text-muted-foreground text-xs">–</span>
                                 <Input
-                                  className="h-7 w-16 text-xs"
+                                  className="h-7 w-14 text-xs"
                                   type="number"
                                   value={legendForm.max ?? ''}
                                   onChange={(e) =>
@@ -1108,9 +1132,6 @@ export default function FloodPage() {
                                   }
                                 />
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{legend.kind}</Badge>
                             </TableCell>
                             <TableCell>
                               <div className="flex justify-end gap-1">
@@ -1139,49 +1160,51 @@ export default function FloodPage() {
                           </TableRow>
                         ) : (
                           <TableRow key={legend.code}>
-                            <TableCell className="font-mono text-xs">
-                              {legend.code}
+                            <TableCell>
+                              <p className="font-mono text-xs">{legend.code}</p>
+                              <p className="text-muted-foreground mt-0.5 text-xs">
+                                {LEGEND_MODULE_LABELS[legend.module ?? ''] ?? legend.module}
+                              </p>
                               {legend.hasOverride ? (
                                 <Badge
                                   variant="outline"
-                                  className="ml-2 border-amber-300 text-[10px] text-amber-600"
+                                  className="mt-1 border-amber-300 text-[10px] text-amber-600"
                                 >
-                                  đã sửa
+                                  đã chỉnh sửa
                                 </Badge>
                               ) : null}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{legend.module ?? '—'}</Badge>
-                            </TableCell>
-                            <TableCell className="text-sm">{legend.label.vi}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {legend.label.en}
+                              <p className="text-sm">{legend.label.vi}</p>
+                              <p className="text-muted-foreground mt-0.5 text-xs">
+                                Kiểu: {LEGEND_KIND_LABELS[legend.kind]}
+                              </p>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-0.5">
-                                {legend.entries.slice(0, 6).map((entry, i) => (
+                                {legend.entries.slice(0, 8).map((entry, i) => (
                                   <Tooltip key={i}>
                                     <TooltipTrigger>
                                       <span
-                                        className="inline-block h-4 w-4 rounded-sm border border-black/10"
+                                        className="inline-block h-5 w-5 rounded-sm border border-black/10"
                                         style={{ background: entry.color }}
                                       />
                                     </TooltipTrigger>
-                                    <TooltipContent>{entry.color}</TooltipContent>
+                                    <TooltipContent>
+                                      {entry.color}
+                                      {entry.value !== undefined ? ` · ${entry.value}` : ''}
+                                    </TooltipContent>
                                   </Tooltip>
                                 ))}
-                                {legend.entries.length > 6 ? (
+                                {legend.entries.length > 8 ? (
                                   <span className="text-muted-foreground self-center text-xs">
-                                    +{legend.entries.length - 6}
+                                    +{legend.entries.length - 8}
                                   </span>
                                 ) : null}
                               </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground font-mono text-xs">
-                              {legend.min} / {legend.max}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{legend.kind}</Badge>
+                              {legend.min} – {legend.max}
                             </TableCell>
                             {canPublish ? (
                               <TableCell>
@@ -1189,7 +1212,7 @@ export default function FloodPage() {
                                   <Button
                                     size="icon-xs"
                                     variant="outline"
-                                    tooltip="Chỉnh sửa"
+                                    tooltip="Chỉnh sửa màu / nhãn"
                                     onClick={() => openLegendEditor(legend)}
                                   >
                                     <Settings2 />
@@ -1202,7 +1225,7 @@ export default function FloodPage() {
                                       onClick={() => {
                                         if (
                                           window.confirm(
-                                            `Khôi phục chú giải '${legend.code}' về mặc định?`
+                                            `Khôi phục '${legend.code}' về mặc định?`
                                           )
                                         )
                                           resetLegendMutation.mutate(legend.code)
@@ -1220,7 +1243,7 @@ export default function FloodPage() {
                       {!legends.length && !legendsQuery.isFetching ? (
                         <TableRow>
                           <TableCell
-                            colSpan={8}
+                            colSpan={5}
                             className="text-muted-foreground py-10 text-center"
                           >
                             Không có chú giải phù hợp.
