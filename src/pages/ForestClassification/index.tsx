@@ -180,6 +180,13 @@ const getSeasonRepresentativeMonth = (month: number): number => {
   return 12
 }
 
+const getSeasonMonthRange = (representativeMonth: number): string => {
+  if (representativeMonth === 3) return 'T1–3'
+  if (representativeMonth === 6) return 'T4–6'
+  if (representativeMonth === 9) return 'T7–9'
+  return 'T10–12'
+}
+
 const formatPeriod = (year: number, month: number) => `${getSeasonName(month)} ${year}`
 
 const latestCompletedYearMonth = () => {
@@ -207,13 +214,11 @@ const validPeriod = (year: number, month: number) => {
 const selectableSeasonsForYear = (year: number) => {
   if (!Number.isInteger(year) || year < 1984) return []
   const latestCompleted = latestCompletedYearMonth()
-  const lastRepresentativeMonth =
-    year < latestCompleted.year
-      ? 12
-      : year === latestCompleted.year
-        ? getSeasonRepresentativeMonth(latestCompleted.month)
-        : 0
-  return [3, 6, 9, 12].filter((m) => m <= lastRepresentativeMonth)
+  // Use raw completed month (not the season rep) so the current in-progress
+  // season is excluded until all its calendar months have elapsed.
+  const ceiling =
+    year < latestCompleted.year ? 12 : year === latestCompleted.year ? latestCompleted.month : 0
+  return [3, 6, 9, 12].filter((m) => m <= ceiling)
 }
 
 function resolveRasterTileUrl(snapshot: ForestClassSnapshot | null): string | null {
@@ -314,11 +319,23 @@ export default function ForestClassificationPage() {
   )
 
   const openRefresh = (period = latestCompletedYearMonth()) => {
-    setRefreshPeriod({ year: period.year, month: getSeasonRepresentativeMonth(period.month) })
+    let year = period.year
+    let month = getSeasonRepresentativeMonth(period.month)
+    const available = selectableSeasonsForYear(year)
+    if (!available.includes(month)) {
+      // Season not yet complete — snap to the most recent valid one
+      if (available.length > 0) {
+        month = available[available.length - 1]
+      } else {
+        year -= 1
+        month = 12
+      }
+    }
+    setRefreshPeriod({ year, month })
     // Seed cloudCover from the currently selected snapshot if it has one,
     // otherwise use the server default (50%).
     const seed = snapshot?.cloudCover
-    setRefreshCloudCover(Number.isFinite(Number(seed)) ? Number(seed) : 50)
+    setRefreshCloudCover(Number.isFinite(Number(seed)) && Number(seed) > 0 ? Number(seed) : 50)
     setRefreshDialogOpen(true)
   }
   const refreshPeriodIsValid = validPeriod(refreshPeriod.year, refreshPeriod.month)
@@ -552,7 +569,10 @@ export default function ForestClassificationPage() {
                   <SelectContent>
                     {refreshSeasonOptions.map((m) => (
                       <SelectItem key={m} value={String(m)}>
-                        {getSeasonName(m)}
+                        {getSeasonName(m)}{' '}
+                        <span className="text-muted-foreground text-xs">
+                          ({getSeasonMonthRange(m)})
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -636,23 +656,34 @@ function RecentSeasonsPicker({
       <div className="grid grid-cols-4 gap-1.5">
         {seasons.map((s) => {
           const isSelected = s.year === value.year && s.month === value.month
+          const isSelectable = validPeriod(s.year, s.month)
           return (
             <button
               key={`${s.year}-${s.month}`}
               type="button"
-              onClick={() => onPick({ year: s.year, month: s.month })}
+              disabled={!isSelectable}
+              onClick={() => isSelectable && onPick({ year: s.year, month: s.month })}
+              title={
+                isSelectable
+                  ? `${getSeasonName(s.month)} ${s.year} · ${getSeasonMonthRange(s.month)}`
+                  : `${getSeasonName(s.month)} ${s.year} chưa kết thúc (${getSeasonMonthRange(s.month)})`
+              }
               className={
                 'rounded-md border p-1.5 text-xs transition ' +
-                (isSelected
-                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                  : 'border-slate-200 hover:border-slate-400')
+                (isSelectable
+                  ? isSelected
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                    : 'border-slate-200 hover:border-slate-400'
+                  : 'cursor-not-allowed border-slate-100 opacity-40')
               }
             >
               <div className="font-medium">
                 {getSeasonName(s.month)} {s.year}
               </div>
               <div className="text-muted-foreground mt-0.5">
-                {s.exists ? (
+                {!isSelectable ? (
+                  <span className="text-slate-400">Chưa kết thúc</span>
+                ) : s.exists ? (
                   <span className={STATUS_TONE[s.status || ''] || 'text-slate-500'}>
                     {STATUS_LABEL[s.status || ''] || s.status}
                   </span>

@@ -32,26 +32,6 @@ const floodService = {
     apiClient.post(`${serviceAdminFloodPath}/artifacts/${id}/publish`, {}, noLang),
   unpublishArtifact: (id: number) =>
     apiClient.post(`${serviceAdminFloodPath}/artifacts/${id}/unpublish`, {}, noLang),
-  // Auto-fill helper for the M3 rain form.
-  getCurrentWeather: () =>
-    apiClient.get<{
-      observedAt: string | null
-      location: string | null
-      coord: { lng: number; lat: number }
-      source: 'openweather'
-      rainfall: {
-        amount1h: number | null
-        amount3h: number | null
-        amount6h: number | null
-        amount24h: number | null
-        amount72h: number | null
-        amount7d: number | null
-        amount30d: number | null
-      }
-      weather: { id: number; main: string; description: string; icon: string } | null
-      humidity: number | null
-      wind: { speed: number | null; deg: number | null; gust: number | null }
-    }>(`${serviceAdminFloodPath}/weather/current`, noLang),
   // Manual trigger for the nightly daily-flood pipeline (ops shortcut).
   triggerDaily: () =>
     apiClient.post<{

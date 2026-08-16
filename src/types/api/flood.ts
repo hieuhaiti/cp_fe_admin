@@ -1,4 +1,4 @@
-export type FloodModule = 'event' | 'hand' | 'rain' | 'impact' | 'trend'
+export type FloodModule = 'event' | 'hand' | 'impact' | 'trend'
 export type FloodRunMode = 'product' | 'calibration'
 export type FloodRunStatus =
   | 'QUEUED'

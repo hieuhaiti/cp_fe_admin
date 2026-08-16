@@ -10,42 +10,31 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock3,
-  CloudRain,
-  // CloudUpload,
   Droplets,
   FilterX,
   History,
-  Info,
   Loader2,
-  Lock,
-  // Map as MapIcon,
   MapPin,
-  PencilLine,
   Play,
   RefreshCcw,
   RotateCcw,
-  Satellite,
   Settings2,
   Waves,
-  Wind,
 } from 'lucide-react'
 import { floodService, useApiMutation, useApiQuery } from '@/service'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import { hasPerm } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import type {
-  FloodArtifact,
   FloodModule,
   FloodRunDetail,
   FloodRunMode,
   FloodRunStatus,
-  FloodStageEvent,
 } from '@/types/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PaginationCustom } from '@/components/features/PaginationCustom'
-import FloodRasterPreview from '@/components/features/FloodRasterPreview'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -80,12 +69,6 @@ const MODULES: Array<{
     description: 'Sentinel-1 trước/sau sự kiện',
   },
   { code: 'hand', short: 'M2', name: 'Nhạy cảm địa hình', description: 'HAND và độ dốc' },
-  {
-    code: 'rain',
-    short: 'M3',
-    name: 'Chỉ số nguy cơ',
-    description: 'Chỉ số tương đối, không phải xác suất',
-  },
   {
     code: 'impact',
     short: 'M4',
@@ -124,18 +107,6 @@ const STATUS_LABELS: Record<FloodRunStatus, string> = {
   DLQ: 'Cần xử lý',
 }
 
-const ARTIFACT_ROLE_LABELS: Record<string, string> = {
-  PRODUCT: 'Sản phẩm',
-  QA: 'Kiểm định',
-  CALIBRATION: 'Hiệu chuẩn',
-}
-
-const PUBLISH_STATUS_LABELS: Record<string, string> = {
-  pending: 'Chờ công bố',
-  published: 'Đã công bố',
-  failed: 'Lỗi công bố',
-  unpublished: 'Chưa công bố',
-}
 
 type FloodRunForm = Record<string, string | boolean>
 type FloodConfigDefaults = Partial<Record<FloodModule, Record<string, unknown>>>
@@ -151,7 +122,6 @@ const FORM_FALLBACK_DEFAULTS: Record<FloodModule, Record<string, unknown>> = {
     runImpactAfterM1: true,
   },
   hand: { levelM: 5 },
-  rain: { source: 'IMERG', threshold: 0.6 },
   impact: { impactSource: 'M1', impactUseNonTidal: true },
   trend: {
     dryStart: '2023-01-01',
@@ -337,7 +307,6 @@ export default function FloodPage() {
   const user = useAuthStore((state) => state.user)
   const canRun = hasPerm(user, 'flood', 'run')
   const canCalibrate = hasPerm(user, 'flood', 'calibrate')
-  const canPublish = hasPerm(user, 'flood', 'publish')
   const [activeTab, setActiveTab] = useState('submit')
   const [module, setModule] = useState<FloodModule>('event')
   const [mode, setMode] = useState<FloodRunMode>('product')
@@ -427,12 +396,6 @@ export default function FloodPage() {
   const cancelMutation = useApiMutation((id: number) => floodService.cancel(id), {
     onSuccess: () => refreshAll(),
   })
-  const publishMutation = useApiMutation(
-    ({ id, action }: { id: number; action: 'publish' | 'unpublish' }) =>
-      action === 'publish' ? floodService.publishArtifact(id) : floodService.unpublishArtifact(id),
-    { onSuccess: () => refreshAll() }
-  )
-
   const dashboard = dashboardQuery.data?.data
   const runDetail = detailQuery.data?.data
   const floodConfig = configQuery.data?.data as
