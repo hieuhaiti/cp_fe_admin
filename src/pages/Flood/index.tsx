@@ -160,18 +160,6 @@ function createRunForm(module: FloodModule, defaults: Record<string, unknown> = 
       }
     case 'hand':
       return { levelM: stringDefault(defaults.levelM, '5') }
-    case 'rain':
-      return {
-        source: stringDefault(defaults.source, 'IMERG'),
-        eventTime: '',
-        threshold: stringDefault(defaults.threshold, '0.6'),
-        amount3h: '',
-        amount6h: '',
-        amount24h: '',
-        amount72h: '',
-        amount7d: '',
-        amount30d: '',
-      }
     case 'impact':
       return {
         impactSource: stringDefault(defaults.impactSource, 'M1'),
@@ -222,29 +210,6 @@ function buildRunConfig(module: FloodModule, form: FloodRunForm): Record<string,
     case 'hand': {
       const levelM = optionalNumber(form, 'levelM', 'Mực nước giả định')
       return levelM === undefined ? {} : { levelM }
-    }
-    case 'rain': {
-      const source = requiredFormValue(form, 'source', 'nguồn dữ liệu mưa')
-      const threshold = optionalNumber(form, 'threshold', 'Ngưỡng cảnh báo')
-      const config: Record<string, unknown> = { source }
-      if (threshold !== undefined) config.threshold = threshold
-      if (source === 'IMERG') {
-        const eventDate = requiredFormValue(form, 'eventTime', 'ngày xảy ra mưa')
-        config.eventTime = `${eventDate}T00:00:00.000Z`
-      } else {
-        const rainfall = Object.fromEntries(
-          ['3h', '6h', '24h', '72h', '7d', '30d']
-            .map((window) => [
-              `amount${window}`,
-              optionalNumber(form, `amount${window}`, `Lượng mưa ${window}`),
-            ])
-            .filter(([, value]) => value !== undefined)
-        )
-        if (!Object.keys(rainfall).length)
-          throw new Error('Hãy nhập ít nhất một lượng mưa đo được.')
-        config.rainfall = rainfall
-      }
-      return config
     }
     case 'impact': {
       const sourceRunId = optionalNumber(form, 'sourceRunId', 'Mã lượt chạy nguồn')
@@ -984,14 +949,6 @@ export default function FloodPage() {
                   <ConfigFact
                     label="Mô hình M1"
                     value={floodConfig?.versions?.event || 'Đang tải'}
-                  />
-                  <ConfigFact
-                    label="Mô hình M3"
-                    value={floodConfig?.versions?.rain || 'Đang tải'}
-                  />
-                  <ConfigFact
-                    label="M3 là xác suất?"
-                    value={floodConfig?.probabilityCalibrated ? 'Có' : 'Không · chỉ số nguy cơ'}
                   />
                 </div>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
