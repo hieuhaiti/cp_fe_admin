@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-toastify'
 import {
   Activity,
-  AlertTriangle,
   Archive,
   Ban,
   CalendarDays,
@@ -991,7 +990,6 @@ export default function FloodPage() {
 function RunFormFields({
   module,
   form,
-  configVersion,
   onChange,
 }: {
   module: FloodModule
@@ -1181,8 +1179,6 @@ function configExplanation(module: FloodModule, defaults?: Record<string, unknow
       return `So sánh ảnh Sentinel-1; ngưỡng ${stringDefault(defaults?.thresholdMode, 'chuẩn')} và giới hạn dốc ${stringDefault(defaults?.hardMaximumSlope, '—')}°.`
     case 'hand':
       return `Kịch bản mực nước ${stringDefault(defaults?.levelM, '—')} m; giới hạn dốc ${stringDefault(defaults?.maximumSlope, '—')}°.`
-    case 'rain':
-      return `Nguồn mặc định ${stringDefault(defaults?.source, '—')}; ngưỡng cảnh báo ${stringDefault(defaults?.threshold, '—')}.`
     case 'impact':
       return `Thống kê dựa trên ${stringDefault(defaults?.impactSource, '—')}; ${defaults?.impactUseNonTidal === true ? 'có' : 'không'} loại trừ thủy triều.`
     case 'trend':
@@ -1394,156 +1390,6 @@ function MetricCard({
   )
 }
 
-/**
- * Read-only OpenWeather reference for the M3 manual rainfall form.
- * The current-weather endpoint only reports rain over the last hour at one
- * point. It must not be copied into a 3h accumulated-rainfall field because
- * those measurements cover different time windows.
- */
-function OpenWeatherReference() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [snapshot, setSnapshot] = useState<{
-    observedAt: string | null
-    location: string | null
-    rain1h: number
-    humidity: number | null
-    windSpeed: number | null
-  } | null>(null)
-
-  const fetchNow = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await floodService.getCurrentWeather()
-      const data = res?.data
-      setSnapshot({
-        observedAt: data?.observedAt ?? null,
-        location: data?.location ?? null,
-        rain1h: Number(data?.rainfall?.amount1h || 0),
-        humidity: data?.humidity ?? null,
-        windSpeed: data?.wind?.speed ?? null,
-      })
-    } catch (err: unknown) {
-      const message =
-        (err as { body?: { message?: string } } | null)?.body?.message ||
-        (err as Error)?.message ||
-        'Không lấy được dữ liệu OpenWeather.'
-      setError(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <aside className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 sm:p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="rounded-md bg-white p-2 text-sky-700 shadow-sm">
-            <CloudRain className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="font-medium text-sky-950">Quan trắc OpenWeather</p>
-              <Badge variant="outline" className="border-sky-300 bg-white text-sky-800">
-                Tham khảo · 1 giờ
-              </Badge>
-            </div>
-            <p className="mt-1 text-xs leading-5 text-sky-900">
-              Xem nhanh thời tiết hiện tại tại điểm trung tâm Cẩm Phả. Dữ liệu này không tự động
-              được đưa vào lượt chạy M3.
-            </p>
-          </div>
-        </div>
-        <Button
-          className="w-full shrink-0 bg-white sm:w-auto"
-          size="sm"
-          variant="outline"
-          onClick={fetchNow}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCcw className="size-4" />
-          )}
-          {loading ? 'Đang lấy...' : snapshot ? 'Cập nhật quan trắc' : 'Xem quan trắc hiện tại'}
-        </Button>
-      </div>
-
-      <p className="mt-3 flex items-start gap-2 rounded-md bg-white/80 p-2 text-xs text-sky-950">
-        <Info className="mt-0.5 size-3.5 shrink-0" />
-        API thời tiết hiện tại chỉ trả tổng mưa 1 giờ tại một điểm; không cung cấp các tổng tích lũy
-        3h, 6h, 24h, 72h, 7 ngày hoặc 30 ngày.
-      </p>
-
-      {error ? (
-        <div
-          role="alert"
-          className="mt-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700"
-        >
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      ) : null}
-
-      {snapshot && !error ? (
-        <div className="mt-3 space-y-3" aria-live="polite">
-          <div className="flex flex-col gap-1 text-xs text-sky-950 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
-            <span className="flex items-center gap-1.5 font-medium">
-              <MapPin className="size-3.5" />
-              {snapshot.location || 'Cẩm Phả'}
-            </span>
-            <span className="text-sky-800">
-              Quan trắc lúc {formatDateTime(snapshot.observedAt)}
-            </span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <WeatherFact
-              icon={Droplets}
-              label="Mưa 1 giờ"
-              value={`${snapshot.rain1h.toFixed(2)} mm`}
-            />
-            <WeatherFact
-              icon={CloudRain}
-              label="Độ ẩm"
-              value={snapshot.humidity == null ? 'Không có dữ liệu' : `${snapshot.humidity}%`}
-            />
-            <WeatherFact
-              icon={Wind}
-              label="Tốc độ gió"
-              value={snapshot.windSpeed == null ? 'Không có dữ liệu' : `${snapshot.windSpeed} m/s`}
-            />
-          </div>
-          <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs leading-5 text-amber-900">
-            Không dùng trực tiếp mưa 1h thay cho tổng mưa 3h. Hãy nhập số liệu tích lũy đúng khoảng
-            thời gian từ trạm đo hoặc nguồn nghiệp vụ đã kiểm tra.
-          </p>
-        </div>
-      ) : null}
-    </aside>
-  )
-}
-
-function WeatherFact({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  value: string
-}) {
-  return (
-    <div className="rounded-md border border-sky-100 bg-white p-3">
-      <p className="flex items-center gap-1.5 text-xs text-sky-800">
-        <Icon className="size-3.5" />
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-sky-950">{value}</p>
-    </div>
-  )
-}
 
 /**
  * Preset scenario buttons — one click preps the run form for a common
@@ -1567,14 +1413,6 @@ function ScenarioPresets({ onPickScenario }: { onPickScenario: (module: FloodMod
       description: 'Phát hiện ngập từ ảnh Sentinel-1 sau bão. Kèm thống kê tác động.',
       module: 'event',
       tone: 'border-sky-200 bg-sky-50 hover:border-sky-400',
-    },
-    {
-      key: 'rain',
-      icon: CloudRain,
-      title: 'Mưa lớn dự báo',
-      description: 'Chỉ số nguy cơ ngập theo lượng mưa IMERG / nhập thủ công.',
-      module: 'rain',
-      tone: 'border-indigo-200 bg-indigo-50 hover:border-indigo-400',
     },
     {
       key: 'scenario',

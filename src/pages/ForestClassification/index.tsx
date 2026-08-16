@@ -101,19 +101,19 @@ const STATUS_TONE: Record<string, string> = {
 
 /** 8-class object taxonomy calibrated for Cẩm Phả terrain/vegetation (2026). */
 const FOREST_CLASS_DEFINITIONS = [
-  { classId: 0, nameVi: 'Mặt nước', nameEn: 'Water surface', color: '#1A73E8' },
+  { classId: 0, nameVi: 'Mặt nước', nameEn: 'Water surface', color: '#0886FB' },
   {
     classId: 1,
-    nameVi: 'Rừng lá rộng thường xanh (thưa)',
+    nameVi: 'Rừng LRTX có độ che phủ thưa',
     nameEn: 'Sparse evergreen broadleaf forest',
-    color: '#2D7B2E',
+    color: '#036403',
   },
-  { classId: 2, nameVi: 'Dân cư đô thị', nameEn: 'Urban / built-up', color: '#E91E63' },
-  { classId: 3, nameVi: 'Đất trống khô', nameEn: 'Dry bare land', color: '#C8B097' },
-  { classId: 4, nameVi: 'Bãi khai thác than', nameEn: 'Coal mining area', color: '#1A1A1A' },
-  { classId: 5, nameVi: 'Cây bụi', nameEn: 'Shrubland', color: '#85C946' },
-  { classId: 6, nameVi: 'Đất trống trảng cỏ', nameEn: 'Grassland / bare grass', color: '#BFD760' },
-  { classId: 7, nameVi: 'Đất nông nghiệp', nameEn: 'Agricultural land', color: '#F5E642' },
+  { classId: 2, nameVi: 'Dân cư đô thị', nameEn: 'Urban / built-up', color: '#FA9497' },
+  { classId: 3, nameVi: 'Đất trống khô', nameEn: 'Dry bare land', color: '#FDFE98' },
+  { classId: 4, nameVi: 'Bãi khai thác than', nameEn: 'Coal mining area', color: '#8C5C07' },
+  { classId: 5, nameVi: 'Cây bụi', nameEn: 'Shrubland', color: '#318A07' },
+  { classId: 6, nameVi: 'Đất trống trảng cỏ', nameEn: 'Grassland / bare grass', color: '#CFFC15' },
+  { classId: 7, nameVi: 'Đất nông nghiệp', nameEn: 'Agricultural land', color: '#FBC695' },
 ] as const
 
 const finiteNumber = (value: unknown): number | null => {
