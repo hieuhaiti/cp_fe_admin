@@ -9,7 +9,7 @@ interface ForestMapProps {
   /** WMS raster tile URL — build từ resolveRasterTileUrl (ưu tiên GeoServer,
    *  fallback GEE tile URL có thời hạn). */
   rasterTileUrl?: string | null
-  /** Legend items để hiển thị bảng Chú giải 12 lớp góc dưới bản đồ. */
+  /** Legend items để hiển thị bảng Chú giải 8 lớp góc dưới bản đồ. */
   legend?: Array<{ classId: number; name: string; color: string }>
   /** Opacity 0-1 cho raster overlay. */
   opacity?: number
@@ -25,7 +25,7 @@ const RASTER_LAYER_ID = 'forest-class-raster-layer'
 const CAM_PHA_CENTER: [number, number] = [107.303749, 21.002361]
 
 /**
- * Bản đồ preview raster Phân loại đối tượng 11 lớp. Skeleton tối giản so với
+ * Bản đồ preview raster Phân loại đối tượng 8 lớp. Skeleton tối giản so với
  * Preview tối giản: không vector lớp quận/phường, không popup
  * click, không reproject UTM (server serve WMS 3857 sẵn).
  *
@@ -162,7 +162,7 @@ export default function ForestMap({
       {/* Legend góc dưới trái */}
       {legend && legend.length > 0 && (
         <div className="absolute bottom-2 left-2 max-h-64 overflow-y-auto rounded-md bg-white/95 p-2 text-xs shadow">
-          <div className="mb-1 font-semibold">Chú giải 12 lớp</div>
+          <div className="mb-1 font-semibold">Chú giải 8 lớp</div>
           {legend.map((c) => (
             <div key={c.classId} className="flex items-center gap-2">
               <span

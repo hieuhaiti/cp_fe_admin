@@ -465,24 +465,30 @@ export default function MapLayerFormDialog({
             <Label>
               Nhóm lớp <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={category}
-              onValueChange={(value) => {
-                setCategory(value)
-                setCategoryName(getMapLayerCategoryLabel(value))
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn nhóm lớp" />
-              </SelectTrigger>
-              <SelectContent>
-                {MAP_LAYER_CATEGORY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isEdit ? (
+              <div className="border-input bg-muted/40 flex h-9 w-full items-center rounded-md border px-3 text-sm">
+                {categoryName || getMapLayerCategoryLabel(category)}
+              </div>
+            ) : (
+              <Select
+                value={category}
+                onValueChange={(value) => {
+                  setCategory(value)
+                  setCategoryName(getMapLayerCategoryLabel(value))
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Chọn nhóm lớp" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MAP_LAYER_CATEGORY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -505,18 +511,24 @@ export default function MapLayerFormDialog({
             <Label>
               Loại lớp <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={layerKind}
-              onValueChange={(v) => setLayerKind(v as 'basemap' | 'overlay')}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="basemap">Lớp nền</SelectItem>
-                <SelectItem value="overlay">Lớp phủ</SelectItem>
-              </SelectContent>
-            </Select>
+            {isEdit ? (
+              <div className="border-input bg-muted/40 flex h-9 w-full items-center rounded-md border px-3 text-sm">
+                {layerKind === 'basemap' ? 'Lớp nền' : 'Lớp phủ'}
+              </div>
+            ) : (
+              <Select
+                value={layerKind}
+                onValueChange={(v) => setLayerKind(v as 'basemap' | 'overlay')}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="basemap">Lớp nền</SelectItem>
+                  <SelectItem value="overlay">Lớp phủ</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <p className="text-muted-foreground text-xs">
               {layerKind === 'basemap'
                 ? 'Lớp nền sẽ tự động được bật khi user vào bản đồ, hiển thị ở mục "Lớp nền" trong sidebar.'
@@ -540,20 +552,31 @@ export default function MapLayerFormDialog({
             <Label>
               Kiểu hình học <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={geometryType}
-              onValueChange={(v) => setGeometryType(v as typeof geometryType)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="point">Point</SelectItem>
-                <SelectItem value="line">Line</SelectItem>
-                <SelectItem value="polygon">Polygon</SelectItem>
-                <SelectItem value="raster">Raster (GeoTIFF)</SelectItem>
-              </SelectContent>
-            </Select>
+            {isEdit ? (
+              <>
+                <div className="border-input bg-muted/40 flex h-9 w-full items-center rounded-md border px-3 text-sm capitalize">
+                  {geometryType === 'raster' ? 'Raster (GeoTIFF)' : geometryType}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Kiểu hình học không thể thay đổi sau khi tạo lớp.
+                </p>
+              </>
+            ) : (
+              <Select
+                value={geometryType}
+                onValueChange={(v) => setGeometryType(v as typeof geometryType)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="point">Point</SelectItem>
+                  <SelectItem value="line">Line</SelectItem>
+                  <SelectItem value="polygon">Polygon</SelectItem>
+                  <SelectItem value="raster">Raster (GeoTIFF)</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">

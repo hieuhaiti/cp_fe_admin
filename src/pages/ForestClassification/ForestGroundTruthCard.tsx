@@ -11,10 +11,10 @@ import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 
 /**
- * Ground truth card cho phân loại lớp phủ Cẩm Phả 12 lớp.
+ * Ground truth card cho phân loại lớp phủ Cẩm Phả 8 lớp.
  *
  * Đặc thù ground truth Phân loại đối tượng:
- *   - Thang: class_id 0-11 thay vì severity 1-5
+ *   - Thang: class_id 0-7 thay vì severity 1-5
  *   - "observedAt" thay vì "occurredAt" (đo đạc chứ không phải sự cố)
  *   - Point vẫn có class_id — điểm mẫu đơn lẻ (ranger đo tại tọa độ X,Y)
  *
@@ -24,18 +24,14 @@ import { useAuthStore } from '@/stores/common/useAuthStore'
 
 // Đồng bộ với CLASS_DEFINITIONS của server/src/services/forest-classification/pipeline.js.
 const CLASSES: Array<{ id: number; name: string; color: string }> = [
-  { id: 0,  name: 'Nước mặt',                        color: '#1A73E8' },
-  { id: 1,  name: 'Rừng tự nhiên',                   color: '#2D7B2E' },
-  { id: 2,  name: 'Rừng trồng',                      color: '#85C946' },
-  { id: 3,  name: 'Cây bụi / trảng cỏ',              color: '#BFD760' },
-  { id: 4,  name: 'Cây hàng năm',                    color: '#F5E642' },
-  { id: 5,  name: 'Cây lâu năm',                     color: '#F9A825' },
-  { id: 6,  name: 'Khu dân cư',                      color: '#E91E63' },
-  { id: 7,  name: 'Công trình - hạ tầng',            color: '#B71C1C' },
-  { id: 8,  name: 'Đất trống',                       color: '#D7CCC8' },
-  { id: 9,  name: 'Khai trường mỏ',                  color: '#000000' },
-  { id: 10, name: 'Bãi thải mỏ',                     color: '#795548' },
-  { id: 11, name: 'Đất ngập nước / ven biển',        color: '#00BCD4' },
+  { id: 0, name: 'Mặt nước',                        color: '#0886FB' },
+  { id: 1, name: 'Rừng LRTX có độ che phủ thưa',   color: '#036403' },
+  { id: 2, name: 'Dân cư đô thị',                   color: '#FA9497' },
+  { id: 3, name: 'Đất trống khô',                   color: '#FDFE98' },
+  { id: 4, name: 'Bãi khai thác than',              color: '#8C5C07' },
+  { id: 5, name: 'Cây bụi',                         color: '#318A07' },
+  { id: 6, name: 'Đất trống trảng cỏ',              color: '#CFFC15' },
+  { id: 7, name: 'Đất nông nghiệp',                 color: '#FBC695' },
 ]
 
 const classLabel = (id: number) => {
@@ -62,7 +58,7 @@ export default function ForestGroundTruthCard() {
         >
           <div className="flex items-center gap-2">
             <Trees className="h-4 w-4 text-emerald-600" />
-            <h2 className="text-lg font-semibold">Dữ liệu mẫu thực địa (12 lớp)</h2>
+            <h2 className="text-lg font-semibold">Dữ liệu mẫu thực địa (8 lớp)</h2>
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700">
               Cải thiện độ chính xác
             </span>

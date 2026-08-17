@@ -51,7 +51,7 @@ export const serviceStatisticsPath = '/statistics'
 
 // Flood / Hydrology
 export const serviceAdminFloodPath = '/admin/flood'
-export const serviceFloodPath = '/field-reports'
+export const serviceFloodPath = '/flood'
 export const serviceAdminFieldReportPath = '/admin/field-reports'
 
 // Satellite (on-demand GEE)

@@ -9,9 +9,9 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock3,
-  Droplets,
   FilterX,
   History,
+  Layers3,
   Loader2,
   MapPin,
   Play,
@@ -19,6 +19,7 @@ import {
   RotateCcw,
   Settings2,
   Waves,
+  X,
 } from 'lucide-react'
 import { floodService, useApiMutation, useApiQuery } from '@/service'
 import { useAuthStore } from '@/stores/common/useAuthStore'
@@ -31,13 +32,23 @@ import type {
   FloodRunDetail,
   FloodRunMode,
   FloodRunStatus,
+  TrendConfig,
+  TrendConfigField,
   UpdateLegendBody,
 } from '@/types/api'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PaginationCustom } from '@/components/features/PaginationCustom'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -58,39 +69,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-const MODULES: Array<{
-  code: FloodModule
-  short: string
-  name: string
-  description: string
-}> = [
-  {
-    code: 'event',
-    short: 'M1',
-    name: 'Hiện trạng ngập',
-    description: 'Sentinel-1 trước/sau sự kiện',
-  },
-  { code: 'hand', short: 'M2', name: 'Nhạy cảm địa hình', description: 'HAND và độ dốc' },
-  {
-    code: 'impact',
-    short: 'M4',
-    name: 'Tác động ngập',
-    description: 'Dân cư, công trình và hạ tầng',
-  },
-  {
-    code: 'trend',
-    short: 'M5',
-    name: 'Xu thế nhiều năm',
-    description: 'Tần suất, ngập mới, biến động đất',
-  },
-]
-
 const LEGEND_MODULE_LABELS: Record<string, string> = {
-  event: 'M1 · Hiện trạng ngập',
-  hand: 'M2 · Kịch bản HAND',
-  rain: 'M3 · Rủi ro mưa',
-  impact: 'M4 · Tác động ngập',
-  trend: 'M5 · Xu thế nhiều năm',
+  event: 'Hiện trạng sự kiện',
+  hand: 'Kịch bản địa hình',
+  rain: 'Rủi ro mưa',
+  impact: 'Tác động ngập',
+  trend: 'Phân tích ngập theo năm',
 }
 
 const LEGEND_KIND_LABELS: Record<string, string> = {
@@ -123,129 +107,8 @@ const STATUS_LABELS: Record<FloodRunStatus, string> = {
   DLQ: 'Cần xử lý',
 }
 
-type FloodRunForm = Record<string, string | boolean>
-type FloodConfigDefaults = Partial<Record<FloodModule, Record<string, unknown>>>
-
-// Fallback values keep the form usable before GET /admin/flood/config returns.
-// The server remains authoritative and supplies the current version after load.
-const FORM_FALLBACK_DEFAULTS: Record<FloodModule, Record<string, unknown>> = {
-  event: {
-    preStart: '2024-01-01',
-    preEnd: '2024-04-30',
-    postStart: '2024-09-01',
-    postEnd: '2024-09-30',
-    runImpactAfterM1: true,
-  },
-  hand: { levelM: 5 },
-  impact: { impactSource: 'M1', impactUseNonTidal: true },
-  trend: {
-    dryStart: '2023-01-01',
-    dryEnd: '2023-04-30',
-    periods: [
-      { start: '2023-07-01', end: '2023-07-31' },
-      { start: '2023-08-01', end: '2023-08-31' },
-      { start: '2023-09-01', end: '2023-09-30' },
-      { start: '2023-10-01', end: '2023-10-31' },
-    ],
-  },
-}
-
 function stringDefault(value: unknown, fallback = '') {
   return typeof value === 'string' || typeof value === 'number' ? String(value) : fallback
-}
-
-function booleanDefault(value: unknown, fallback = false) {
-  return typeof value === 'boolean' ? value : fallback
-}
-
-function periodDefault(value: unknown, index: number, key: 'start' | 'end') {
-  if (!Array.isArray(value) || !value[index] || typeof value[index] !== 'object') return ''
-  return stringDefault((value[index] as Record<string, unknown>)[key])
-}
-
-function createRunForm(module: FloodModule, defaults: Record<string, unknown> = {}): FloodRunForm {
-  switch (module) {
-    case 'event':
-      return {
-        preStart: stringDefault(defaults.preStart),
-        preEnd: stringDefault(defaults.preEnd),
-        postStart: stringDefault(defaults.postStart),
-        postEnd: stringDefault(defaults.postEnd),
-        runImpactAfterM1: booleanDefault(defaults.runImpactAfterM1, true),
-      }
-    case 'hand':
-      return { levelM: stringDefault(defaults.levelM, '5') }
-    case 'impact':
-      return {
-        impactSource: stringDefault(defaults.impactSource, 'M1'),
-        sourceRunId: '',
-        impactUseNonTidal: booleanDefault(defaults.impactUseNonTidal, true),
-      }
-    case 'trend':
-      return {
-        dryStart: stringDefault(defaults.dryStart),
-        dryEnd: stringDefault(defaults.dryEnd),
-        period1Start: periodDefault(defaults.periods, 0, 'start'),
-        period1End: periodDefault(defaults.periods, 0, 'end'),
-        period2Start: periodDefault(defaults.periods, 1, 'start'),
-        period2End: periodDefault(defaults.periods, 1, 'end'),
-        period3Start: periodDefault(defaults.periods, 2, 'start'),
-        period3End: periodDefault(defaults.periods, 2, 'end'),
-        period4Start: periodDefault(defaults.periods, 3, 'start'),
-        period4End: periodDefault(defaults.periods, 3, 'end'),
-      }
-  }
-}
-
-function requiredFormValue(form: FloodRunForm, key: string, label: string) {
-  const value = form[key]
-  if (typeof value !== 'string' || !value.trim())
-    throw new Error(`Hãy nhập ${label.toLowerCase()}.`)
-  return value.trim()
-}
-
-function optionalNumber(form: FloodRunForm, key: string, label: string) {
-  const value = form[key]
-  if (typeof value !== 'string' || !value.trim()) return undefined
-  const number = Number(value)
-  if (!Number.isFinite(number)) throw new Error(`${label} phải là một số hợp lệ.`)
-  return number
-}
-
-function buildRunConfig(module: FloodModule, form: FloodRunForm): Record<string, unknown> {
-  switch (module) {
-    case 'event':
-      return {
-        preStart: requiredFormValue(form, 'preStart', 'ngày bắt đầu kỳ nền'),
-        preEnd: requiredFormValue(form, 'preEnd', 'ngày kết thúc kỳ nền'),
-        postStart: requiredFormValue(form, 'postStart', 'ngày bắt đầu kỳ phân tích'),
-        postEnd: requiredFormValue(form, 'postEnd', 'ngày kết thúc kỳ phân tích'),
-        runImpactAfterM1: form.runImpactAfterM1 === true,
-      }
-    case 'hand': {
-      const levelM = optionalNumber(form, 'levelM', 'Mực nước giả định')
-      return levelM === undefined ? {} : { levelM }
-    }
-    case 'impact': {
-      const sourceRunId = optionalNumber(form, 'sourceRunId', 'Mã lượt chạy nguồn')
-      return {
-        impactSource: requiredFormValue(form, 'impactSource', 'nguồn lớp ngập'),
-        impactUseNonTidal: form.impactUseNonTidal === true,
-        ...(sourceRunId === undefined ? {} : { sourceRunId }),
-      }
-    }
-    case 'trend': {
-      const periods = [1, 2, 3, 4].map((index) => ({
-        start: requiredFormValue(form, `period${index}Start`, `ngày bắt đầu đợt ${index}`),
-        end: requiredFormValue(form, `period${index}End`, `ngày kết thúc đợt ${index}`),
-      }))
-      return {
-        dryStart: requiredFormValue(form, 'dryStart', 'ngày bắt đầu kỳ nền'),
-        dryEnd: requiredFormValue(form, 'dryEnd', 'ngày kết thúc kỳ nền'),
-        periods,
-      }
-    }
-  }
 }
 
 function formatDateTime(value?: string | null) {
@@ -261,9 +124,10 @@ function exclusiveEndDate(value: string) {
   return parsed.toISOString()
 }
 
-function moduleLabel(module: FloodModule) {
-  const item = MODULES.find(({ code }) => code === module)
-  return item ? `${item.name}` : module
+function formatNumber(value: unknown) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return '—'
+  return n.toLocaleString('vi-VN', { maximumFractionDigits: 2 })
 }
 
 function StatusBadge({ status }: { status: FloodRunStatus }) {
@@ -289,29 +153,26 @@ export default function FloodPage() {
   const canCalibrate = hasPerm(user, 'flood', 'calibrate')
   const canPublish = hasPerm(user, 'flood', 'publish')
   const [activeTab, setActiveTab] = useState('submit')
-  const [module, setModule] = useState<FloodModule>('event')
-  const [mode, setMode] = useState<FloodRunMode>('product')
-  const [runForm, setRunForm] = useState<FloodRunForm>(() =>
-    createRunForm('event', FORM_FALLBACK_DEFAULTS.event)
-  )
+  const [analysisYear, setAnalysisYear] = useState(() => String(new Date().getFullYear() - 1))
+  const [orbitPass, setOrbitPass] = useState('ASCENDING')
   const [historyExpanded, setHistoryExpanded] = useState(true)
   const [historyPage, setHistoryPage] = useState(1)
   const [historyPageSize, setHistoryPageSize] = useState(10)
-  const [moduleFilter, setModuleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [fromFilter, setFromFilter] = useState('')
   const [toFilter, setToFilter] = useState('')
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
   const [legendModuleFilter, setLegendModuleFilter] = useState<FloodLegendModule | 'all'>('all')
-  const [editingCode, setEditingCode] = useState<string | null>(null)
-  const [legendForm, setLegendForm] = useState<UpdateLegendBody>({})
+  const [editingLegend, setEditingLegend] = useState<FloodLegend | null>(null)
+  const [paletteRows, setPaletteRows] = useState<string[]>([])
+  const [legendForm, setLegendForm] = useState<{ label: { vi: string; en: string }; min: number; max: number }>({
+    label: { vi: '', en: '' }, min: 0, max: 1
+  })
 
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ['flood'] })
   }
 
-  // Poll only the lightweight queue/dashboard state. History is opt-in and is
-  // fetched only while its collapsible panel is open.
   const IDLE_POLL_MS = 30_000
   const ACTIVE_POLL_MS = 5_000
   const queueQuery = useApiQuery(['flood', 'queue'], () => floodService.getQueue(), {}, false)
@@ -330,7 +191,6 @@ export default function FloodPage() {
       'runs',
       historyPage,
       historyPageSize,
-      moduleFilter,
       statusFilter,
       fromFilter,
       toFilter,
@@ -339,7 +199,7 @@ export default function FloodPage() {
       floodService.getRuns({
         page: historyPage,
         limit: historyPageSize,
-        module: moduleFilter === 'all' ? undefined : moduleFilter,
+        module: 'trend',
         status: statusFilter === 'all' ? undefined : statusFilter,
         from: fromFilter || undefined,
         to: toFilter ? exclusiveEndDate(toFilter) : undefined,
@@ -359,9 +219,14 @@ export default function FloodPage() {
     { refetchInterval: pollInterval },
     false
   )
-  // Config is version-stamped on the server and doesn't change on its own —
-  // fetch once and let refreshAll invalidate it after a config-writing action.
   const configQuery = useApiQuery(['flood', 'config'], () => floodService.getConfig(), {}, false)
+  const trendConfigQuery = useApiQuery(
+    ['flood', 'trend-config'],
+    () => floodService.getTrendConfig(),
+    { enabled: activeTab === 'config' },
+    false
+  )
+  const trendConfig = trendConfigQuery.data?.data as TrendConfig | undefined
   const detailQuery = useApiQuery(
     ['flood', 'run', selectedRunId],
     () => floodService.getRun(selectedRunId as number),
@@ -383,7 +248,7 @@ export default function FloodPage() {
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['flood', 'legends'] })
-        setEditingCode(null)
+        setEditingLegend(null)
       },
     }
   )
@@ -391,13 +256,31 @@ export default function FloodPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'legends'] }),
   })
 
+  const putTrendConfigMutation = useApiMutation(
+    (patch: Record<string, unknown>) => floodService.putTrendConfig(patch),
+    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'trend-config'] }) },
+  )
+  const resetTrendConfigMutation = useApiMutation(
+    (key?: string) => floodService.resetTrendConfigField(key),
+    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'trend-config'] }) },
+  )
+
+  const handleTrendConfigSave = async (key: string, value: unknown) => {
+    await putTrendConfigMutation.mutateAsync({ [key]: value })
+    toast.success(`Đã cập nhật thông số "${key}"`)
+  }
+  const handleTrendConfigReset = async (key: string) => {
+    await resetTrendConfigMutation.mutateAsync(key)
+    toast.success(`Đã khôi phục thông số "${key}" về mặc định`)
+  }
+
   const openLegendEditor = (legend: FloodLegend) => {
-    setEditingCode(legend.code)
+    setEditingLegend(legend)
+    setPaletteRows(legend.entries.map(e => e.color.replace('#', '')))
     setLegendForm({
       label: { vi: legend.label.vi, en: legend.label.en },
-      palette: legend.entries.map((e) => e.color.replace('#', '')),
-      min: legend.min,
-      max: legend.max,
+      min: legend.min ?? 0,
+      max: legend.max ?? 1,
     })
   }
 
@@ -416,27 +299,20 @@ export default function FloodPage() {
   const runDetail = detailQuery.data?.data
   const floodConfig = configQuery.data?.data as
     | {
-        defaults?: FloodConfigDefaults
+        defaults?: Record<string, Record<string, unknown>>
         versions?: Partial<Record<FloodModule, string>>
         configVersion?: string
         probabilityCalibrated?: boolean
       }
     | undefined
-  const configDefaults = floodConfig?.defaults
-  const layerCounts = useMemo(() => {
-    const result = Object.fromEntries(MODULES.map(({ code }) => [code, 0]))
-    dashboard?.layers?.forEach((layer) => {
-      result[layer.module] = (result[layer.module] || 0) + 1
-    })
-    return result
+
+  const publishedCount = useMemo(() => {
+    return (dashboard?.layers ?? []).filter((l: { module?: string }) => l.module === 'trend').length
   }, [dashboard])
 
-  const updateRunForm = (key: string, value: string | boolean) => {
-    setRunForm((current) => ({ ...current, [key]: value }))
-  }
+  const latestTrend = dashboard?.modules?.['trend']
 
   const resetHistoryFilters = () => {
-    setModuleFilter('all')
     setStatusFilter('all')
     setFromFilter('')
     setToFilter('')
@@ -444,32 +320,28 @@ export default function FloodPage() {
     setSelectedRunId(null)
   }
 
-  const hasHistoryFilters =
-    moduleFilter !== 'all' || statusFilter !== 'all' || Boolean(fromFilter) || Boolean(toFilter)
+  const hasHistoryFilters = statusFilter !== 'all' || Boolean(fromFilter) || Boolean(toFilter)
   const refreshingPage =
     dashboardQuery.isFetching ||
     queueQuery.isFetching ||
     configQuery.isFetching ||
     (historyExpanded && runsQuery.isFetching)
 
-  const selectModule = (value: string) => {
-    const nextModule = value as FloodModule
-    setModule(nextModule)
-    setRunForm(
-      createRunForm(nextModule, configDefaults?.[nextModule] ?? FORM_FALLBACK_DEFAULTS[nextModule])
-    )
-  }
-
   const submitRun = () => {
-    try {
-      const config = buildRunConfig(module, runForm)
-      submitMutation.mutate({ module, mode, config })
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Không thể đọc thông tin lượt phân tích.'
-      )
+    const year = Number(analysisYear)
+    if (!Number.isInteger(year) || year < 2015 || year > 2100) {
+      toast.error('Năm phân tích phải từ 2015 đến 2100.')
       return
     }
+    if (!orbitPass.trim()) {
+      toast.error('Hãy chọn quỹ đạo Sentinel-1.')
+      return
+    }
+    submitMutation.mutate({
+      module: 'trend',
+      mode: 'product',
+      config: { analysisYear: year, orbitPass },
+    })
   }
 
   return (
@@ -490,84 +362,32 @@ export default function FloodPage() {
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-3 sm:space-y-6 sm:p-6">
-        {canRun && (
-          <ScenarioPresets
-            onPickScenario={(scenarioModule) => {
-              selectModule(scenarioModule)
-              setActiveTab('submit')
-            }}
-          />
-        )}
-
+        {/* Dashboard cards */}
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {MODULES.map((item) => {
-            const latest = dashboard?.modules?.[item.code]
-            const publishedCount = layerCounts[item.code] || 0
-            const clickable = canRun
-            return (
-              <Card
-                key={item.code}
-                className={cn(
-                  'shadow-none transition',
-                  clickable && 'cursor-pointer hover:border-sky-400 hover:shadow-sm'
-                )}
-                onClick={
-                  clickable
-                    ? () => {
-                        selectModule(item.code)
-                        setActiveTab('submit')
-                      }
-                    : undefined
-                }
-              >
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm">{item.name}</CardTitle>
-                    {latest ? (
-                      <StatusBadge status={latest.status} />
-                    ) : (
-                      <Badge variant="outline">Trống</Badge>
-                    )}
-                  </div>
-                  <CardDescription className="text-xs">{item.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="text-muted-foreground p-4 pt-1 text-xs">
-                  <p className="flex items-center gap-1">
-                    <Archive className="size-3" />
-                    {publishedCount} lớp đã công bố
-                  </p>
-                  <p className="mt-1 flex items-center gap-1">
-                    <CalendarDays className="size-3" />
-                    {formatDateTime(latest?.finishedAt) || '—'}
-                  </p>
-                  {clickable && (
-                    <p className="mt-2 text-[10px] text-sky-700">Bấm để tạo lượt chạy →</p>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
+          <MetricCard
+            icon={latestTrend ? (latestTrend.status === 'SUCCEEDED' ? CheckCircle2 : Activity) : Clock3}
+            label="Trạng thái lần chạy gần nhất"
+            value={latestTrend ? STATUS_LABELS[latestTrend.status as FloodRunStatus] || latestTrend.status : 'Chưa có'}
+            hint={latestTrend ? formatDateTime(latestTrend.finishedAt) : 'Chưa có lượt phân tích'}
+          />
+          <MetricCard
+            icon={CalendarDays}
+            label="Năm phân tích gần nhất"
+            value={latestTrend?.analysisYear ? String(latestTrend.analysisYear) : '—'}
+            hint="Năm của lượt phân tích hoàn thành gần nhất"
+          />
+          <MetricCard
+            icon={Layers3}
+            label="Lớp bản đồ đã công bố"
+            value={String(publishedCount)}
+            hint="Số lớp raster đang hiển thị trên bản đồ"
+          />
           <MetricCard
             icon={queue?.active ? Loader2 : CheckCircle2}
-            label="Tiến trình đang chạy"
-            value={queue?.active?.label || 'Không có'}
-            hint={`Xử lý ${queue?.concurrency ?? 1} lượt cùng lúc`}
+            label="Hàng đợi"
+            value={queue?.active ? 'Đang xử lý' : 'Sẵn sàng'}
+            hint={`Chờ: ${queue?.pending?.length ?? 0} · Còn ${queue?.capacityRemaining ?? 0}/${queue?.maxPending ?? 0} vị trí`}
             spinning={Boolean(queue?.active)}
-          />
-          <MetricCard
-            icon={Clock3}
-            label="Đang chờ"
-            value={String(queue?.pending?.length ?? 0)}
-            hint={`Còn ${queue?.capacityRemaining ?? 0}/${queue?.maxPending ?? 0} vị trí`}
-          />
-          <MetricCard
-            icon={Activity}
-            label="Nhận tác vụ"
-            value={queue?.accepting === false ? 'Đang dừng' : 'Sẵn sàng'}
-            hint="Hàng đợi vệ tinh chung, xử lý tuần tự"
           />
         </div>
 
@@ -579,7 +399,7 @@ export default function FloodPage() {
             </TabsTrigger>
             <TabsTrigger value="submit">
               <span className="sm:hidden">Tạo lượt</span>
-              <span className="hidden sm:inline">Tạo lượt chạy</span>
+              <span className="hidden sm:inline">Tạo lượt phân tích</span>
             </TabsTrigger>
             <TabsTrigger value="legends">
               <span className="sm:hidden">Chú giải</span>
@@ -591,6 +411,7 @@ export default function FloodPage() {
             </TabsTrigger>
           </TabsList>
 
+          {/* ── HISTORY TAB ── */}
           <TabsContent value="runs" className="space-y-4">
             <Card>
               <CardHeader className="p-0">
@@ -629,31 +450,7 @@ export default function FloodPage() {
                 <CardContent id="flood-run-history" className="space-y-4 border-t p-4 sm:p-6">
                   <div className="rounded-lg border bg-slate-50/60 p-3 sm:p-4">
                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="history-module">Mô-đun</Label>
-                          <Select
-                            value={moduleFilter}
-                            onValueChange={(next) => {
-                              setModuleFilter(next)
-                              setHistoryPage(1)
-                              setSelectedRunId(null)
-                            }}
-                          >
-                            <SelectTrigger id="history-module">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Tất cả mô-đun</SelectItem>
-                              {MODULES.map((item) => (
-                                <SelectItem key={item.code} value={item.code}>
-                                  {item.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         <div className="space-y-1.5">
                           <Label htmlFor="history-status">Trạng thái</Label>
                           <Select
@@ -761,9 +558,10 @@ export default function FloodPage() {
                       <TableHeader className="bg-background sticky top-0 z-10 shadow-sm">
                         <TableRow>
                           <TableHead>ID</TableHead>
-                          <TableHead>Mô-đun</TableHead>
-                          <TableHead>Chế độ</TableHead>
+                          <TableHead>Năm</TableHead>
                           <TableHead>Trạng thái</TableHead>
+                          <TableHead>Diện tích ngập (ha)</TableHead>
+                          <TableHead>Dân số</TableHead>
                           <TableHead>Thời gian</TableHead>
                           <TableHead className="text-right">Thao tác</TableHead>
                         </TableRow>
@@ -771,7 +569,7 @@ export default function FloodPage() {
                       <TableBody>
                         {runsQuery.isFetching && !runs.length ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="py-10 text-center">
+                            <TableCell colSpan={7} className="py-10 text-center">
                               <span className="text-muted-foreground inline-flex items-center gap-2 text-sm">
                                 <Loader2 className="size-4 animate-spin" />
                                 Đang tải lịch sử...
@@ -779,62 +577,68 @@ export default function FloodPage() {
                             </TableCell>
                           </TableRow>
                         ) : null}
-                        {runs.map((run) => (
-                          <TableRow
-                            key={run.id}
-                            data-state={selectedRunId === run.id ? 'selected' : undefined}
-                            className="cursor-pointer"
-                            onClick={() => setSelectedRunId(run.id)}
-                          >
-                            <TableCell className="font-mono">
-                              #{run.id}.{run.attempt_no}
-                            </TableCell>
-                            <TableCell>{moduleLabel(run.module)}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {run.mode === 'product' ? 'Sản phẩm' : 'Hiệu chuẩn'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={run.status} />
-                            </TableCell>
-                            <TableCell>{formatDateTime(run.created_at)}</TableCell>
-                            <TableCell>
-                              <div
-                                className="flex justify-end gap-1"
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                {canRun && LIVE_STATUSES.has(run.status) ? (
-                                  <Button
-                                    size="icon-xs"
-                                    variant="destructive"
-                                    tooltip="Hủy"
-                                    onClick={() => {
-                                      if (window.confirm(`Hủy lượt chạy #${run.id}?`))
-                                        cancelMutation.mutate(run.id)
-                                    }}
-                                  >
-                                    <Ban />
-                                  </Button>
-                                ) : null}
-                                {canRun && !LIVE_STATUSES.has(run.status) ? (
-                                  <Button
-                                    size="icon-xs"
-                                    variant="outline"
-                                    tooltip="Chạy lại"
-                                    onClick={() => rerunMutation.mutate(run.id)}
-                                  >
-                                    <RotateCcw />
-                                  </Button>
-                                ) : null}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {runs.map((run) => {
+                          const year = run.params_snapshot?.analysisYear ?? '—'
+                          const areaHa = run.result_metadata?.areaStats?.floodExtentAreaHa
+                          const population = run.result_metadata?.areaStats?.populationAffected
+                          return (
+                            <TableRow
+                              key={run.id}
+                              data-state={selectedRunId === run.id ? 'selected' : undefined}
+                              className="cursor-pointer"
+                              onClick={() => setSelectedRunId(run.id)}
+                            >
+                              <TableCell className="font-mono">
+                                #{run.id}.{run.attempt_no}
+                              </TableCell>
+                              <TableCell>{year}</TableCell>
+                              <TableCell>
+                                <StatusBadge status={run.status} />
+                              </TableCell>
+                              <TableCell>
+                                {areaHa != null ? `${Number(areaHa).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} ha` : '—'}
+                              </TableCell>
+                              <TableCell>
+                                {population != null ? `${Math.round(Number(population)).toLocaleString('vi-VN')} người` : '—'}
+                              </TableCell>
+                              <TableCell>{formatDateTime(run.created_at)}</TableCell>
+                              <TableCell>
+                                <div
+                                  className="flex justify-end gap-1"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {canRun && LIVE_STATUSES.has(run.status) ? (
+                                    <Button
+                                      size="icon-xs"
+                                      variant="destructive"
+                                      tooltip="Hủy"
+                                      onClick={() => {
+                                        if (window.confirm(`Hủy lượt chạy #${run.id}?`))
+                                          cancelMutation.mutate(run.id)
+                                      }}
+                                    >
+                                      <Ban />
+                                    </Button>
+                                  ) : null}
+                                  {canRun && !LIVE_STATUSES.has(run.status) ? (
+                                    <Button
+                                      size="icon-xs"
+                                      variant="outline"
+                                      tooltip="Chạy lại"
+                                      onClick={() => rerunMutation.mutate(run.id)}
+                                    >
+                                      <RotateCcw />
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
                         {!runs.length && !runsQuery.isFetching ? (
                           <TableRow>
                             <TableCell
-                              colSpan={6}
+                              colSpan={7}
                               className="text-muted-foreground py-10 text-center"
                             >
                               Không có lượt chạy phù hợp với bộ lọc.
@@ -869,95 +673,70 @@ export default function FloodPage() {
             </Card>
 
             {historyExpanded && selectedRunId ? (
-              <>
-                <ImpactMetricsCard runDetail={runDetail} />
-                {/* <RunDetail
-                  run={runDetail}
-                  loading={detailQuery.isFetching}
-                  canPublish={canPublish}
-                  mutationPending={publishMutation.isPending}
-                  onArtifactAction={(artifact, action) =>
-                    publishMutation.mutate({ id: artifact.id, action })
-                  }
-                /> */}
-              </>
+              <TrendMetricsCard runDetail={runDetail} />
             ) : null}
           </TabsContent>
 
+          {/* ── SUBMIT TAB ── */}
           <TabsContent value="submit">
             <div className="grid w-full gap-4 lg:grid-cols-12">
-              <Card className="min-w-0 lg:col-span-4 xl:col-span-3">
+              <Card className="min-w-0 lg:col-span-12">
                 <CardHeader className="p-4 sm:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Play className="size-5 text-sky-600" />
-                    1. Chọn loại phân tích
+                    Tạo lượt phân tích ngập
                   </CardTitle>
                   <CardDescription>
-                    Chọn tác vụ và mục đích chạy. Các ngưỡng khoa học được khóa theo phiên bản cấu
-                    hình chuẩn để tránh thay đổi ngoài quy trình kiểm định.
+                    Chọn năm và quỹ đạo — hệ thống tự sinh 4 mùa (Xuân · Hạ · Thu · Đông) và kỳ
+                    nền khô (T1–T4). Dùng thuật toán VH-only Otsu 3 tầng với dữ liệu
+                    WorldPop và WorldCover cho tác động.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5 p-4 pt-0 sm:p-6 sm:pt-0">
-                  <div className="space-y-2">
-                    <Label>Mô-đun</Label>
-                    <Select value={module} onValueChange={selectModule}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MODULES.map((item) => (
-                          <SelectItem key={item.code} value={item.code}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-muted-foreground text-xs">
-                      {MODULES.find((item) => item.code === module)?.description}
-                    </p>
+                  <div className="bg-muted/20 text-muted-foreground rounded-lg border p-3 text-sm">
+                    Hệ thống tự sinh: Xuân (T3–T5) · Hạ (T6–T8) · Thu (T9–T11) · Đông (T12–T2 năm sau).
+                    Kỳ nền khô: T1–T4. Các ngưỡng thuật toán được kiểm soát theo phiên bản cấu hình.
                   </div>
-                  <div className="space-y-2">
-                    <Label>Chế độ</Label>
-                    <Select value={mode} onValueChange={(value) => setMode(value as FloodRunMode)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="product">
-                          Sản phẩm · có thể công bố lên bản đồ
-                        </SelectItem>
-                        <SelectItem value="calibration" disabled={!canCalibrate}>
-                          Hiệu chuẩn · chỉ lưu trữ, kiểm định chất lượng
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-muted-foreground text-xs">
-                      {mode === 'product'
-                        ? 'Kết quả đạt kiểm định có thể đưa vào quy trình công bố.'
-                        : 'Dùng để kiểm định; kết quả không được công bố trực tiếp.'}
-                    </p>
+                  <div className="grid gap-4 md:grid-cols-2 max-w-xl">
+                    <div className="space-y-2">
+                      <Label htmlFor="analysisYear">Năm phân tích *</Label>
+                      <Input
+                        id="analysisYear"
+                        type="number"
+                        min="2015"
+                        max="2100"
+                        step="1"
+                        value={analysisYear}
+                        onChange={(e) => setAnalysisYear(e.target.value)}
+                        placeholder={String(new Date().getFullYear() - 1)}
+                      />
+                      <p className="text-muted-foreground text-xs">
+                        Từ 2015. Hệ thống sẽ tự xây dựng tất cả các kỳ của năm đã chọn.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Quỹ đạo Sentinel-1</Label>
+                      <Select value={orbitPass} onValueChange={setOrbitPass}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ASCENDING">ASCENDING — hướng lên</SelectItem>
+                          <SelectItem value="DESCENDING">DESCENDING — hướng xuống</SelectItem>
+                          <SelectItem value="AUTO">AUTO — hệ thống tự chọn tốt nhất</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-muted-foreground text-xs">
+                        AUTO: so sánh coverage ASCENDING / DESCENDING rồi chọn quỹ đạo có nhiều ảnh hợp lệ hơn.
+                      </p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="min-w-0 lg:col-span-8 xl:col-span-9">
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <CalendarDays className="size-5 text-sky-600" />
-                    2. Nhập thông tin cần thiết
-                  </CardTitle>
-                  <CardDescription>
-                    Điền thông tin thời gian và tham số cho lượt phân tích. Trường có dấu * là bắt
-                    buộc.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-                  <RunFormFields
-                    module={module}
-                    form={runForm}
-                    configVersion={floodConfig?.configVersion}
-                    onChange={updateRunForm}
-                  />
+                  <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-800 space-y-1">
+                    <p className="font-medium">Thông số thuật toán</p>
+                    <p>VH-only · Otsu per-stratum · HAND 15 m · Slope 5° · freqAlertMin 2 mùa</p>
+                    <p>Tác động: WorldPop VNM 2020 · WorldCover · ESRI LULC (lcYear 2018→2023)</p>
+                    <p className="text-sky-600">Thay đổi thông số nâng cao trong tab Cấu hình mô hình.</p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -988,6 +767,7 @@ export default function FloodPage() {
             </div>
           </TabsContent>
 
+          {/* ── LEGENDS TAB ── */}
           <TabsContent value="legends">
             <Card>
               <CardHeader className="p-4 sm:p-6">
@@ -1012,19 +792,19 @@ export default function FloodPage() {
                       value={legendModuleFilter}
                       onValueChange={(v) => {
                         setLegendModuleFilter(v as FloodLegendModule | 'all')
-                        setEditingCode(null)
+                        setEditingLegend(null)
                       }}
                     >
                       <SelectTrigger className="w-48">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tất cả mô-đun</SelectItem>
-                        <SelectItem value="event">M1 · Hiện trạng ngập</SelectItem>
-                        <SelectItem value="hand">M2 · Kịch bản HAND</SelectItem>
-                        <SelectItem value="rain">M3 · Rủi ro mưa</SelectItem>
-                        <SelectItem value="impact">M4 · Tác động ngập</SelectItem>
-                        <SelectItem value="trend">M5 · Xu thế nhiều năm</SelectItem>
+                        <SelectItem value="all">Tất cả</SelectItem>
+                        <SelectItem value="trend">Phân tích ngập theo năm</SelectItem>
+                        <SelectItem value="event">Hiện trạng sự kiện</SelectItem>
+                        <SelectItem value="hand">Kịch bản địa hình</SelectItem>
+                        <SelectItem value="rain">Rủi ro mưa</SelectItem>
+                        <SelectItem value="impact">Tác động ngập</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
@@ -1060,186 +840,87 @@ export default function FloodPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {legends.map((legend) =>
-                        editingCode === legend.code ? (
-                          <TableRow key={legend.code} className="bg-sky-50/60">
-                            <TableCell>
-                              <p className="font-mono text-xs text-sky-700">{legend.code}</p>
-                              <p className="text-muted-foreground mt-0.5 text-xs">
-                                {LEGEND_MODULE_LABELS[legend.module ?? ''] ?? legend.module}
-                              </p>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                className="h-7 text-xs"
-                                placeholder="Nhãn tiếng Việt"
-                                value={legendForm.label?.vi ?? ''}
-                                onChange={(e) =>
-                                  setLegendForm((f) => ({
-                                    ...f,
-                                    label: { ...f.label, vi: e.target.value },
-                                  }))
-                                }
-                              />
-                              <p className="text-muted-foreground mt-1 text-[11px]">
-                                Kiểu:{' '}
-                                <span className="font-medium">{LEGEND_KIND_LABELS[legend.kind]}</span>{' '}
-                                · không thay đổi được
-                              </p>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                className="h-7 font-mono text-xs"
-                                value={(legendForm.palette ?? []).join(',')}
-                                placeholder="deebf7,9ecae1,4292c6"
-                                onChange={(e) =>
-                                  setLegendForm((f) => ({
-                                    ...f,
-                                    palette: e.target.value
-                                      .split(',')
-                                      .map((s) => s.trim().replace(/^#/, ''))
-                                      .filter(Boolean),
-                                  }))
-                                }
-                              />
-                              <div className="mt-1 flex gap-0.5">
-                                {(legendForm.palette ?? []).slice(0, 10).map((hex, i) => (
-                                  <span
-                                    key={i}
-                                    className="inline-block h-3 w-5 rounded-sm border border-black/10"
-                                    style={{ background: `#${hex}` }}
-                                  />
-                                ))}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  className="h-7 w-14 text-xs"
-                                  type="number"
-                                  value={legendForm.min ?? ''}
-                                  onChange={(e) =>
-                                    setLegendForm((f) => ({ ...f, min: Number(e.target.value) }))
-                                  }
-                                />
-                                <span className="text-muted-foreground text-xs">–</span>
-                                <Input
-                                  className="h-7 w-14 text-xs"
-                                  type="number"
-                                  value={legendForm.max ?? ''}
-                                  onChange={(e) =>
-                                    setLegendForm((f) => ({ ...f, max: Number(e.target.value) }))
-                                  }
-                                />
-                              </div>
-                            </TableCell>
+                      {legends.map((legend) => (
+                        <TableRow key={legend.code}>
+                          <TableCell>
+                            <p className="font-mono text-xs">{legend.code}</p>
+                            <p className="text-muted-foreground mt-0.5 text-xs">
+                              {LEGEND_MODULE_LABELS[legend.module ?? ''] ?? legend.module}
+                            </p>
+                            {legend.hasOverride ? (
+                              <Badge
+                                variant="outline"
+                                className="mt-1 border-amber-300 text-[10px] text-amber-600"
+                              >
+                                đã chỉnh sửa
+                              </Badge>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{legend.label.vi}</p>
+                            <p className="text-muted-foreground mt-0.5 text-xs">
+                              Kiểu: {LEGEND_KIND_LABELS[legend.kind]}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-0.5">
+                              {legend.entries.slice(0, 8).map((entry, i) => (
+                                <Tooltip key={i}>
+                                  <TooltipTrigger>
+                                    <span
+                                      className="inline-block h-5 w-5 rounded-sm border border-black/10"
+                                      style={{ background: entry.color }}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {entry.color}
+                                    {entry.value !== undefined ? ` · ${entry.value}` : ''}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ))}
+                              {legend.entries.length > 8 ? (
+                                <span className="text-muted-foreground self-center text-xs">
+                                  +{legend.entries.length - 8}
+                                </span>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-xs">
+                            {legend.min} – {legend.max}
+                          </TableCell>
+                          {canPublish ? (
                             <TableCell>
                               <div className="flex justify-end gap-1">
                                 <Button
-                                  size="xs"
-                                  variant="default"
-                                  disabled={updateLegendMutation.isPending}
-                                  onClick={() =>
-                                    updateLegendMutation.mutate({
-                                      code: legend.code,
-                                      body: legendForm,
-                                    })
-                                  }
-                                >
-                                  Lưu
-                                </Button>
-                                <Button
-                                  size="xs"
+                                  size="icon-xs"
                                   variant="outline"
-                                  onClick={() => setEditingCode(null)}
+                                  tooltip="Chỉnh sửa màu / nhãn"
+                                  onClick={() => openLegendEditor(legend)}
                                 >
-                                  Hủy
+                                  <Settings2 />
                                 </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          <TableRow key={legend.code}>
-                            <TableCell>
-                              <p className="font-mono text-xs">{legend.code}</p>
-                              <p className="text-muted-foreground mt-0.5 text-xs">
-                                {LEGEND_MODULE_LABELS[legend.module ?? ''] ?? legend.module}
-                              </p>
-                              {legend.hasOverride ? (
-                                <Badge
-                                  variant="outline"
-                                  className="mt-1 border-amber-300 text-[10px] text-amber-600"
-                                >
-                                  đã chỉnh sửa
-                                </Badge>
-                              ) : null}
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm">{legend.label.vi}</p>
-                              <p className="text-muted-foreground mt-0.5 text-xs">
-                                Kiểu: {LEGEND_KIND_LABELS[legend.kind]}
-                              </p>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-0.5">
-                                {legend.entries.slice(0, 8).map((entry, i) => (
-                                  <Tooltip key={i}>
-                                    <TooltipTrigger>
-                                      <span
-                                        className="inline-block h-5 w-5 rounded-sm border border-black/10"
-                                        style={{ background: entry.color }}
-                                      />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {entry.color}
-                                      {entry.value !== undefined ? ` · ${entry.value}` : ''}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ))}
-                                {legend.entries.length > 8 ? (
-                                  <span className="text-muted-foreground self-center text-xs">
-                                    +{legend.entries.length - 8}
-                                  </span>
-                                ) : null}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground font-mono text-xs">
-                              {legend.min} – {legend.max}
-                            </TableCell>
-                            {canPublish ? (
-                              <TableCell>
-                                <div className="flex justify-end gap-1">
+                                {legend.hasOverride ? (
                                   <Button
                                     size="icon-xs"
                                     variant="outline"
-                                    tooltip="Chỉnh sửa màu / nhãn"
-                                    onClick={() => openLegendEditor(legend)}
-                                  >
-                                    <Settings2 />
-                                  </Button>
-                                  {legend.hasOverride ? (
-                                    <Button
-                                      size="icon-xs"
-                                      variant="outline"
-                                      tooltip="Khôi phục mặc định"
-                                      onClick={() => {
-                                        if (
-                                          window.confirm(
-                                            `Khôi phục '${legend.code}' về mặc định?`
-                                          )
+                                    tooltip="Khôi phục mặc định"
+                                    onClick={() => {
+                                      if (
+                                        window.confirm(
+                                          `Khôi phục '${legend.code}' về mặc định?`
                                         )
-                                          resetLegendMutation.mutate(legend.code)
-                                      }}
-                                    >
-                                      <RotateCcw />
-                                    </Button>
-                                  ) : null}
-                                </div>
-                              </TableCell>
-                            ) : null}
-                          </TableRow>
-                        )
-                      )}
+                                      )
+                                        resetLegendMutation.mutate(legend.code)
+                                    }}
+                                  >
+                                    <RotateCcw />
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                          ) : null}
+                        </TableRow>
+                      ))}
                       {!legends.length && !legendsQuery.isFetching ? (
                         <TableRow>
                           <TableCell
@@ -1254,234 +935,254 @@ export default function FloodPage() {
                   </Table>
                 )}
               </CardContent>
+
+              <Dialog open={editingLegend !== null} onOpenChange={(open) => { if (!open) setEditingLegend(null) }}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <span className="font-mono text-base">{editingLegend?.code}</span>
+                      <Badge variant="outline" className="text-xs">{LEGEND_MODULE_LABELS[editingLegend?.module ?? ''] ?? editingLegend?.module}</Badge>
+                    </DialogTitle>
+                    <DialogDescription>
+                      Chỉ thay đổi được <strong>nhãn tiếng Việt</strong> và <strong>bảng màu</strong>.
+                      Kiểu legend ({LEGEND_KIND_LABELS[editingLegend?.kind ?? '']}) do hệ thống xác định tự động
+                      dựa trên số màu và khoảng min–max.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-5">
+                    <div className="space-y-1.5">
+                      <Label>Nhãn hiển thị (tiếng Việt)</Label>
+                      <Input
+                        value={legendForm.label.vi}
+                        onChange={e => setLegendForm(f => ({ ...f, label: { ...f.label, vi: e.target.value } }))}
+                        placeholder="Tên lớp bản đồ"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label>Khoảng giá trị (Min – Max)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input type="number" className="w-24" value={legendForm.min}
+                          onChange={e => setLegendForm(f => ({ ...f, min: Number(e.target.value) }))} />
+                        <span className="text-muted-foreground">–</span>
+                        <Input type="number" className="w-24" value={legendForm.max}
+                          onChange={e => setLegendForm(f => ({ ...f, max: Number(e.target.value) }))} />
+                      </div>
+                      {paletteRows.length >= 2 && editingLegend?.kind === 'continuous' && (
+                        <p className="text-muted-foreground text-xs">
+                          Dải liên tục · bước nhảy ={' '}
+                          <code>({legendForm.max} − {legendForm.min}) / ({paletteRows.length} − 1) ={' '}
+                            {((legendForm.max - legendForm.min) / (paletteRows.length - 1)).toFixed(3)}
+                          </code>{' '}
+                          · mỗi màu ứng với 1 mốc tick trên bản đồ.
+                        </p>
+                      )}
+                      {editingLegend?.kind === 'class' && (
+                        <p className="text-muted-foreground text-xs">
+                          Phân lớp · mỗi màu = 1 cấp giá trị nguyên từ {legendForm.min} đến {legendForm.min + paletteRows.length - 1}.
+                          Thay đổi số màu sẽ thay đổi số cấp.
+                        </p>
+                      )}
+                      {editingLegend?.kind === 'binary' && (
+                        <p className="text-muted-foreground text-xs">
+                          Nhị phân · 1 màu duy nhất, không có bước nhảy.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label>Bảng màu ({paletteRows.length} màu)</Label>
+                        <Button type="button" size="xs" variant="outline"
+                          onClick={() => setPaletteRows(r => [...r, 'cccccc'])}>
+                          + Thêm màu
+                        </Button>
+                      </div>
+                      <div className="rounded-md border">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b bg-muted/30 text-xs text-muted-foreground">
+                              <th className="px-3 py-2 text-left w-8">#</th>
+                              <th className="px-3 py-2 text-left">Xem trước</th>
+                              <th className="px-3 py-2 text-left">Mã hex</th>
+                              <th className="px-3 py-2 text-left">Giá trị tick</th>
+                              <th className="px-3 py-2 w-8"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paletteRows.map((hex, idx) => {
+                              const n = paletteRows.length
+                              let tickValue: string
+                              if (editingLegend?.kind === 'binary') {
+                                tickValue = '—'
+                              } else if (editingLegend?.kind === 'class') {
+                                tickValue = String(legendForm.min + idx)
+                              } else {
+                                const t = n <= 1 ? 0 : idx / (n - 1)
+                                tickValue = (legendForm.min + (legendForm.max - legendForm.min) * t).toFixed(2)
+                              }
+                              return (
+                                <tr key={idx} className="border-b last:border-0">
+                                  <td className="px-3 py-2 text-muted-foreground text-xs">{idx + 1}</td>
+                                  <td className="px-3 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="color"
+                                        value={`#${hex.padEnd(6, '0')}`}
+                                        className="h-7 w-10 cursor-pointer rounded border p-0.5"
+                                        onChange={e => {
+                                          const newHex = e.target.value.replace('#', '')
+                                          setPaletteRows(r => r.map((c, i) => i === idx ? newHex : c))
+                                        }}
+                                      />
+                                      <span
+                                        className="inline-block h-6 w-16 rounded border border-black/10"
+                                        style={{ background: `#${hex}` }}
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <Input
+                                      className="h-7 w-28 font-mono text-xs"
+                                      value={hex}
+                                      placeholder="rrggbb"
+                                      maxLength={6}
+                                      onChange={e => {
+                                        const v = e.target.value.replace(/^#/, '').replace(/[^0-9a-fA-F]/g, '')
+                                        setPaletteRows(r => r.map((c, i) => i === idx ? v : c))
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                                    {tickValue}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    {paletteRows.length > 1 && (
+                                      <Button type="button" size="icon-xs" variant="ghost"
+                                        onClick={() => setPaletteRows(r => r.filter((_, i) => i !== idx))}>
+                                        <X className="size-3" />
+                                      </Button>
+                                    )}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        Nhập mã hex 6 ký tự (không cần dấu #). Dùng color picker để chọn màu trực quan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditingLegend(null)}>Hủy</Button>
+                    <Button
+                      disabled={updateLegendMutation.isPending || paletteRows.filter(Boolean).length === 0}
+                      onClick={() => updateLegendMutation.mutate({
+                        code: editingLegend!.code,
+                        body: { ...legendForm, palette: paletteRows.filter(Boolean) },
+                      })}
+                    >
+                      {updateLegendMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </Card>
           </TabsContent>
 
-          <TabsContent value="config">
+          {/* ── CONFIG TAB ── */}
+          <TabsContent value="config" className="space-y-4">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Settings2 className="size-5" />
                   Cấu hình đã phiên bản hóa
                 </CardTitle>
                 <CardDescription>
-                  Thông số chuẩn do hệ thống kiểm soát. Chỉ cán bộ kỹ thuật cần xem chi tiết kỹ
-                  thuật.
+                  Thông số chuẩn do hệ thống kiểm soát. Chỉ cán bộ kỹ thuật cần xem chi tiết kỹ thuật.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <ConfigFact
-                    label="Phiên bản cấu hình"
-                    value={floodConfig?.configVersion || 'Đang tải'}
-                  />
-                  <ConfigFact
-                    label="Mô hình M1"
-                    value={floodConfig?.versions?.event || 'Đang tải'}
-                  />
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ConfigFact label="Phiên bản cấu hình" value={floodConfig?.configVersion || '—'} />
+                  <ConfigFact label="Phiên bản mô hình" value={floodConfig?.versions?.trend || '—'} />
                 </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {MODULES.map((item) => (
-                    <div key={item.code} className="rounded-lg border p-4">
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {configExplanation(item.code, configDefaults?.[item.code])}
-                      </p>
-                      <Badge variant="outline" className="mt-3">
-                        {floodConfig?.versions?.[item.code] || 'Phiên bản đang tải'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-
-                <details className="rounded-lg border p-4">
-                  <summary className="cursor-pointer font-medium">
-                    Xem dữ liệu kỹ thuật (JSON)
-                  </summary>
-                  <pre className="bg-muted/30 mt-3 max-h-[28rem] overflow-auto rounded-md p-4 text-xs">
-                    {JSON.stringify(floodConfig ?? {}, null, 2)}
-                  </pre>
-                </details>
               </CardContent>
             </Card>
+
+            {/* Trend FINAL field metadata */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Activity className="size-4 text-emerald-600" />
+                  Mô hình phân tích ngập
+                </CardTitle>
+                <CardDescription>
+                  Các tham số điều chỉnh thuật toán VH-only Otsu 3 tầng. Thông số cơ bản dùng khi tạo lượt chạy; nâng cao dành cho chuyên gia.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {trendConfigQuery.isFetching && !trendConfig ? (
+                  <div className="text-muted-foreground flex items-center gap-2 py-6 text-sm">
+                    <Loader2 className="size-4 animate-spin" /> Đang tải cấu hình...
+                  </div>
+                ) : trendConfig ? (
+                  <>
+                    <TrendConfigSection
+                      title="Thông số cơ bản"
+                      fields={trendConfig.fields.filter((f) => f.category === 'basic')}
+                      defaults={trendConfig.defaults}
+                      onSave={canRun ? handleTrendConfigSave : undefined}
+                      onReset={canRun ? handleTrendConfigReset : undefined}
+                    />
+                    <details className="group rounded-lg border">
+                      <summary className="flex cursor-pointer items-center justify-between gap-2 p-4 font-medium">
+                        <span>Thông số nâng cao</span>
+                        <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="border-t p-4">
+                        <TrendConfigSection
+                          fields={trendConfig.fields.filter((f) => f.category === 'advanced')}
+                          defaults={trendConfig.defaults}
+                          onSave={canRun ? handleTrendConfigSave : undefined}
+                          onReset={canRun ? handleTrendConfigReset : undefined}
+                        />
+                      </div>
+                    </details>
+                    <details className="group rounded-lg border">
+                      <summary className="flex cursor-pointer items-center justify-between gap-2 p-4 font-medium">
+                        <span>Thông số chuyên gia</span>
+                        <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="border-t p-4">
+                        <TrendConfigSection
+                          fields={trendConfig.fields.filter((f) => f.category === 'expert')}
+                          defaults={trendConfig.defaults}
+                          onSave={canRun ? handleTrendConfigSave : undefined}
+                          onReset={canRun ? handleTrendConfigReset : undefined}
+                        />
+                      </div>
+                    </details>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground py-4 text-sm">Không thể tải cấu hình mô hình.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Raw JSON */}
+            <details className="rounded-lg border p-4">
+              <summary className="cursor-pointer font-medium">Xem dữ liệu kỹ thuật (JSON)</summary>
+              <pre className="bg-muted/30 mt-3 max-h-112 overflow-auto rounded-md p-4 text-xs">
+                {JSON.stringify(floodConfig ?? {}, null, 2)}
+              </pre>
+            </details>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
-  )
-}
-
-function RunFormFields({
-  module,
-  form,
-  onChange,
-}: {
-  module: FloodModule
-  form: FloodRunForm
-  configVersion?: string
-  onChange: (key: string, value: string | boolean) => void
-}) {
-  const value = (key: string) => (typeof form[key] === 'string' ? (form[key] as string) : '')
-  const dateField = (key: string, label: string, hint?: string) => (
-    <div className="space-y-2">
-      <Label htmlFor={key}>{label}</Label>
-      <Input
-        id={key}
-        type="date"
-        value={value(key)}
-        onChange={(event) => onChange(key, event.target.value)}
-      />
-      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
-    </div>
-  )
-  const numberField = (key: string, label: string, hint?: string) => (
-    <div className="space-y-2">
-      <Label htmlFor={key}>{label}</Label>
-      <Input
-        id={key}
-        type="number"
-        min="0"
-        step="any"
-        value={value(key)}
-        onChange={(event) => onChange(key, event.target.value)}
-      />
-      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
-    </div>
-  )
-
-  if (module === 'event') {
-    return (
-      <div className="space-y-5">
-        <div className="bg-muted/20 text-muted-foreground rounded-lg border p-3 text-sm">
-          Chọn kỳ nền trước sự kiện và kỳ cần phân tích sau sự kiện. Hệ thống sẽ so sánh ảnh
-          Sentinel-1 giữa hai kỳ.
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {dateField('preStart', 'Kỳ nền — từ ngày *')}
-          {dateField('preEnd', 'Kỳ nền — đến ngày *')}
-          {dateField('postStart', 'Kỳ phân tích — từ ngày *')}
-          {dateField('postEnd', 'Kỳ phân tích — đến ngày *')}
-        </div>
-        <div className="flex items-start gap-3 rounded-lg border p-3">
-          <Checkbox
-            id="runImpactAfterM1"
-            checked={form.runImpactAfterM1 === true}
-            onCheckedChange={(checked) => onChange('runImpactAfterM1', checked === true)}
-          />
-          <div>
-            <Label htmlFor="runImpactAfterM1" className="cursor-pointer">
-              Tính tác động sau khi có kết quả M1
-            </Label>
-            <p className="text-muted-foreground mt-1 text-xs">
-              Tự tạo phần thống kê dân cư, công trình và hạ tầng có thể bị ảnh hưởng.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (module === 'hand') {
-    return (
-      <div className="space-y-5">
-        <div className="bg-muted/20 text-muted-foreground rounded-lg border p-3 text-sm">
-          Mô phỏng vùng nhạy cảm ngập theo địa hình. Chỉ cần nhập mực nước giả định cho kịch bản
-          này.
-        </div>
-        <div className="max-w-sm">
-          {numberField(
-            'levelM',
-            'Mực nước giả định (m)',
-            'Giá trị đề xuất là 5 m. Hệ thống tự áp dụng giới hạn độ dốc an toàn.'
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  if (module === 'impact') {
-    return (
-      <div className="space-y-5">
-        <div className="bg-muted/20 text-muted-foreground rounded-lg border p-3 text-sm">
-          Thống kê tác động từ lớp ngập có sẵn. Nếu không chỉ định mã lượt chạy, hệ thống chọn kết
-          quả phù hợp gần nhất.
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Nguồn lớp ngập</Label>
-            <Select
-              value={value('impactSource') || 'M1'}
-              onValueChange={(next) => onChange('impactSource', next)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="M1">M1 · Hiện trạng ngập</SelectItem>
-                <SelectItem value="M2">M2 · Kịch bản địa hình</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="sourceRunId">
-              Mã lượt chạy nguồn <span className="text-muted-foreground">(không bắt buộc)</span>
-            </Label>
-            <Input
-              id="sourceRunId"
-              type="number"
-              min="1"
-              step="1"
-              value={value('sourceRunId')}
-              onChange={(event) => onChange('sourceRunId', event.target.value)}
-              placeholder="Ví dụ: 125"
-            />
-            <p className="text-muted-foreground text-xs">
-              Dùng khi cần tính tác động cho một lượt cụ thể.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 rounded-lg border p-3">
-          <Checkbox
-            id="impactUseNonTidal"
-            checked={form.impactUseNonTidal === true}
-            onCheckedChange={(checked) => onChange('impactUseNonTidal', checked === true)}
-          />
-          <div>
-            <Label htmlFor="impactUseNonTidal" className="cursor-pointer">
-              Loại trừ khu vực chịu ảnh hưởng thủy triều
-            </Label>
-            <p className="text-muted-foreground mt-1 text-xs">
-              Khuyến nghị dùng để thống kê vùng ngập chính xác hơn.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="bg-muted/20 text-muted-foreground rounded-lg border p-3 text-sm">
-        So sánh một kỳ nền khô với bốn đợt mưa/ngập. Các ngưỡng phân loại và kiểm định được dùng
-        theo cấu hình chuẩn.
-      </div>
-      <div>
-        <p className="mb-3 text-sm font-medium">Kỳ nền khô *</p>
-        <div className="grid gap-4 md:grid-cols-2">
-          {dateField('dryStart', 'Từ ngày')}
-          {dateField('dryEnd', 'Đến ngày')}
-        </div>
-      </div>
-      <div>
-        <p className="mb-3 text-sm font-medium">Các đợt phân tích *</p>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {[1, 2, 3, 4].map((index) => (
-            <div key={index} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
-              {dateField(`period${index}Start`, `Đợt ${index} — từ ngày`)}
-              {dateField(`period${index}End`, `Đợt ${index} — đến ngày`)}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   )
@@ -1495,191 +1196,6 @@ function ConfigFact({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
-
-function configExplanation(module: FloodModule, defaults?: Record<string, unknown>) {
-  switch (module) {
-    case 'event':
-      return `So sánh ảnh Sentinel-1; ngưỡng ${stringDefault(defaults?.thresholdMode, 'chuẩn')} và giới hạn dốc ${stringDefault(defaults?.hardMaximumSlope, '—')}°.`
-    case 'hand':
-      return `Kịch bản mực nước ${stringDefault(defaults?.levelM, '—')} m; giới hạn dốc ${stringDefault(defaults?.maximumSlope, '—')}°.`
-    case 'impact':
-      return `Thống kê dựa trên ${stringDefault(defaults?.impactSource, '—')}; ${defaults?.impactUseNonTidal === true ? 'có' : 'không'} loại trừ thủy triều.`
-    case 'trend':
-      return `Theo dõi ${Array.isArray(defaults?.periods) ? defaults.periods.length : '—'} đợt; ngưỡng tần suất ${stringDefault(defaults?.frequencyAlertPercent, '—')}%.`
-  }
-}
-
-// function RunDetail({
-//   run,
-//   loading,
-//   canPublish,
-//   mutationPending,
-//   onArtifactAction,
-// }: {
-//   run: FloodRunDetail | undefined
-//   loading: boolean
-//   canPublish: boolean
-//   mutationPending: boolean
-//   onArtifactAction: (artifact: FloodArtifact, action: 'publish' | 'unpublish') => void
-// }) {
-//   const [previewArtifactId, setPreviewArtifactId] = useState<number | null>(null)
-//   const previewableArtifacts = (run?.artifacts || []).filter(
-//     (artifact) => artifact.publish_status === 'published' && Number(artifact.registry_layer_id) > 0
-//   )
-//   const previewArtifact =
-//     previewableArtifacts.find((artifact) => artifact.id === previewArtifactId) ||
-//     previewableArtifacts[0]
-
-//   if (loading && !run)
-//     return (
-//       <Card>
-//         <CardContent className="flex items-center gap-2 p-6">
-//           <Loader2 className="animate-spin" />
-//           Đang tải chi tiết...
-//         </CardContent>
-//       </Card>
-//     )
-//   if (!run) return null
-//   return (
-//     <Card>
-//       <CardHeader>
-//         <div className="flex flex-wrap items-center justify-between gap-2">
-//           <div>
-//             <CardTitle className="text-lg">Chi tiết lượt chạy #{run.id}</CardTitle>
-//             <CardDescription>
-//               {moduleLabel(run.module)} · {run.pipeline_version}
-//             </CardDescription>
-//           </div>
-//           <StatusBadge status={run.status} />
-//         </div>
-//       </CardHeader>
-//       <CardContent className="space-y-5">
-//         {run.error_message_safe ? (
-//           <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-//             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-//             <span>
-//               {run.error_code ? `${run.error_code}: ` : ''}
-//               {run.error_message_safe}
-//             </span>
-//           </div>
-//         ) : null}
-//         <div>
-//           <h3 className="mb-2 font-medium">Giai đoạn xử lý</h3>
-//           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-//             {(run.stages || []).map((stage: FloodStageEvent) => (
-//               <div key={stage.id} className="rounded-md border p-3 text-sm">
-//                 <p className="font-medium">
-//                   {stage.stage} · {stage.event_type}
-//                 </p>
-//                 <p className="text-muted-foreground mt-1 text-xs">
-//                   {stage.elapsed_ms != null
-//                     ? `${stage.elapsed_ms} ms`
-//                     : formatDateTime(stage.emitted_at)}
-//                 </p>
-//               </div>
-//             ))}
-//             {!run.stages?.length ? (
-//               <p className="text-muted-foreground text-sm">Chưa có sự kiện giai đoạn.</p>
-//             ) : null}
-//           </div>
-//         </div>
-//         <div>
-//           <h3 className="mb-2 font-medium">Sản phẩm và trạng thái công bố</h3>
-//           <div className="space-y-2">
-//             {(run.artifacts || []).map((artifact: FloodArtifact) => (
-//               <div
-//                 key={artifact.id}
-//                 className="flex flex-col gap-3 rounded-md border p-3 lg:flex-row lg:items-center lg:justify-between"
-//               >
-//                 <div className="min-w-0">
-//                   <div className="flex flex-wrap items-center gap-2">
-//                     <p className="font-medium">
-//                       {artifact.metadata?.label?.vi || artifact.artifact_code}
-//                     </p>
-//                     <Badge variant="outline">
-//                       {ARTIFACT_ROLE_LABELS[artifact.artifact_role] || artifact.artifact_role}
-//                     </Badge>
-//                     <Badge
-//                       variant={artifact.publish_status === 'failed' ? 'destructive' : 'secondary'}
-//                     >
-//                       {PUBLISH_STATUS_LABELS[artifact.publish_status] || artifact.publish_status}
-//                     </Badge>
-//                   </div>
-//                   <p className="text-muted-foreground mt-1 truncate text-xs">
-//                     {artifact.publish_status === 'published'
-//                       ? 'Đã công bố lên bản đồ'
-//                       : artifact.minio_object_key
-//                         ? 'Đã lưu trữ, sẵn sàng công bố'
-//                         : 'Chưa có dữ liệu lưu trữ'}
-//                     {artifact.resolution_m ? ` · độ phân giải ${artifact.resolution_m} m` : ''}
-//                   </p>
-//                 </div>
-//                 <div className="flex shrink-0 flex-wrap gap-2">
-//                   {artifact.publish_status === 'published' &&
-//                   Number(artifact.registry_layer_id) > 0 ? (
-//                     <Button
-//                       size="sm"
-//                       variant={previewArtifact?.id === artifact.id ? 'default' : 'outline'}
-//                       onClick={() => setPreviewArtifactId(artifact.id)}
-//                     >
-//                       <MapIcon />
-//                       Xem trên bản đồ
-//                     </Button>
-//                   ) : null}
-//                   {canPublish ? (
-//                     <>
-//                       {artifact.publish_status === 'published' ? (
-//                         <Button
-//                           size="sm"
-//                           variant="outline"
-//                           disabled={mutationPending}
-//                           onClick={() => {
-//                             if (window.confirm(`Gỡ công bố sản phẩm này khỏi bản đồ?`))
-//                               onArtifactAction(artifact, 'unpublish')
-//                           }}
-//                         >
-//                           <Archive />
-//                           Gỡ công bố
-//                         </Button>
-//                       ) : artifact.artifact_role !== 'CALIBRATION' && artifact.minio_object_key ? (
-//                         <Button
-//                           size="sm"
-//                           disabled={mutationPending}
-//                           onClick={() => onArtifactAction(artifact, 'publish')}
-//                         >
-//                           <CloudUpload />
-//                           {artifact.publish_status === 'failed' ? 'Thử lại' : 'Công bố'}
-//                         </Button>
-//                       ) : null}
-//                     </>
-//                   ) : null}
-//                 </div>
-//               </div>
-//             ))}
-//             {!run.artifacts?.length ? (
-//               <p className="text-muted-foreground text-sm">Chưa có sản phẩm.</p>
-//             ) : null}
-//           </div>
-//         </div>
-//         {previewArtifact ? (
-//           <div className="space-y-2">
-//             <div>
-//               <h3 className="font-medium">Bản xem trước lớp đã công bố</h3>
-//               <p className="text-muted-foreground mt-1 text-xs">
-//                 {previewArtifact.metadata?.label?.vi || previewArtifact.artifact_code}
-//               </p>
-//             </div>
-//             <FloodRasterPreview
-//               key={`${previewArtifact.registry_layer_id}-${previewArtifact.registry_is_public}`}
-//               layerId={previewArtifact.registry_layer_id as number | string}
-//               isPublic={previewArtifact.registry_is_public === true}
-//             />
-//           </div>
-//         ) : null}
-//       </CardContent>
-//     </Card>
-//   )
-// }
 
 function MetricCard({
   icon: Icon,
@@ -1713,135 +1229,286 @@ function MetricCard({
   )
 }
 
-/**
- * Preset scenario buttons — one click preps the run form for a common
- * operational case. Instead of forcing users to remember which module to pick,
- * we suggest the module + jump to the submit tab with fields pre-filled from
- * server defaults.
- */
-function ScenarioPresets({ onPickScenario }: { onPickScenario: (module: FloodModule) => void }) {
-  const scenarios: Array<{
-    key: string
-    icon: ComponentType<{ className?: string }>
-    title: string
-    description: string
-    module: FloodModule
-    tone: string
-  }> = [
-    {
-      key: 'storm',
-      icon: Waves,
-      title: 'Bão vừa qua',
-      description: 'Phát hiện ngập từ ảnh Sentinel-1 sau bão. Kèm thống kê tác động.',
-      module: 'event',
-      tone: 'border-sky-200 bg-sky-50 hover:border-sky-400',
-    },
-    {
-      key: 'scenario',
-      icon: Droplets,
-      title: 'Kịch bản mực nước',
-      description: 'Vùng bị ngập giả định theo HAND + slope. Không cần ảnh sự kiện.',
-      module: 'hand',
-      tone: 'border-amber-200 bg-amber-50 hover:border-amber-400',
-    },
-    {
-      key: 'trend',
-      icon: Activity,
-      title: 'Xu thế nhiều năm',
-      description: 'Tần suất, ngập mới, biến động sử dụng đất qua nhiều mùa mưa.',
-      module: 'trend',
-      tone: 'border-emerald-200 bg-emerald-50 hover:border-emerald-400',
-    },
-  ]
+function TrendConfigSection({
+  title,
+  fields,
+  defaults,
+  onSave,
+  onReset,
+}: {
+  title?: string
+  fields: TrendConfigField[]
+  defaults: Record<string, unknown>
+  onSave?: (key: string, value: unknown) => Promise<void>
+  onReset?: (key: string) => Promise<void>
+}) {
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [draftValue, setDraftValue] = useState<string>('')
+  const [saving, setSaving] = useState(false)
+
+  if (!fields.length) return null
+
+  const fmtVal = (f: TrendConfigField, v: unknown) => {
+    if (v === undefined || v === null) return '—'
+    if (f.type === 'boolean') return v ? 'Bật' : 'Tắt'
+    if (f.options) {
+      const opt = f.options.find((o) => o.value === String(v))
+      return opt ? opt.label : String(v)
+    }
+    return f.unit ? `${v} ${f.unit}` : String(v)
+  }
+
+  const startEdit = (f: TrendConfigField) => {
+    setEditingKey(f.key)
+    setDraftValue(String(f.current ?? f.default ?? defaults[f.key] ?? ''))
+  }
+
+  const cancelEdit = () => {
+    setEditingKey(null)
+    setDraftValue('')
+  }
+
+  const saveEdit = async (f: TrendConfigField) => {
+    if (!onSave) return
+    setSaving(true)
+    try {
+      let parsed: unknown = draftValue
+      if (f.type === 'number') parsed = Number(draftValue)
+      else if (f.type === 'boolean') parsed = draftValue === 'true'
+      await onSave(f.key, parsed)
+      setEditingKey(null)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleReset = async (f: TrendConfigField) => {
+    if (!onReset) return
+    setSaving(true)
+    try {
+      await onReset(f.key)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <div>
-      <p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
-        Bắt đầu nhanh theo tình huống
-      </p>
-      <div className="grid gap-3 md:grid-cols-3">
-        {scenarios.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            onClick={() => onPickScenario(s.module)}
-            className={cn(
-              'flex flex-col gap-1.5 rounded-lg border p-3 text-left transition',
-              s.tone
-            )}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <s.icon className="size-4" />
-              {s.title}
+    <div className="space-y-3">
+      {title && <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">{title}</p>}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {fields.map((f) => {
+          const isEditing = editingKey === f.key
+          const currentDisplay = fmtVal(f, f.current)
+          const defaultDisplay = fmtVal(f, f.default ?? defaults[f.key])
+          return (
+            <div
+              key={f.key}
+              className={cn(
+                'rounded-md border p-3 space-y-1',
+                f.hasOverride && 'border-amber-300 bg-amber-50',
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-medium leading-tight">{f.label}</p>
+                <div className="flex shrink-0 items-center gap-1">
+                  {f.hasOverride && (
+                    <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700">đã chỉnh</Badge>
+                  )}
+                  {f.required && (
+                    <Badge variant="outline" className="text-[10px] border-sky-300 text-sky-700">bắt buộc</Badge>
+                  )}
+                </div>
+              </div>
+              <p className="text-muted-foreground text-xs leading-snug">{f.description}</p>
+
+              {isEditing ? (
+                <div className="pt-1 space-y-1.5">
+                  {f.options ? (
+                    <Select value={draftValue} onValueChange={setDraftValue}>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {f.options.map((o) => (
+                          <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : f.type === 'boolean' ? (
+                    <Select value={draftValue} onValueChange={setDraftValue}>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true" className="text-xs">Bật</SelectItem>
+                        <SelectItem value="false" className="text-xs">Tắt</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      className="h-7 text-xs font-mono"
+                      type={f.type === 'number' ? 'number' : 'text'}
+                      min={f.min}
+                      max={f.max}
+                      step={f.type === 'number' ? 'any' : undefined}
+                      value={draftValue}
+                      onChange={(e) => setDraftValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(f); if (e.key === 'Escape') cancelEdit() }}
+                      autoFocus
+                    />
+                  )}
+                  <div className="flex gap-1">
+                    <Button size="sm" className="h-6 text-xs px-2" disabled={saving} onClick={() => saveEdit(f)}>
+                      {saving ? <Loader2 className="size-3 animate-spin" /> : 'Lưu'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={cancelEdit}>Hủy</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between pt-1 gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-muted-foreground text-xs">Hiện tại:</span>
+                    <span className={cn('font-mono text-xs font-semibold truncate', f.hasOverride ? 'text-amber-700' : '')}>{currentDisplay}</span>
+                    {!f.hasOverride && defaultDisplay !== currentDisplay && (
+                      <span className="text-muted-foreground text-xs">({defaultDisplay})</span>
+                    )}
+                  </div>
+                  {onSave && (
+                    <div className="flex shrink-0 gap-1">
+                      {f.hasOverride && onReset && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-6 text-amber-600 hover:text-amber-800"
+                              disabled={saving}
+                              onClick={() => handleReset(f)}
+                            >
+                              <RotateCcw className="size-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Khôi phục mặc định</TooltipContent>
+                        </Tooltip>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-6"
+                            onClick={() => startEdit(f)}
+                          >
+                            <Settings2 className="size-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Chỉnh sửa</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
+              )}
+              {f.min !== undefined && f.max !== undefined && (
+                <p className="text-muted-foreground text-[10px]">Khoảng: {f.min} – {f.max}{f.unit ? ` ${f.unit}` : ''}</p>
+              )}
             </div>
-            <p className="text-muted-foreground text-xs leading-snug">{s.description}</p>
-            <p className="text-muted-foreground mt-1 text-[10px]">
-              Sẽ dùng mô-đun{' '}
-              <span className="font-mono text-slate-700">
-                {MODULES.find((m) => m.code === s.module)?.name}
-              </span>
-            </p>
-          </button>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
 
-/**
- * M4 impact metrics card. M4 doesn't publish rasters (impact is a metrics
- * bundle) — surface the numbers as top-level cards so operators see something
- * useful instead of "0 artifacts published".
- */
-export function ImpactMetricsCard({ runDetail }: { runDetail: FloodRunDetail | undefined }) {
-  const metadata =
-    (runDetail?.result_metadata as
-      | {
-          affectedPopulation?: number
-          affectedCroplandHa?: number
-          affectedBuiltUpHa?: number
-          landcoverBreakdown?: Record<string, number>
-        }
-      | undefined) || {}
-  const hasAny =
-    metadata.affectedPopulation != null ||
-    metadata.affectedCroplandHa != null ||
-    metadata.affectedBuiltUpHa != null
-  if (!runDetail || runDetail.module !== 'impact' || !hasAny) {
-    return null
+export function TrendMetricsCard({ runDetail }: { runDetail: FloodRunDetail | undefined }) {
+  type TrendMeta = {
+    areaStats?: {
+      floodExtentAreaHa?: number
+      frequentFloodAreaHa?: number
+      newFloodAreaHa?: number
+      cropAffectedAreaHa?: number
+      builtAffectedAreaHa?: number
+      populationAffected?: number
+    }
+    analysisPeriods?: Array<{ season: string; imageCount?: number; valid?: boolean }>
+    analysisYear?: number
+    orbitPass?: string
+    drySceneCount?: number
   }
-  const fmtNumber = (value: number | null | undefined, unit: string) =>
-    value == null || Number.isNaN(Number(value))
-      ? '—'
-      : `${Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ${unit}`
+  const meta = (runDetail?.result_metadata as TrendMeta | undefined) ?? {}
+  const stats = meta.areaStats ?? {}
+  const periods = meta.analysisPeriods ?? []
+  const hasAny = stats.floodExtentAreaHa != null || stats.populationAffected != null
+
+  if (!runDetail || runDetail.module !== 'trend' || !hasAny) return null
+
+  const fmtHa = (v?: number) =>
+    v == null ? '—' : `${Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} ha`
+  const fmtPop = (v?: number) =>
+    v == null ? '—' : `${Math.round(Number(v)).toLocaleString('vi-VN')} người`
+
+  const SEASON_LABELS: Record<string, string> = {
+    spring: 'Xuân', summer: 'Hạ', autumn: 'Thu', winter: 'Đông',
+  }
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <MapPin className="size-4 text-rose-600" /> Tác động ngập (M4)
+          <Activity className="size-4 text-emerald-600" />
+          Kết quả phân tích ngập{meta.analysisYear ? ` năm ${meta.analysisYear}` : ''}
         </CardTitle>
         <CardDescription>
-          Kết quả M4 thể hiện dưới dạng chỉ số thống kê; không có lớp bản đồ raster.
+          Tóm tắt kết quả phân tích VH-only Otsu 3 tầng · quỹ đạo {meta.orbitPass ?? '—'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-md border p-3">
-          <div className="text-muted-foreground text-xs">Dân số ước tính bị ảnh hưởng</div>
-          <div className="mt-1 text-lg font-semibold">
-            {fmtNumber(metadata.affectedPopulation, 'người')}
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-md border p-3">
+            <div className="text-muted-foreground text-xs">Diện tích ngập (flood_extent)</div>
+            <div className="mt-1 text-lg font-semibold">{fmtHa(stats.floodExtentAreaHa)}</div>
+          </div>
+          <div className="rounded-md border p-3">
+            <div className="text-muted-foreground text-xs">Ngập tái diễn (≥2 mùa)</div>
+            <div className="mt-1 text-lg font-semibold">{fmtHa(stats.frequentFloodAreaHa)}</div>
+          </div>
+          <div className="rounded-md border p-3">
+            <div className="text-muted-foreground text-xs">Ngập mới (new_flood)</div>
+            <div className="mt-1 text-lg font-semibold">{fmtHa(stats.newFloodAreaHa)}</div>
+          </div>
+          <div className="rounded-md border p-3">
+            <div className="text-muted-foreground text-xs">Dân số bị ảnh hưởng</div>
+            <div className="mt-1 text-lg font-semibold">{fmtPop(stats.populationAffected)}</div>
+          </div>
+          <div className="rounded-md border p-3">
+            <div className="text-muted-foreground text-xs">Đất nông nghiệp bị ảnh hưởng</div>
+            <div className="mt-1 text-lg font-semibold">{fmtHa(stats.cropAffectedAreaHa)}</div>
+          </div>
+          <div className="rounded-md border p-3">
+            <div className="text-muted-foreground text-xs">Đất xây dựng bị ảnh hưởng</div>
+            <div className="mt-1 text-lg font-semibold">{fmtHa(stats.builtAffectedAreaHa)}</div>
           </div>
         </div>
-        <div className="rounded-md border p-3">
-          <div className="text-muted-foreground text-xs">Đất nông nghiệp</div>
-          <div className="mt-1 text-lg font-semibold">
-            {fmtNumber(metadata.affectedCroplandHa, 'ha')}
+        {periods.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">Chất lượng dữ liệu theo mùa</p>
+            <div className="grid gap-2 sm:grid-cols-4">
+              {periods.map((p) => (
+                <div
+                  key={p.season}
+                  className={cn(
+                    'rounded-md border p-3 text-center',
+                    p.valid === false ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'
+                  )}
+                >
+                  <p className="font-medium text-sm">{SEASON_LABELS[p.season] ?? p.season}</p>
+                  <p className={cn('mt-1 text-xs', p.valid === false ? 'text-amber-700' : 'text-emerald-700')}>
+                    {p.valid === false ? '⚠ Không đủ dữ liệu' : `✓ ${p.imageCount ?? 0} ảnh`}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="rounded-md border p-3">
-          <div className="text-muted-foreground text-xs">Khu xây dựng</div>
-          <div className="mt-1 text-lg font-semibold">
-            {fmtNumber(metadata.affectedBuiltUpHa, 'ha')}
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   )

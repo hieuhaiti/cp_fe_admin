@@ -117,6 +117,25 @@ export interface FloodDashboard {
   }>
 }
 
+export interface TrendConfigField {
+  key: string
+  category: 'basic' | 'advanced' | 'expert'
+  type: 'integer' | 'number' | 'boolean' | 'select'
+  label: string
+  description: string
+  default: unknown
+  unit?: string
+  min?: number
+  max?: number
+  required?: boolean
+  options?: Array<{ value: string; label: string }>
+}
+
+export interface TrendConfig {
+  defaults: Record<string, unknown>
+  fields: TrendConfigField[]
+}
+
 export interface FloodQueueState {
   concurrency: number
   maxPending: number

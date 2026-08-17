@@ -9,6 +9,7 @@ import type {
   FloodRun,
   FloodRunDetail,
   FloodRunMode,
+  TrendConfig,
   UpdateLegendBody,
 } from '@/types/api'
 
@@ -17,6 +18,7 @@ const noLang = { skipLang: true }
 const floodService = {
   getDashboard: () => apiClient.get<FloodDashboard>(`${serviceAdminFloodPath}/dashboard`, noLang),
   getConfig: () => apiClient.get<Record<string, unknown>>(`${serviceAdminFloodPath}/config`, noLang),
+  getTrendConfig: () => apiClient.get<TrendConfig>(`${serviceAdminFloodPath}/trend/config`, noLang),
   getQueue: () => apiClient.get<FloodQueueState>(`${serviceAdminFloodPath}/queue`, noLang),
   getRuns: (params: Record<string, string | number | undefined> = {}) =>
     apiClient.get<{ items: FloodRun[] }>(`${serviceAdminFloodPath}/runs`, {
@@ -44,6 +46,16 @@ const floodService = {
     apiClient.put<FloodLegend>(`${serviceAdminFloodPath}/legends/${code}`, body, noLang),
   resetLegend: (code: string) =>
     apiClient.del<void>(`${serviceAdminFloodPath}/legends/${code}`, undefined, noLang),
+  putTrendConfig: (patch: Record<string, unknown>) =>
+    apiClient.put<TrendConfig>(`${serviceAdminFloodPath}/trend/config`, patch, noLang),
+  resetTrendConfigField: (key?: string) =>
+    apiClient.del<TrendConfig>(
+      key
+        ? `${serviceAdminFloodPath}/trend/config/${encodeURIComponent(key)}`
+        : `${serviceAdminFloodPath}/trend/config`,
+      undefined,
+      noLang,
+    ),
   // Manual trigger for the nightly daily-flood pipeline (ops shortcut).
   triggerDaily: () =>
     apiClient.post<{

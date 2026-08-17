@@ -1,5 +1,7 @@
 import type { JSX } from 'react'
 import { useState } from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import KttvInputForm from './KttvInputForm'
 import { useApiQuery, useApiMutation, kttvScenarioService } from '@/service'
 import type { ApiResponse, Pagination } from '@/types/api'
 import type { FloodScenario, FloodScenarioListData } from '@/service/kttvScenarioService'
@@ -98,113 +100,133 @@ export default function KttvScenariosPage(): JSX.Element {
   }
 
   return (
-    <PageLayout
-      title="Kịch bản thủy văn"
-      description="Quản lý kịch bản phát hiện sự kiện ngập lụt"
-    >
-      <ToolTableCustom
-        searchValue={searchValue}
-        setSearchValue={(value) => {
-          setSearchValue(value)
-          setCurrentPage(1)
-        }}
-        filter={
-          <div className="flex items-center gap-2">
-            <Select
-              value={`${limit}`}
-              onValueChange={(v) => {
-                setLimit(parseInt(v, 10))
-                setCurrentPage(1)
-              }}
-            >
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+    <PageLayout title="Kịch bản thủy văn" description="Quản lý kịch bản phát hiện sự kiện ngập lụt">
+      <Tabs defaultValue="manage" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manage">Quản lý kịch bản</TabsTrigger>
+          <TabsTrigger value="input">Nhập kịch bản</TabsTrigger>
+        </TabsList>
 
-            {canCreate && (
-              <Button variant="default" onClick={openCreateDialog}>
-                <Plus className="size-4" />
-                Thêm kịch bản
-              </Button>
-            )}
-          </div>
-        }
-        total={total}
-        pagination={{
-          currentPage,
-          totalPages,
-          onPageChange: (page: number) => setCurrentPage(page),
-        }}
-      >
-        <Table className="relative">
-          <TableHeader className="sticky top-0 z-20">
-            <TableRow>
-              <TableHead className="w-12">ID</TableHead>
-              <TableHead>Mã</TableHead>
-              <TableHead>Tên</TableHead>
-              <TableHead className="w-24">Ưu tiên</TableHead>
-              <TableHead className="w-24">Trạng thái</TableHead>
-              <TableHead className="w-32">Ngày tạo</TableHead>
-              <TableHead className="w-24 text-right">Hành động</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {scenarios.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  Không có dữ liệu
-                </TableCell>
-              </TableRow>
-            ) : (
-              scenarios.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.id}</TableCell>
-                  <TableCell className="font-mono text-sm">{item.code}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell className="text-sm">{item.matchPriority ?? 0}</TableCell>
-                  <TableCell className="text-sm">
-                    {item.isEnabled ? '✓ Kích hoạt' : '— Vô hiệu'}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {item.createdAt ? formatDate(item.createdAt) : '—'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      {canUpdate && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          tooltip="Chỉnh sửa"
-                          onClick={() => openEditDialog(item)}
-                        >
-                          <Pen className="size-4" />
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          tooltip="Xóa"
-                          onClick={() => openDeleteDialog(item)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="text-destructive size-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+        <TabsContent value="input" className="mt-4">
+          <KttvInputForm />
+        </TabsContent>
+
+        <TabsContent value="manage">
+          <ToolTableCustom
+            searchValue={searchValue}
+            setSearchValue={(value) => {
+              setSearchValue(value)
+              setCurrentPage(1)
+            }}
+            filter={
+              <div className="flex items-center gap-2">
+                <Select
+                  value={`${limit}`}
+                  onValueChange={(v) => {
+                    setLimit(parseInt(v, 10))
+                    setCurrentPage(1)
+                  }}
+                >
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {canCreate && (
+                  <Button variant="default" onClick={openCreateDialog}>
+                    <Plus className="size-4" />
+                    Thêm kịch bản
+                  </Button>
+                )}
+              </div>
+            }
+            total={total}
+            pagination={{
+              currentPage,
+              totalPages,
+              onPageChange: (page: number) => setCurrentPage(page),
+            }}
+          >
+            <Table className="relative">
+              <TableHeader className="sticky top-0 z-20">
+                <TableRow>
+                  <TableHead className="w-12">ID</TableHead>
+                  <TableHead>Mã</TableHead>
+                  <TableHead>Tên</TableHead>
+                  <TableHead className="w-36">Lượng mưa (mm)</TableHead>
+                  <TableHead className="w-28">Triều (m)</TableHead>
+                  <TableHead>Lớp bản đồ</TableHead>
+                  <TableHead className="">Trạng thái</TableHead>
+                  <TableHead className="w-32">Ngày tạo</TableHead>
+                  <TableHead className="w-24 text-right">Hành động</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </ToolTableCustom>
+              </TableHeader>
+              <TableBody>
+                {scenarios.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center">
+                      Không có dữ liệu
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  scenarios.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.id}</TableCell>
+                      <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                      <TableCell>{item.name_vi}</TableCell>
+                      <TableCell className="text-sm">
+                        {item.min_rainfall ?? '—'} – {item.max_rainfall ?? '∞'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {item.min_tide ?? '—'} – {item.max_tide ?? '∞'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {item.layer?.nameVi ?? item.layer_code}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {item.is_active ? '✓ Kích hoạt' : '— Vô hiệu'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {item.created_at ? formatDate(item.created_at) : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {canUpdate && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              tooltip="Chỉnh sửa"
+                              onClick={() => openEditDialog(item)}
+                            >
+                              <Pen className="size-4" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              tooltip="Xóa"
+                              onClick={() => openDeleteDialog(item)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="text-destructive size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </ToolTableCustom>
+        </TabsContent>
+      </Tabs>
 
       <KttvScenarioFormDialog
         open={formOpen}
@@ -218,7 +240,7 @@ export default function KttvScenariosPage(): JSX.Element {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa kịch bản "{itemToDelete?.name}"? Hành động này không thể
+              Bạn có chắc chắn muốn xóa kịch bản "{itemToDelete?.name_vi}"? Hành động này không thể
               hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>

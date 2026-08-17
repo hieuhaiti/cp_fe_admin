@@ -163,6 +163,23 @@ const getSeasonMonthRange = (representativeMonth: number): string => {
 
 const formatPeriod = (year: number, month: number) => `${getSeasonName(month)} ${year}`
 
+// Sentinel-2A launched 2015-06-23; first season with enough coverage is
+// autumn 2015 (Jul–Sep). Any earlier period → Landsat-only composite.
+const S2_EARLIEST_YEAR = 2015
+const S2_EARLIEST_SEASON = 9 // month representative for autumn (Jul–Sep)
+
+// Landsat 8 launched 2013-04-11; first viable season is summer 2013 (Apr–Jun).
+// Spring 2013 (Jan–Mar) ends 2013-04-01, before launch → no Landsat images.
+const LANDSAT_EARLIEST_YEAR = 2013
+const LANDSAT_EARLIEST_SEASON = 6 // month representative for summer (Apr–Jun)
+
+const periodHasS2 = (year: number, month: number): boolean =>
+  year > S2_EARLIEST_YEAR || (year === S2_EARLIEST_YEAR && month >= S2_EARLIEST_SEASON)
+
+const periodHasLandsat = (year: number, month: number): boolean =>
+  year > LANDSAT_EARLIEST_YEAR ||
+  (year === LANDSAT_EARLIEST_YEAR && month >= LANDSAT_EARLIEST_SEASON)
+
 const latestCompletedYearMonth = () => {
   const now = new Date()
   const latestCompletedMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -177,7 +194,7 @@ const validPeriod = (year: number, month: number) => {
   return (
     Number.isInteger(year) &&
     Number.isInteger(month) &&
-    year >= 1984 &&
+    periodHasLandsat(year, month) &&
     month >= 1 &&
     month <= 12 &&
     (year < latestCompleted.year ||
@@ -186,13 +203,18 @@ const validPeriod = (year: number, month: number) => {
 }
 
 const selectableSeasonsForYear = (year: number) => {
-  if (!Number.isInteger(year) || year < 1984) return []
+  if (!Number.isInteger(year) || year < LANDSAT_EARLIEST_YEAR) return []
   const latestCompleted = latestCompletedYearMonth()
   // Use raw completed month (not the season rep) so the current in-progress
   // season is excluded until all its calendar months have elapsed.
   const ceiling =
     year < latestCompleted.year ? 12 : year === latestCompleted.year ? latestCompleted.month : 0
-  return [3, 6, 9, 12].filter((m) => m <= ceiling)
+  return [3, 6, 9, 12].filter((m) => {
+    if (m > ceiling) return false
+    // For 2013, exclude spring (no Landsat before launch in April)
+    if (year === LANDSAT_EARLIEST_YEAR && m < LANDSAT_EARLIEST_SEASON) return false
+    return true
+  })
 }
 
 function resolveRasterTileUrl(snapshot: ForestClassSnapshot | null): string | null {
@@ -514,7 +536,7 @@ export default function ForestClassificationPage() {
                 <Input
                   id="refresh-year"
                   type="number"
-                  min={1984}
+                  min={LANDSAT_EARLIEST_YEAR}
                   max={latestCompletedYearMonth().year}
                   value={refreshPeriod.year}
                   onChange={(e) => {
@@ -570,6 +592,17 @@ export default function ForestClassificationPage() {
                 50%.
               </p>
             </div>
+            {!periodHasS2(refreshPeriod.year, refreshPeriod.month) && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  Sentinel-2 chưa có ảnh trước{' '}
+                  <strong>mùa thu {S2_EARLIEST_YEAR}</strong> (ra mắt 23/06/2015). Kỳ này sẽ chỉ
+                  tổng hợp từ <strong>Landsat 8/9</strong> — độ chính xác phân loại có thể thấp
+                  hơn do thiếu dải red-edge.
+                </span>
+              </div>
+            )}
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={refreshMutation.isPending}>Hủy</AlertDialogCancel>
@@ -1094,25 +1127,31 @@ function HistoryDetails({
   const geoserverDownloadUrl = item.geoserver_layer
     ? buildGeoserverDownloadUrl(item.geoserver_layer)
     : null
-  // Đường ống hiện tại là RULE-BASED (bộ luật Sentinel-2 tất định), không huấn
-  // luyện mô hình ML — nên không có Kappa/OOB/accuracy hay ground-truth. Cột
-  // ls_image_count/gee_task_id/... cũng không dùng vì đã bỏ Landsat và GEE
-  // batch Export. Chỉ hiển thị các trường thực sự có dữ liệu để bảng gọn hơn.
+  // Đường ống hiện tại là RULE-BASED (bộ luật tất định), dùng Sentinel-2 làm
+  // nguồn chính và Landsat 8/9 lấp pixel bị mây (hybrid composite). Không có
+  // Kappa/OOB/accuracy hay ground-truth vì không huấn luyện mô hình ML.
   const cloudCover = (
     item as { cloud_cover?: number | null; model_params?: { cloudCover?: number } }
   ).model_params?.cloudCover
+  const triggerLabel =
+    item.trigger === 'cron'
+      ? 'Tự động (lịch)'
+      : item.trigger === 'manual'
+        ? 'Thủ công'
+        : item.trigger || '—'
   const metrics: Array<[string, string]> = [
     ['Tổng diện tích', formatHa(summary?.totalHa ?? null)],
     ['Diện tích rừng', formatHa(summary?.forestHa ?? null)],
     ['Diện tích mỏ', formatHa(summary?.mineHa ?? null)],
     ['Thời gian xử lý', formatDuration(item.duration_ms)],
-    ['Số ảnh Sentinel-2 dùng cho ghép', formatCount(item.s2_image_count)],
+    ['Số ảnh Sentinel-2', formatCount(item.s2_image_count)],
+    ['Số ảnh Landsat 8/9', formatCount(item.ls_image_count)],
     [
       'Ngưỡng mây tối đa',
       Number.isFinite(Number(cloudCover)) ? `${cloudCover}%` : '— (mặc định 50%)',
     ],
     ['Độ phân giải', item.download_scale_m == null ? '—' : `${item.download_scale_m} m`],
-    ['Nguồn chạy', item.trigger || '—'],
+    ['Nguồn chạy', triggerLabel],
     ['Thời điểm tạo', item.created_at ? formatDateTime(item.created_at) : '—'],
   ]
 

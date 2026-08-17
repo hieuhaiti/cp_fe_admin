@@ -2,15 +2,31 @@ import apiClient from './common/apiClient'
 import { serviceAdminFloodPath, serviceFloodPath } from '@/constant/serviceConstant'
 import type { Pagination } from '@/types/api'
 
+export interface FloodScenarioLayer {
+  id: string
+  code: string
+  nameVi: string
+  category: string
+  categoryName: string
+  geometryType: string
+  storageKind: string
+  geoserverLayer: string
+}
+
 export interface FloodScenario {
   id: number | string
   code: string
-  name: string
-  matchPriority?: number
-  matchRule?: Record<string, unknown> | null
-  isEnabled?: boolean
-  createdAt?: string
-  updatedAt?: string
+  name_vi: string
+  min_rainfall: string | null
+  max_rainfall: string | null
+  min_tide: string | null
+  max_tide: string | null
+  layer_code: string
+  description: string | null
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+  layer?: FloodScenarioLayer
 }
 
 export interface FloodScenarioListParams {
@@ -24,15 +40,48 @@ export interface FloodScenarioListData {
   pagination?: Pagination
 }
 
+export interface FloodSimulationParams {
+  rainfall: number
+  tide: number | null
+  scenarioId: number
+  scenarioCode: string
+  scenarioName: string
+  matchedLayerCode: string
+}
+
+/** API returns the matched layer object directly, with simulationParams embedded */
+export interface FloodSimulationResult {
+  id: string
+  code: string
+  nameVi: string
+  category: string
+  categoryName: string
+  geometryType: string
+  storageKind: string
+  geoserverLayer: string
+  styleName: string | null
+  minZoom: number
+  maxZoom: number
+  legend: Record<string, any> | null
+  isPublic: boolean
+  isEnableDefault: boolean
+  simulationParams: FloodSimulationParams
+}
+
 export interface FloodScenarioWriteBody {
   code?: string
-  name?: string
-  matchPriority?: number
-  matchRule?: Record<string, unknown> | null
-  isEnabled?: boolean
+  nameVi?: string
+  minRainfall?: number | null
+  maxRainfall?: number | null
+  minTide?: number | null
+  maxTide?: number | null
+  layerCode?: string
+  description?: string | null
+  isActive?: boolean
 }
 
 const publicBase = `${serviceFloodPath}/scenarios`
+const publicFloodBase = serviceFloodPath
 const adminBase = `${serviceAdminFloodPath}/scenarios`
 
 export default {
@@ -61,4 +110,8 @@ export default {
 
   /** DELETE /api/v1/admin/flood/scenarios/:floodScenarioId */
   delete: (id: number | string) => apiClient.del<FloodScenario>(`${adminBase}/${id}`),
+
+  /** POST /flood/simulation — match scenario by rainfall + tide */
+  simulate: (data: { rainfall: number; tide?: number | null }) =>
+    apiClient.post<FloodSimulationResult>(`${publicFloodBase}/simulation`, data),
 }
