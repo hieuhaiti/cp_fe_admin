@@ -116,6 +116,6 @@ export const navConfig: NavItem[] = [
   {
     icon: <MessageSquare />,
     name: 'Tài liệu hệ thống',
-    path: 'http://apicampha.tourismpj.pro.vn/uploads/HDSD_ADMIN_CAMPHA.docx',
+    path: 'http://apicampha.tourismpj.pro.vn/uploads/HDSD_ADMIN_CAMPHA.pdf',
   },
 ]
