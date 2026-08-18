@@ -96,7 +96,9 @@ export default function MapLayerApiForm({
 }: MapLayerApiFormProps) {
   const layerQuery = useApiQuery(
     ['map-layers-for-map-api-form'],
-    () => mapLayerService.getAll({ page: 1, limit: 100, is_active: true }),
+    // The admin /layers endpoint does not accept the legacy is_active filter.
+    // Only page/limit and optional search are valid here.
+    () => mapLayerService.getAll({ page: 1, limit: 100 }),
     {},
     false,
     false
