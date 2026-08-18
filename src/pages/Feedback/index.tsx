@@ -1,11 +1,10 @@
 import type { JSX } from 'react'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useApiQuery, useApiMutation, citizenFeedbackService } from '@/service'
 import type {
   ApiResponse,
   CitizenFeedback,
   FeedbackCategory,
-  FeedbackFeatureCollection,
   FeedbackStatus,
   FeedbackPriority,
   UpdateFeedbackStatusBody,
@@ -119,15 +118,13 @@ export default function FeedbackPage(): JSX.Element {
     page: currentPage,
     limit,
     ...(searchValue && { q: searchValue }),
-    ...(filterCategory !== 'all' && { category: filterCategory }),
+
     ...(filterStatus !== 'all' && {
-      status: (
-        filterStatus === 'new'
-          ? 'pending'
-          : filterStatus === 'in_progress'
-            ? 'under_review'
-            : filterStatus
-      ) as FeedbackStatus,
+      status: (filterStatus === 'new'
+        ? 'pending'
+        : filterStatus === 'in_progress'
+          ? 'under_review'
+          : filterStatus) as FeedbackStatus,
     }),
     ...(filterPriority !== 'all' && { priority: filterPriority }),
   }
@@ -136,20 +133,6 @@ export default function FeedbackPage(): JSX.Element {
     ['feedbacks', queryParams],
     () => citizenFeedbackService.getAll(queryParams),
     {},
-    false,
-    false
-  )
-
-  const mapParams = {
-    radiusMeters: 500,
-    minReporters: 2,
-    from: '2026-01-01',
-    to: '2026-12-31',
-  }
-  const mapQuery = useApiQuery(
-    ['feedback-map', mapParams],
-    () => citizenFeedbackService.getMap(mapParams),
-    { enabled: view === 'map' },
     false,
     false
   )
@@ -167,30 +150,6 @@ export default function FeedbackPage(): JSX.Element {
   const totalPages = lastTotalPagesRef.current
   const total = pagination?.total ?? 0
 
-  // Transform clusters array to GeoJSON FeatureCollection
-  const clustersRaw = ((mapQuery.data as ApiResponse<any> | undefined)?.data ?? []) as any[]
-  const mapData: FeedbackFeatureCollection | null = useMemo(() => {
-    if (!clustersRaw || clustersRaw.length === 0) return null
-    return {
-      type: 'FeatureCollection',
-      features: clustersRaw.map((cluster) => ({
-        type: 'Feature' as const,
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [cluster.longitude ?? 0, cluster.latitude ?? 0],
-        },
-        properties: {
-          id: cluster.cluster_id,
-          category: 'hien_trang',
-          title: `Cụm #${cluster.cluster_id} (${cluster.report_count} báo cáo)`,
-          status: 'new',
-          priority: 'normal',
-          createdAt: new Date().toISOString(),
-        },
-      })),
-    }
-  }, [clustersRaw])
-
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages)
   }, [currentPage, totalPages])
@@ -207,7 +166,6 @@ export default function FeedbackPage(): JSX.Element {
     {
       onSuccess: () => {
         dbQuery.refetch()
-        if (view === 'map') mapQuery.refetch()
         setUpdateDialogOpen(false)
         setSelectedFeedback(null)
       },
@@ -352,7 +310,7 @@ export default function FeedbackPage(): JSX.Element {
                 <TableHead className="w-28">Loại</TableHead>
                 <TableHead className="w-24">Ưu tiên</TableHead>
                 <TableHead className="w-28">Trạng thái</TableHead>
-                <TableHead className="w-36">Người gửi</TableHead>
+                <TableHead className="">Người gửi</TableHead>
                 <TableHead className="w-32">Ngày tạo</TableHead>
                 {showActions && <TableHead className="w-24 text-right">Hành động</TableHead>}
               </TableRow>
@@ -463,16 +421,11 @@ export default function FeedbackPage(): JSX.Element {
         <Card className="space-y-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              {mapData?.features?.length ?? 0} điểm phản ánh
+              {total > 0 ? `${total} phản ánh` : 'Đang tải...'}
             </p>
             {filters}
           </div>
-          <FeedbackMap
-            data={mapData}
-            isLoading={mapQuery.isLoading || mapQuery.isFetching}
-            isError={mapQuery.isError}
-            onSelect={openMapDetails}
-          />
+          <FeedbackMap onSelect={openMapDetails} />
         </Card>
       )}
 

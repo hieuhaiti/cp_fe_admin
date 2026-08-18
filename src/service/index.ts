@@ -13,6 +13,7 @@ export { default as newsCommentService } from './newsCommentService'
 export { default as citizenFeedbackService } from './citizenFeedbackService'
 // Alias matching Postman naming
 export { default as feedbackService } from './citizenFeedbackService'
+export { default as documentService } from './documentService'
 
 // Map + GIS
 export { default as mapImageService } from './mapImageService'

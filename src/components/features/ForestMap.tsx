@@ -22,7 +22,11 @@ const RASTER_SOURCE_ID = 'forest-class-raster'
 const RASTER_LAYER_ID = 'forest-class-raster-layer'
 
 // Fallback Cẩm Phả; dữ liệu raster/bounds từ server vẫn là nguồn ưu tiên.
-const CAM_PHA_CENTER: [number, number] = [107.303749, 21.002361]
+const CAM_PHA_CENTER: [number, number] = [107.283749, 21.10361]
+const CAM_PHA_MAX_BOUNDS: [[number, number], [number, number]] = [
+  [106.8337, 20.6536],
+  [107.7337, 21.5536],
+]
 
 /**
  * Bản đồ preview raster Phân loại đối tượng 8 lớp. Skeleton tối giản so với
@@ -61,9 +65,9 @@ export default function ForestMap({
       style: buildBasemapStyle().spec,
       center: CAM_PHA_CENTER,
       zoom: 11,
+      maxBounds: CAM_PHA_MAX_BOUNDS,
       attributionControl: false,
     })
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
     mapRef.current = map
 

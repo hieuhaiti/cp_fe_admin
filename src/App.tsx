@@ -27,6 +27,7 @@ const MapLayerApisPage = lazy(() => import('@/pages/MapLayerApis'))
 const MapLayerApiPublicPage = lazy(() => import('@/pages/MapLayerApis/MapLayerApiPublicPage'))
 const ImportGeoJsonPage = lazy(() => import('@/pages/MapLayers/ImportGeoJson'))
 const MapImagePage = lazy(() => import('@/pages/MapImage'))
+const DocumentsPage = lazy(() => import('@/pages/Documents'))
 const FeedbackPage = lazy(() => import('@/pages/Feedback'))
 const ProfilePage = lazy(() => import('@/pages/Profile'))
 const ChangePasswordPage = lazy(() => import('@/pages/ChangePassword'))
@@ -130,6 +131,11 @@ function App() {
                 element={<ProtectedRoute permission={{ resource: 'pdf_maps', action: 'read' }} />}
               >
                 <Route path="/map-images" element={<MapImagePage />} />
+              </Route>
+              <Route
+                element={<ProtectedRoute permission={{ resource: 'documents', action: 'read' }} />}
+              >
+                <Route path="/documents" element={<DocumentsPage />} />
               </Route>
 
               {/* Phân loại đối tượng / ngập lụt - thủy văn */}

@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   // Bell,
+  FileText,
   Image,
   Key,
   LayoutDashboard,
@@ -51,6 +52,12 @@ export const navConfig: NavItem[] = [
     name: 'Ảnh bản đồ',
     path: '/map-images',
     permission: { resource: 'pdf_maps', action: 'read' },
+  },
+  {
+    icon: <FileText />,
+    name: 'Văn bản tài liệu',
+    path: '/documents',
+    permission: { resource: 'documents', action: 'read' },
   },
   {
     icon: <Trees />,

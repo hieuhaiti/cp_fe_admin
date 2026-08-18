@@ -68,7 +68,7 @@ import type {
 import ForestMap from '@/components/features/ForestMap'
 import LoadingInline from '@/components/common/LoadingInline'
 import { PaginationCustom } from '@/components/features/PaginationCustom'
-import ForestGroundTruthCard from './ForestGroundTruthCard'
+// import ForestGroundTruthCard from './ForestGroundTruthCard'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 
@@ -514,7 +514,7 @@ export default function ForestClassificationPage() {
               onOpenMap={openHistoryOnMap}
             />
           )}
-          {canManage && <ForestGroundTruthCard />}
+          {/* {canManage && <ForestGroundTruthCard />} */}
         </>
       )}
 
@@ -596,10 +596,9 @@ export default function ForestClassificationPage() {
               <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
                 <span>
-                  Sentinel-2 chưa có ảnh trước{' '}
-                  <strong>mùa thu {S2_EARLIEST_YEAR}</strong> (ra mắt 23/06/2015). Kỳ này sẽ chỉ
-                  tổng hợp từ <strong>Landsat 8/9</strong> — độ chính xác phân loại có thể thấp
-                  hơn do thiếu dải red-edge.
+                  Sentinel-2 chưa có ảnh trước <strong>mùa thu {S2_EARLIEST_YEAR}</strong> (ra mắt
+                  23/06/2015). Kỳ này sẽ chỉ tổng hợp từ <strong>Landsat 8/9</strong> — độ chính xác
+                  phân loại có thể thấp hơn do thiếu dải red-edge.
                 </span>
               </div>
             )}

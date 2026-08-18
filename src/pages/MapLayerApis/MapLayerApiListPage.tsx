@@ -175,10 +175,10 @@ export default function MapLayerApiListPage(): JSX.Element {
   )
 
   const regenerateMutation = useApiMutation(
-    (id: number) => mapLayerApiService.regenerate(id),
+    ({ id, name }: { id: number; name?: string }) => mapLayerApiService.regenerate(id, name),
     {
       onSuccess: (response: any) => {
-        const key = response?.data?.apiKey || response?.data?.raw_key
+        const key = response?.data?.apiKey || response?.data?.raw_key || response?.data?.token
         toast.success(key ? `Đã xoay key. Key mới: ${key}` : 'Đã xoay key thành công')
         listQuery.refetch()
         setRegenerateDialogOpen(false)
@@ -225,7 +225,7 @@ export default function MapLayerApiListPage(): JSX.Element {
   }
 
   function handleRegenerate() {
-    if (apiToRegenerate) regenerateMutation.mutate(apiToRegenerate.id)
+    if (apiToRegenerate) regenerateMutation.mutate({ id: apiToRegenerate.id, name: apiToRegenerate.name })
   }
 
   return (

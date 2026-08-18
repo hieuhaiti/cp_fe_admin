@@ -66,6 +66,17 @@ export interface CreateMapApiBody {
   scope?: MapApiScope
   is_active?: boolean
   expires_at?: string | null
+
+  // API registry contract fields accepted by the backend. Some legacy callers still
+  // populate them and the service layer normalizes them into the canonical payload.
+  layerId?: number | string
+  slug?: string
+  readFields?: string[]
+  writeFields?: string[]
+  searchFields?: string[]
+  allowedMethods?: string[]
+  defaultSortField?: string
+  metadata?: Record<string, unknown>
 }
 
 export interface UpdateMapApiBody {
@@ -74,6 +85,14 @@ export interface UpdateMapApiBody {
   scope?: MapApiScope
   is_active?: boolean
   expires_at?: string | null
+
+  expectedVersion?: number | string
+  readFields?: string[]
+  writeFields?: string[]
+  searchFields?: string[]
+  allowedMethods?: string[]
+  defaultSortField?: string
+  metadata?: Record<string, unknown>
 }
 
 /** Legacy aliases so old import paths keep compiling. */

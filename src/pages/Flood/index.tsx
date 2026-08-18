@@ -195,6 +195,22 @@ export default function FloodPage() {
     false
   )
   const runs = useMemo(() => runsQuery.data?.data?.items ?? [], [runsQuery.data])
+
+  const sortedRuns = useMemo(() => {
+    return [...runs].sort((a, b) => {
+      const aSnap = a.params_snapshot as Record<string, unknown> | null
+      const bSnap = b.params_snapshot as Record<string, unknown> | null
+      const aEnd = (aSnap?.monitorEnd as string | undefined) ?? ''
+      const bEnd = (bSnap?.monitorEnd as string | undefined) ?? ''
+      if (!aEnd && !bEnd) return 0
+      if (!aEnd) return 1
+      if (!bEnd) return -1
+      return bEnd > aEnd ? 1 : bEnd < aEnd ? -1 : 0
+    })
+  }, [runs])
+
+  const latestByEndDate = sortedRuns[0] ?? null
+
   const historyTotal = Number(runsQuery.data?.metadata?.total ?? runs.length)
   const historyTotalPages = Math.max(1, Math.ceil(historyTotal / historyPageSize))
   const historyStart = historyTotal ? (historyPage - 1) * historyPageSize + 1 : 0
@@ -314,16 +330,15 @@ export default function FloodPage() {
     return (dashboard?.layers ?? []).filter((l: { module?: string }) => l.module === 'trend').length
   }, [dashboard])
 
-  const latestTrend = dashboard?.modules?.['trend']
-
-  // Auto-select the latest successful trend run once when the dashboard first loads.
+  // Auto-select the run with the highest monitorEnd once when runs first load.
   const hasAutoSelected = useRef(false)
   useEffect(() => {
-    if (!hasAutoSelected.current && latestTrend?.id && latestTrend.status === 'SUCCEEDED') {
+    if (!hasAutoSelected.current && sortedRuns.length > 0) {
+      const best = sortedRuns.find((r) => r.status === 'SUCCEEDED') ?? sortedRuns[0]
       hasAutoSelected.current = true
-      setSelectedRunId(Number(latestTrend.id))
+      setSelectedRunId(Number(best.id))
     }
-  }, [latestTrend])
+  }, [sortedRuns])
 
   const resetHistoryFilters = () => {
     setStatusFilter('all')
@@ -406,25 +421,35 @@ export default function FloodPage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           icon={
-            latestTrend ? (latestTrend.status === 'SUCCEEDED' ? CheckCircle2 : Activity) : Clock3
+            latestByEndDate
+              ? latestByEndDate.status === 'SUCCEEDED'
+                ? CheckCircle2
+                : Activity
+              : Clock3
           }
           label="Trạng thái lần chạy gần nhất"
           value={
-            latestTrend
-              ? STATUS_LABELS[latestTrend.status as FloodRunStatus] || latestTrend.status
+            latestByEndDate
+              ? STATUS_LABELS[latestByEndDate.status] || latestByEndDate.status
               : 'Chưa có'
           }
-          hint={latestTrend ? formatDateTime(latestTrend.finishedAt) : 'Chưa có lượt phân tích'}
+          hint={
+            latestByEndDate
+              ? formatDateTime(latestByEndDate.finished_at)
+              : 'Chưa có lượt phân tích'
+          }
         />
         <MetricCard
           icon={CalendarDays}
           label="Kỳ giám sát gần nhất"
           value={(() => {
-            const p = latestTrend?.params
-            const m = latestTrend?.metadata
-            if (p?.monitorStart && p?.monitorEnd) return `${p.monitorStart} – ${p.monitorEnd}`
-            if (m?.monitorStart && m?.monitorEnd) return `${m.monitorStart} – ${m.monitorEnd}`
-            const year = p?.analysisYear ?? m?.analysisYear
+            const snap = latestByEndDate?.params_snapshot as Record<string, unknown> | undefined
+            const meta = latestByEndDate?.result_metadata as Record<string, unknown> | undefined
+            if (snap?.monitorStart && snap?.monitorEnd)
+              return `${snap.monitorStart} – ${snap.monitorEnd}`
+            if (meta?.monitorStart && meta?.monitorEnd)
+              return `${meta.monitorStart} – ${meta.monitorEnd}`
+            const year = (snap?.analysisYear ?? meta?.analysisYear) as number | undefined
             return year != null ? String(year) : '—'
           })()}
           hint="Khoảng thời gian giám sát gần nhất đã hoàn thành"
@@ -628,7 +653,7 @@ export default function FloodPage() {
                     </TableCell>
                   </TableRow>
                 ) : null}
-                {runs.map((run) => {
+                {sortedRuns.map((run) => {
                   const snap = run.params_snapshot as Record<string, unknown> | null
                   const periodLabel =
                     snap?.monitorStart && snap?.monitorEnd
@@ -707,7 +732,7 @@ export default function FloodPage() {
                     </TableRow>
                   )
                 })}
-                {!runs.length && !runsQuery.isFetching ? (
+                {!sortedRuns.length && !runsQuery.isFetching ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-muted-foreground py-10 text-center">
                       Không có lượt chạy phù hợp với bộ lọc.
@@ -1769,12 +1794,6 @@ export function TrendMetricsCard({ runDetail }: { runDetail: FloodRunDetail | un
           <Activity className="size-4 text-emerald-600" />
           Kết quả giám sát ngập{periodLabel}
         </CardTitle>
-        <CardDescription>
-          VH-only Otsu 3 tầng · quỹ đạo {meta.orbitSelected ?? meta.orbitRequested ?? '—'}
-          {meta.dryWindow?.start
-            ? ` · Mùa khô: ${meta.dryWindow.start} → ${meta.dryWindow.end}`
-            : ''}
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

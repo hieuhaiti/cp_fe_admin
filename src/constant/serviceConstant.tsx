@@ -20,6 +20,10 @@ export const serviceAdminCommentsPath = '/admin/comments'
 export const serviceFeedbackPath = '/field-reports'
 export const serviceAdminFeedbackPath = '/admin/field-reports'
 
+// Documents
+export const serviceDocumentsPath = '/cms/documents'
+export const serviceAdminDocumentsPath = '/admin/cms/documents'
+
 // PDF Maps (replaces map-images)
 export const servicePdfMapPath = '/cms/pdf-maps'
 export const serviceAdminPdfMapPath = '/admin/cms/pdf-maps'

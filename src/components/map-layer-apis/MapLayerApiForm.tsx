@@ -166,7 +166,10 @@ export default function MapLayerApiForm({
       onSubmit={form.handleSubmit((values) => {
         const normalized = normalizeMapLayerApiInput(values as any)
         if (mode === 'create') {
-          onSubmitCreate(normalized)
+          onSubmitCreate({
+            ...normalized,
+            metadata: selectedLayer?.metadata,
+          } as any)
           return
         }
 

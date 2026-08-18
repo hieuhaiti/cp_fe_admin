@@ -25,6 +25,7 @@ export type * from './notification'
 export type * from './news'
 export type * from './newsComment'
 export type * from './citizenFeedback'
+export type * from './document'
 
 // Map + GIS
 export type * from './mapImage'

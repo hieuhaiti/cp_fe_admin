@@ -13,7 +13,11 @@ export interface FloodMapLayer {
   opacity?: number
 }
 
-const CAM_PHA_CENTER: [number, number] = [107.303749, 21.002361]
+const CAM_PHA_CENTER: [number, number] = [107.283749, 21.10361]
+const CAM_PHA_MAX_BOUNDS: [[number, number], [number, number]] = [
+  [106.8337, 20.6536],
+  [107.7337, 21.5536],
+]
 
 function applyLayers(
   map: maplibregl.Map,
@@ -86,9 +90,9 @@ export default function FloodMap({
         style: buildBasemapStyle().spec,
         center: CAM_PHA_CENTER,
         zoom: 11,
+        maxBounds: CAM_PHA_MAX_BOUNDS,
         attributionControl: false,
       })
-      map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-right')
       mapRef.current = map
 
       // Apply any layers that arrived before map finished loading.
