@@ -11,9 +11,8 @@ import {
   Cell,
 } from 'recharts'
 import {
+  adminDashboardService,
   citizenFeedbackService,
-  floodService,
-  forestClassificationService,
   newsCommentService,
   userService,
   useApiQuery,
@@ -31,79 +30,37 @@ import {
   RefreshCcw,
   ArrowRight,
   Loader2,
+  CalendarDays,
+  PersonStanding,
+  Wheat,
 } from 'lucide-react'
 import { formatDateTime } from '@/lib/date'
 import type {
+  AdminDashboardOverview,
   ApiResponse,
   CitizenFeedback,
   CitizenFeedbackListData,
-  FloodDashboard,
-  ForestClassLatestData,
   NewsComment,
   NewsCommentListData,
   User,
   UserListData,
 } from '@/types/api'
 
-/**
- * Dashboard tổng hợp cho admin.
- *
- * 5 khối theo yêu cầu:
- * 1. Phản ánh hiện trường  — count + list mới nhất
- * 2. Comment chờ duyệt      — count + list mới nhất
- * 3. Người dùng             — total + chart tăng trưởng theo tháng
- * 4. Rừng + Mỏ              — KPI diện tích, tỉ lệ, kỳ
- * 5. Ngập lụt & thủy văn    — trạng thái 5 mô-đun M1–M5
- *
- * Dashboard chỉ đọc dữ liệu — mọi thao tác quản trị nằm ở trang chuyên đề tương
- * ứng. Mỗi khối có link "Xem chi tiết →" mở page quản lý.
- */
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const FEEDBACK_STATUS_LABEL: Record<string, string> = {
-  new: 'Mới',
   pending: 'Chờ xử lý',
-  in_progress: 'Đang xử lý',
   under_review: 'Đang xem xét',
-  resolved: 'Đã xử lý',
   approved: 'Đã tiếp nhận',
   rejected: 'Từ chối',
+  resolved: 'Đã xử lý',
 }
 const FEEDBACK_STATUS_TONE: Record<string, string> = {
-  new: 'bg-amber-100 text-amber-900 border-amber-200',
   pending: 'bg-amber-100 text-amber-900 border-amber-200',
-  in_progress: 'bg-sky-100 text-sky-900 border-sky-200',
   under_review: 'bg-sky-100 text-sky-900 border-sky-200',
-  resolved: 'bg-emerald-100 text-emerald-900 border-emerald-200',
   approved: 'bg-emerald-100 text-emerald-900 border-emerald-200',
   rejected: 'bg-red-100 text-red-900 border-red-200',
-}
-
-const FLOOD_MODULE_INFO: Array<{ code: string; short: string; name: string }> = [
-  { code: 'event', short: 'M1', name: 'Hiện trạng ngập' },
-  { code: 'hand', short: 'M2', name: 'Nhạy cảm địa hình' },
-  { code: 'impact', short: 'M4', name: 'Tác động ngập' },
-  { code: 'trend', short: 'M5', name: 'Xu thế nhiều năm' },
-]
-const FLOOD_STATUS_LABEL: Record<string, string> = {
-  QUEUED: 'Đang chờ',
-  COMPUTING: 'Đang tính',
-  EXPORTING: 'Đang xuất',
-  HARVESTING: 'Đang thu nhận',
-  VALIDATING: 'Đang kiểm định',
-  ARCHIVING: 'Đang lưu',
-  PUBLISHING: 'Đang công bố',
-  SUCCEEDED: 'Hoàn thành',
-  FAILED: 'Thất bại',
-  CANCELLED: 'Đã hủy',
-  DLQ: 'Cần xử lý',
-}
-const FLOOD_STATUS_TONE: Record<string, string> = {
-  SUCCEEDED: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-  FAILED: 'bg-red-100 text-red-900 border-red-200',
-  CANCELLED: 'bg-slate-100 text-slate-700 border-slate-200',
-  DLQ: 'bg-red-100 text-red-900 border-red-200',
+  resolved: 'bg-emerald-100 text-emerald-900 border-emerald-200',
 }
 
 const formatHa = (v: number | null | undefined) =>
@@ -116,10 +73,21 @@ const formatPct = (v: number | null | undefined) =>
     : `${Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`
 const formatCount = (v: number | null | undefined) =>
   v == null || Number.isNaN(Number(v)) ? '—' : Number(v).toLocaleString('vi-VN')
-const formatPeriod = (year?: number, month?: number) =>
-  year && month ? `${String(month).padStart(2, '0')}/${year}` : '—'
+const getSeasonName = (month: number): string => {
+  if (month <= 3) return 'Xuân'
+  if (month <= 6) return 'Hạ'
+  if (month <= 9) return 'Thu'
+  return 'Đông'
+}
+const formatPeriod = (year?: number | null, month?: number | null) =>
+  year && month ? `${String(month).padStart(2, '0')}/${year} · ${getSeasonName(month)}` : '—'
+const formatDateRange = (start: string | null, end: string | null) => {
+  if (!start && !end) return '—'
+  const fmt = (s: string) => s.slice(0, 10)
+  if (start && end) return `${fmt(start)} → ${fmt(end)}`
+  return fmt(start ?? end ?? '')
+}
 
-// Aggregate `User.createdAt` into `{ month: 'MM/YY', count }` for last N months.
 function bucketUsersByMonth(users: User[], monthsBack = 6) {
   const now = new Date()
   const buckets: Array<{ key: string; label: string; count: number }> = []
@@ -145,7 +113,16 @@ function bucketUsersByMonth(users: User[], monthsBack = 6) {
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  // 1. Feedback — pull top 5 for list + tổng qua metadata.total
+  // Tổng hợp: flood, classification, landComposition, feedback counts
+  const overviewQuery = useApiQuery(
+    ['dashboard', 'overview'],
+    () => adminDashboardService.getOverview(),
+    {},
+    false,
+    false
+  )
+
+  // List 5 phản ánh gần nhất (items)
   const feedbackQuery = useApiQuery(
     ['dashboard', 'feedback'],
     () => citizenFeedbackService.getAll({ page: 1, limit: 5 }),
@@ -154,7 +131,7 @@ export default function DashboardPage() {
     false
   )
 
-  // 2. Unmoderated comments — status='pending'
+  // Bình luận chờ duyệt
   const commentQuery = useApiQuery(
     ['dashboard', 'unmoderated-comments'],
     () => newsCommentService.getAll({ page: 1, limit: 5, status: 'pending' }),
@@ -163,7 +140,7 @@ export default function DashboardPage() {
     false
   )
 
-  // 3. Users — pull latest 100 (backend cap) để dựng chart 6 tháng gần nhất
+  // Users — chart 6 tháng gần nhất
   const userQuery = useApiQuery(
     ['dashboard', 'users'],
     () => userService.getAll({ page: 1, limit: 100, sortBy: 'created_at', sortOrder: 'DESC' }),
@@ -172,28 +149,18 @@ export default function DashboardPage() {
     false
   )
 
-  // 4. Forest classification latest snapshot
-  const forestQuery = useApiQuery(
-    ['dashboard', 'forest'],
-    () => forestClassificationService.getLatest(),
-    {},
-    false,
-    false
-  )
-
-  // 5. Flood dashboard (modules + published layers)
-  const floodQuery = useApiQuery(['dashboard', 'flood'], () => floodService.getDashboard(), {}, false)
+  const overviewRes = overviewQuery.data as ApiResponse<AdminDashboardOverview> | undefined
+  const overview = overviewRes?.data
 
   const feedbackRes = feedbackQuery.data as ApiResponse<CitizenFeedbackListData> | undefined
   const commentRes = commentQuery.data as ApiResponse<NewsCommentListData> | undefined
   const userRes = userQuery.data as ApiResponse<UserListData> | undefined
-  const forestRes = forestQuery.data as ApiResponse<ForestClassLatestData> | undefined
-  const floodRes = floodQuery.data as ApiResponse<FloodDashboard> | undefined
 
   const feedbackItems = (feedbackRes?.data?.items ?? []) as CitizenFeedback[]
-  const feedbackTotal = Number(feedbackRes?.metadata?.total ?? feedbackItems.length) || 0
 
-  const commentItems = (commentRes?.data?.items ?? commentRes?.data?.comments ?? []) as NewsComment[]
+  const commentItems = (commentRes?.data?.items ??
+    commentRes?.data?.comments ??
+    []) as NewsComment[]
   const commentTotal =
     Number(commentRes?.metadata?.total ?? commentRes?.data?.pagination?.total ?? 0) || 0
 
@@ -202,33 +169,36 @@ export default function DashboardPage() {
     Number(userRes?.metadata?.total ?? userRes?.data?.pagination?.total ?? users.length) || 0
   const userBuckets = useMemo(() => bucketUsersByMonth(users, 6), [users])
 
-  const forestSnapshot = forestRes?.data?.snapshot ?? null
-  const forestSummary = forestSnapshot?.provinceSummary ?? undefined
-  const forestHa = Number(forestSummary?.forestHa ?? 0)
-  const forestPct = Number(forestSummary?.forestPercent ?? 0)
-  const mineHa = Number(forestSummary?.mineHa ?? 0)
-  const minePct = Number(forestSummary?.minePercent ?? 0)
-  const totalHa = Number(forestSummary?.totalHa ?? 0)
+  // Feedback counts từ overview
+  const feedbackTotal = overview?.feedback?.total ?? 0
+  const feedbackPending = overview?.feedback?.byStatus?.pending ?? 0
+  const feedbackResolved = overview?.feedback?.byStatus?.resolved ?? 0
 
-  const flood = floodRes?.data
-  const floodModules = (flood?.modules ?? {}) as FloodDashboard['modules']
-  const floodPublishedCount = flood?.layers?.length ?? 0
-  const floodSucceededCount = Object.values(floodModules).filter(
-    (m) => m?.status === 'SUCCEEDED'
-  ).length
+  // Land composition
+  const land = overview?.landComposition
+  const forestHa = land?.forestAreaHa ?? null
+  const mineHa = land?.mineAreaHa ?? null
+  const totalHa = land?.totalAreaHa ?? null
+  const forestPct = land?.forestPercent ?? null
+  const minePct = land?.minePercent ?? null
+
+  // Classification
+  const cls = overview?.classification
+
+  // Flood
+  const flood = overview?.flood ?? null
 
   const anyLoading =
+    overviewQuery.isLoading ||
     feedbackQuery.isLoading ||
     commentQuery.isLoading ||
-    userQuery.isLoading ||
-    forestQuery.isLoading ||
-    floodQuery.isLoading
+    userQuery.isLoading
+
   const refetchAll = () => {
+    overviewQuery.refetch()
     feedbackQuery.refetch()
     commentQuery.refetch()
     userQuery.refetch()
-    forestQuery.refetch()
-    floodQuery.refetch()
   }
 
   return (
@@ -251,14 +221,14 @@ export default function DashboardPage() {
           icon={<MessageSquareWarning className="size-5 text-amber-600" />}
           label="Phản ánh hiện trường"
           value={formatCount(feedbackTotal)}
-          hint="Tổng số phản ánh của người dân"
+          hint={`${formatCount(feedbackPending)} chờ xử lý · ${formatCount(feedbackResolved)} đã xử lý`}
           tone="bg-amber-50"
         />
         <KpiCard
           icon={<MessagesSquare className="size-5 text-sky-600" />}
           label="Bình luận chờ duyệt"
           value={formatCount(commentTotal)}
-          hint="Bình luận báo chí chưa kiểm duyệt"
+          hint="Bình luận cần kiểm duyệt"
           tone="bg-sky-50"
         />
         <KpiCard
@@ -270,29 +240,27 @@ export default function DashboardPage() {
         />
         <KpiCard
           icon={<Trees className="size-5 text-emerald-600" />}
-          label="Diện tích rừng"
-          value={forestSummary ? formatHa(forestHa) : '—'}
+          label="Tỷ lệ rừng"
+          value={overviewQuery.isLoading ? '…' : land ? formatPct(forestPct) : '—'}
           hint={
-            forestSummary
-              ? `${formatPct(forestPct)} · Kỳ ${formatPeriod(forestSnapshot?.year, forestSnapshot?.month)}`
+            land
+              ? `${formatHa(forestHa)} · Kỳ ${formatPeriod(cls?.year, cls?.month)}`
               : 'Chưa có kết quả phân loại'
           }
           tone="bg-emerald-50"
         />
         <KpiCard
           icon={<Mountain className="size-5 text-stone-700" />}
-          label="Diện tích khu mỏ"
-          value={forestSummary ? formatHa(mineHa) : '—'}
+          label="Tỷ lệ khu mỏ"
+          value={overviewQuery.isLoading ? '…' : land ? formatPct(minePct) : '—'}
           hint={
-            forestSummary
-              ? `${formatPct(minePct)} · Tổng ${formatHa(totalHa)}`
-              : 'Chưa có kết quả phân loại'
+            land ? `${formatHa(mineHa)} · Tổng ${formatHa(totalHa)}` : 'Chưa có kết quả phân loại'
           }
           tone="bg-stone-50"
         />
       </div>
 
-      {/* ── Hàng 2: Chart người dùng + trạng thái ngập lụt ───────────────────── */}
+      {/* ── Hàng 2: Chart người dùng + Ngập lụt gần nhất ───────────────────── */}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
@@ -330,12 +298,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <FloodStatusCard
-          modules={floodModules}
-          publishedCount={floodPublishedCount}
-          succeededCount={floodSucceededCount}
-          loading={floodQuery.isLoading}
-        />
+        <FloodOverviewCard flood={flood} loading={overviewQuery.isLoading} />
       </div>
 
       {/* ── Hàng 3: Chart rừng/mỏ + danh sách phản ánh + comment ───────────── */}
@@ -344,14 +307,10 @@ export default function DashboardPage() {
           forestHa={forestHa}
           mineHa={mineHa}
           totalHa={totalHa}
-          period={formatPeriod(forestSnapshot?.year, forestSnapshot?.month)}
-          loading={forestQuery.isLoading}
+          period={formatPeriod(cls?.year, cls?.month)}
+          loading={overviewQuery.isLoading}
         />
-        <RecentFeedbackCard
-          items={feedbackItems}
-          total={feedbackTotal}
-          loading={feedbackQuery.isLoading}
-        />
+        <RecentFeedbackCard items={feedbackItems} loading={feedbackQuery.isLoading} />
         <UnmoderatedCommentsCard
           items={commentItems}
           total={commentTotal}
@@ -393,15 +352,11 @@ function KpiCard({
   )
 }
 
-function FloodStatusCard({
-  modules,
-  publishedCount,
-  succeededCount,
+function FloodOverviewCard({
+  flood,
   loading,
 }: {
-  modules: FloodDashboard['modules']
-  publishedCount: number
-  succeededCount: number
+  flood: AdminDashboardOverview['flood']
   loading: boolean
 }) {
   return (
@@ -411,39 +366,58 @@ function FloodStatusCard({
           <Waves className="size-4 text-sky-600" />
           Ngập lụt & thủy văn
         </CardTitle>
-        <CardDescription>
-          {succeededCount}/5 mô-đun hoàn thành · {publishedCount} lớp đã công bố
-        </CardDescription>
+        <CardDescription>Kết quả giám sát gần nhất</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2 pt-2">
+      <CardContent className="space-y-3 pt-2">
         {loading ? (
-          <div className="flex h-48 items-center justify-center">
+          <div className="flex h-40 items-center justify-center">
             <Loader2 className="text-muted-foreground size-5 animate-spin" />
           </div>
+        ) : !flood ? (
+          <p className="text-muted-foreground py-6 text-center text-sm">
+            Chưa có kết quả phân tích.
+          </p>
         ) : (
           <>
-            {FLOOD_MODULE_INFO.map((info) => {
-              const module = modules?.[info.code as keyof typeof modules]
-              const status = module?.status
-              const label = status ? FLOOD_STATUS_LABEL[status] || status : 'Chưa có'
-              return (
-                <div
-                  key={info.code}
-                  className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <span className="text-muted-foreground text-xs">{info.short}</span>
-                    <span className="ml-2 font-medium">{info.name}</span>
-                  </div>
-                  <Badge variant="outline" className={status ? FLOOD_STATUS_TONE[status] || '' : ''}>
-                    {label}
-                  </Badge>
-                </div>
-              )
-            })}
+            <FloodRow
+              icon={<CalendarDays className="size-4 text-sky-500" />}
+              label="Kỳ giám sát"
+              value={formatDateRange(flood.monitorStart, flood.monitorEnd)}
+            />
+            <FloodRow
+              icon={<Waves className="size-4 text-sky-500" />}
+              label="Diện tích vùng ngập"
+              value={formatHa(flood.floodExtentAreaHa)}
+            />
+            <FloodRow
+              icon={<PersonStanding className="size-4 text-orange-500" />}
+              label="Dân số ảnh hưởng"
+              value={
+                flood.populationAffected != null
+                  ? Number(flood.populationAffected).toLocaleString('vi-VN') + ' người'
+                  : '—'
+              }
+            />
+            <FloodRow
+              icon={<Wheat className="size-4 text-yellow-600" />}
+              label="Cây trồng ảnh hưởng"
+              value={formatHa(flood.cropAffectedAreaHa)}
+            />
+            <FloodRow
+              icon={<Mountain className="size-4 text-stone-600" />}
+              label="Đất xây dựng ảnh hưởng"
+              value={formatHa(flood.builtAffectedAreaHa)}
+            />
+            {flood.drainageAlertAreaHa != null && (
+              <FloodRow
+                icon={<Waves className="size-4 text-amber-500" />}
+                label="Cảnh báo tiêu thoát"
+                value={formatHa(flood.drainageAlertAreaHa)}
+              />
+            )}
             <Link
               to="/flood"
-              className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+              className="text-primary mt-1 inline-flex items-center gap-1 text-sm font-medium hover:underline"
             >
               Mở trung tâm vận hành <ArrowRight className="size-3" />
             </Link>
@@ -454,6 +428,18 @@ function FloodStatusCard({
   )
 }
 
+function FloodRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
+      <div className="text-muted-foreground flex items-center gap-2">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <span className="font-medium">{value}</span>
+    </div>
+  )
+}
+
 function ForestVsMineCard({
   forestHa,
   mineHa,
@@ -461,16 +447,19 @@ function ForestVsMineCard({
   period,
   loading,
 }: {
-  forestHa: number
-  mineHa: number
-  totalHa: number
+  forestHa: number | null
+  mineHa: number | null
+  totalHa: number | null
   period: string
   loading: boolean
 }) {
+  const fHa = forestHa ?? 0
+  const mHa = mineHa ?? 0
+  const tHa = totalHa ?? 0
   const data = [
-    { label: 'Rừng', value: forestHa, fill: '#059669' },
-    { label: 'Khu mỏ', value: mineHa, fill: '#57534e' },
-    { label: 'Khác', value: Math.max(totalHa - forestHa - mineHa, 0), fill: '#94a3b8' },
+    { label: 'Rừng', value: fHa, fill: '#059669' },
+    { label: 'Khu mỏ', value: mHa, fill: '#57534e' },
+    { label: 'Khác', value: Math.max(tHa - fHa - mHa, 0), fill: '#94a3b8' },
   ]
   return (
     <Card>
@@ -488,7 +477,7 @@ function ForestVsMineCard({
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="text-muted-foreground size-5 animate-spin" />
           </div>
-        ) : totalHa === 0 ? (
+        ) : tHa === 0 ? (
           <p className="text-muted-foreground py-6 text-center text-sm">
             Chưa có kết quả Phân loại đối tượng.
           </p>
@@ -502,7 +491,9 @@ function ForestVsMineCard({
                   tick={{ fontSize: 12 }}
                   tickFormatter={(v) => Number(v).toLocaleString('vi-VN')}
                 />
-                <RechartsTooltip formatter={(value) => [formatHa(Number(value) || 0), 'Diện tích']} />
+                <RechartsTooltip
+                  formatter={(value) => [formatHa(Number(value) || 0), 'Diện tích']}
+                />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                   {data.map((entry, index) => (
                     <Cell key={index} fill={entry.fill} />
@@ -523,15 +514,7 @@ function ForestVsMineCard({
   )
 }
 
-function RecentFeedbackCard({
-  items,
-  total,
-  loading,
-}: {
-  items: CitizenFeedback[]
-  total: number
-  loading: boolean
-}) {
+function RecentFeedbackCard({ items, loading }: { items: CitizenFeedback[]; loading: boolean }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -539,9 +522,6 @@ function RecentFeedbackCard({
           <MessageSquareWarning className="size-4 text-amber-600" />
           Phản ánh mới nhất
         </CardTitle>
-        <CardDescription>
-          Tổng {formatCount(total)} phản ánh — hiển thị 5 mục gần nhất
-        </CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
         {loading ? (
@@ -554,17 +534,19 @@ function RecentFeedbackCard({
           <ul className="space-y-2">
             {items.map((item) => {
               const iso = item.createdAt || item.created_at
+              const title = item.title || item.description || 'Không tiêu đề'
+              const status = item.status
               return (
                 <li key={item.id} className="rounded-md border p-2 text-sm">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="min-w-0 flex-1 truncate font-medium" title={item.title}>
-                      {item.title || 'Không tiêu đề'}
+                    <span className="min-w-0 flex-1 truncate font-medium" title={title}>
+                      {title}
                     </span>
                     <Badge
                       variant="outline"
-                      className={FEEDBACK_STATUS_TONE[item.status] || 'border-slate-200'}
+                      className={FEEDBACK_STATUS_TONE[status] || 'border-slate-200'}
                     >
-                      {FEEDBACK_STATUS_LABEL[item.status] || item.status}
+                      {FEEDBACK_STATUS_LABEL[status] || status}
                     </Badge>
                   </div>
                   {iso ? (

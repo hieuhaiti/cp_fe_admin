@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { floodService, statisticsService, useApiQuery } from '@/service'
+import { adminDashboardService, useApiQuery } from '@/service'
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { navConfig } from '@/constant/common'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import { checkPermission, ROLE_LABELS, getUserRole, hasPerm } from '@/lib/permissions'
+import type { AdminDashboardOverview, ApiResponse } from '@/types/api'
 import type { NavItem } from '@/types/common'
 import {
   ArrowRight,
@@ -24,9 +25,26 @@ function formatPct(v?: number | null) {
   return `${v.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`
 }
 
+function formatHa(v?: number | null) {
+  if (v == null) return '—'
+  return `${Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha`
+}
+
 function formatInt(v?: number | null) {
   if (v == null) return '—'
   return v.toLocaleString('vi-VN')
+}
+
+function formatPeriod(year?: number | null, month?: number | null) {
+  if (!year || !month) return '—'
+  return `${String(month).padStart(2, '0')}/${year}`
+}
+
+function formatDateRange(start: string | null, end: string | null) {
+  if (!start && !end) return '—'
+  const fmt = (s: string) => s.slice(0, 10)
+  if (start && end) return `${fmt(start)} → ${fmt(end)}`
+  return fmt(start ?? end ?? '')
 }
 
 function isExternalPath(path: string) {
@@ -38,21 +56,16 @@ export default function LandingPage() {
   const userName = user?.fullName || user?.email || 'bạn'
   const roleLabel = user ? ROLE_LABELS[getUserRole(user) ?? ''] : ''
 
-  // Chỉ fetch dashboard khi user có quyền, tránh 403 spam log.
-  const canReadDashboard = hasPerm(user, 'statistics', 'dashboard')
-  const dashboardQuery = useApiQuery(
-    ['landing-dashboard'],
-    () => statisticsService.getDashboard(),
-    { enabled: canReadDashboard, staleTime: 60_000 }
-  )
-  const canReadFlood = hasPerm(user, 'flood', 'read')
-  const floodQuery = useApiQuery(
-    ['flood', 'landing-dashboard'],
-    () => floodService.getDashboard(),
-    { enabled: canReadFlood, staleTime: 60_000 },
+  const canReadOverview = hasPerm(user, 'flood', 'read') || hasPerm(user, 'statistics', 'dashboard')
+  const overviewQuery = useApiQuery(
+    ['landing', 'overview'],
+    () => adminDashboardService.getOverview(),
+    { enabled: canReadOverview, staleTime: 60_000 },
+    false,
     false
   )
-  const stats = dashboardQuery.data?.data
+
+  const overview = (overviewQuery.data as ApiResponse<AdminDashboardOverview> | undefined)?.data
 
   const quickLinks = useMemo(() => {
     return navConfig
@@ -60,10 +73,10 @@ export default function LandingPage() {
       .filter((item) => checkPermission(user, item.permission))
   }, [user])
 
-  const flood = floodQuery.data?.data
-  const feedback = stats?.feedback
-  const forest = stats?.forest
-  const classification = stats?.forestClassification
+  const flood = overview?.flood
+  const land = overview?.landComposition
+  const cls = overview?.classification
+  const feedback = overview?.feedback
 
   return (
     <div className="flex-1 space-y-6 overflow-y-auto">
@@ -80,7 +93,7 @@ export default function LandingPage() {
             Giám sát ngập lụt, tài nguyên rừng, ảnh vệ tinh, thời tiết và phản ánh hiện trường
             của thành phố Cẩm Phả trên một nền tảng thống nhất.
           </p>
-          {canReadDashboard && (
+          {canReadOverview && (
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild>
                 <Link to="/dashboard">
@@ -94,47 +107,31 @@ export default function LandingPage() {
       </section>
 
       {/* KPI */}
-      {canReadDashboard && (
+      {canReadOverview && (
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            icon={<Trees className="h-5 w-5" />}
-            label="Che phủ rừng toàn tỉnh"
-            value={formatPct(forest?.provinceCoveragePct)}
-            hint={
-              forest?.totalForestHa != null
-                ? `${(forest.totalForestHa / 100).toLocaleString('vi-VN', {
-                    maximumFractionDigits: 1,
-                  })} km² rừng`
-                : undefined
-            }
+            icon={<Waves className="h-5 w-5 text-sky-600" />}
+            label="Ngập lụt gần nhất"
+            value={flood ? formatDateRange(flood.monitorStart, flood.monitorEnd) : '—'}
+            hint={flood?.floodExtentAreaHa != null ? `${formatHa(flood.floodExtentAreaHa)} vùng ngập` : undefined}
           />
           <KpiCard
-            icon={<Waves className="h-5 w-5 text-sky-600" />}
-            label="Mô-đun ngập hoàn thành"
-            value={`${Object.values(flood?.modules ?? {}).filter((item) => item?.status === 'SUCCEEDED').length}/5`}
-            hint={`${flood?.layers?.length ?? 0} lớp đã công bố`}
+            icon={<Trees className="h-5 w-5 text-emerald-600" />}
+            label="Tỷ lệ che phủ rừng"
+            value={formatPct(land?.forestPercent)}
+            hint={land?.forestAreaHa != null ? `${formatHa(land.forestAreaHa)}` : undefined}
+          />
+          <KpiCard
+            icon={<LayoutDashboard className="h-5 w-5 text-stone-600" />}
+            label="Phân loại đối tượng"
+            value={cls ? formatPeriod(cls.year, cls.month) : '—'}
+            hint={cls?.totalAreaHa != null ? `Tổng phân loại ${formatHa(cls.totalAreaHa)}` : undefined}
           />
           <KpiCard
             icon={<MessageSquareWarning className="h-5 w-5 text-blue-500" />}
-            label="Phản ánh"
-            value={formatInt(feedback?.total)}
-            hint={
-              feedback?.byStatus?.new != null ? `${feedback.byStatus.new} mới chờ xử lý` : undefined
-            }
-          />
-          <KpiCard
-            icon={<LayoutDashboard className="h-5 w-5 text-emerald-600" />}
-            label="Phân loại đối tượng"
-            value={
-              classification?.year && classification?.month
-                ? `${String(classification.month).padStart(2, '0')}/${classification.year}`
-                : '—'
-            }
-            hint={
-              classification?.forestCoveragePct != null
-                ? `Che phủ ${formatPct(classification.forestCoveragePct)}`
-                : (classification?.note ?? undefined)
-            }
+            label="Phản ánh cần xử lý"
+            value={feedback ? formatInt((feedback.byStatus?.pending ?? 0) + (feedback.byStatus?.under_review ?? 0)) : '—'}
+            hint={feedback ? `Tổng ${formatInt(feedback.total)} phản ánh` : undefined}
           />
         </section>
       )}

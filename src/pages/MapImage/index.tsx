@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FileImage, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { mapImageService, useApiMutation, useApiQuery } from '@/service'
 import type {
   ApiResponse,
   Pagination,
   PdfMap,
   PdfMapListData,
-  PdfMapTheme,
   UpdatePdfMapBody,
 } from '@/types/api'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
-import { parseLink } from '@/lib/utils'
 import { formatDate } from '@/lib/date'
 import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
@@ -31,7 +29,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import MapImageDetailDialog from './MapImageDetailDialog'
 import MapImageFormDialog from './MapImageFormDialog'
-import { THEME_LABEL } from '@/constant/mapImageConstant'
 
 type PdfMapFormPayload = UpdatePdfMapBody
 
@@ -43,7 +40,6 @@ export default function MapImagePage() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
   const [q, setQ] = useState('')
-  const [theme, setTheme] = useState('all')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
@@ -56,9 +52,8 @@ export default function MapImagePage() {
       sortBy: 'id',
       sortOrder: 'DESC' as const,
       ...(q.trim() ? { q: q.trim() } : {}),
-      ...(theme !== 'all' ? { theme: theme as PdfMapTheme } : {}),
     }),
-    [page, limit, q, theme]
+    [page, limit, q]
   )
   const query = useApiQuery(
     ['pdfMaps', params],
@@ -124,15 +119,6 @@ export default function MapImagePage() {
         }}
         filter={
           <div className="flex flex-wrap gap-2">
-            <Select value={theme} onValueChange={(value) => { setTheme(value); setPage(1) }}>
-              <SelectTrigger className="w-44"><SelectValue placeholder="Chủ đề" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả chủ đề</SelectItem>
-                {Object.entries(THEME_LABEL).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={String(limit)} onValueChange={(value) => { setLimit(Number(value)); setPage(1) }}>
               <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -152,9 +138,8 @@ export default function MapImagePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Xem trước</TableHead>
               <TableHead>Tiêu đề</TableHead>
-              <TableHead>Chủ đề</TableHead>
+              <TableHead>Tỉ lệ</TableHead>
               <TableHead>Năm</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Ngày tạo</TableHead>
@@ -163,21 +148,20 @@ export default function MapImagePage() {
           </TableHeader>
           <TableBody>
             {query.isLoading ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center">Đang tải dữ liệu...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="py-10 text-center">Đang tải dữ liệu...</TableCell></TableRow>
             ) : items.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Chưa có ảnh bản đồ phù hợp.</TableCell></TableRow>
-            ) : items.map((item) => (
+              <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Chưa có ảnh bản đồ phù hợp.</TableCell></TableRow>
+            ) : items.map((item) => {
+              const isPublic = item.isPublic ?? item.visibility === 'public'
+              const year = item.year ?? item.map_year
+              const createdAt = item.createdAt ?? item.created_at
+              return (
               <TableRow key={item.id} className="cursor-pointer" onClick={() => { setSelectedId(item.id); setDetailOpen(true) }}>
-                <TableCell>
-                  {item.thumbnailUrl ? (
-                    <img src={parseLink(item.thumbnailUrl)} alt="" className="h-12 w-16 rounded border object-cover" />
-                  ) : <FileImage className="mx-auto size-8 text-muted-foreground" />}
-                </TableCell>
-                <TableCell className="font-medium">{item.title || item.fileName || `Bản đồ #${item.id}`}</TableCell>
-                <TableCell>{THEME_LABEL[item.themeCode] ?? item.themeCode}</TableCell>
-                <TableCell>{item.year ?? '-'}</TableCell>
-                <TableCell><Badge variant={item.isPublic ? 'default' : 'secondary'}>{item.isPublic ? 'Công khai' : 'Riêng tư'}</Badge></TableCell>
-                <TableCell>{item.createdAt ? formatDate(item.createdAt) : '-'}</TableCell>
+                <TableCell className="font-medium">{item.title || item.fileName || item.original_name || `Bản đồ #${item.id}`}</TableCell>
+                <TableCell>{item.scale_label ?? item.scale ?? '-'}</TableCell>
+                <TableCell>{year ?? '-'}</TableCell>
+                <TableCell><Badge variant={isPublic ? 'default' : 'secondary'}>{isPublic ? 'Công khai' : 'Nội bộ'}</Badge></TableCell>
+                <TableCell>{createdAt ? formatDate(createdAt) : '-'}</TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
                     {canUpdate && <Button variant="ghost" size="icon" tooltip="Chỉnh sửa" onClick={(event) => { event.stopPropagation(); setSelectedId(item.id); setFormOpen(true) }}><Pencil className="size-4" /></Button>}
@@ -185,7 +169,8 @@ export default function MapImagePage() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
+
           </TableBody>
         </Table>
       </ToolTableCustom>

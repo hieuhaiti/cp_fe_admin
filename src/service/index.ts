@@ -38,4 +38,7 @@ export { default as kttvScenarioService } from './kttvScenarioService'
 export { default as statisticsService } from './statisticsService'
 export { default as statsService } from './statisticsService'
 
+// Admin dashboard overview
+export { default as adminDashboardService } from './adminDashboardService'
+
 // Legacy / kept as-is (not in Postman)

@@ -42,3 +42,6 @@ export type * from './fieldMeasurement'
 
 // Statistics
 export type * from './statistics'
+
+// Admin dashboard overview
+export type * from './adminDashboard'

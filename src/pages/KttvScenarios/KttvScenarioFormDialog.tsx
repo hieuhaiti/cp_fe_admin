@@ -204,7 +204,7 @@ export default function KttvScenarioFormDialog({
         limit: 10,
         sortBy: 'created_at',
         sortOrder: 'DESC',
-        search: layerSearchDebounced || undefined,
+        q: layerSearchDebounced || undefined,
       }),
     { staleTime: 60 * 1000 },
     false,

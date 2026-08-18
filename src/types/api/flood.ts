@@ -94,26 +94,49 @@ export interface FloodRunDetail extends FloodRun {
   stages: FloodStageEvent[]
 }
 
+export interface FloodDashboardAreaStats {
+  floodExtentAreaHa?: number | null
+  populationAffected?: number | null
+  cropAffectedAreaHa?: number | null
+  builtAffectedAreaHa?: number | null
+  drainageAlertAreaHa?: number | null
+}
+
 export interface FloodDashboardModule {
-  id: number
+  id: number | string
   status: FloodRunStatus
   finishedAt?: string | null
-  metadata?: Record<string, unknown> | null
+  /** params_snapshot — includes monitorStart/monitorEnd for trend runs */
+  params?: {
+    monitorStart?: string | null
+    monitorEnd?: string | null
+    [key: string]: unknown
+  } | null
+  /** result_metadata — includes areaStats for completed trend runs */
+  metadata?: {
+    monitorStart?: string | null
+    monitorEnd?: string | null
+    areaStats?: FloodDashboardAreaStats | null
+    [key: string]: unknown
+  } | null
   warnings?: unknown[]
 }
 
 export interface FloodDashboard {
-  modules: Record<FloodModule, FloodDashboardModule | null>
+  modules: { trend: FloodDashboardModule | null }
   layers: Array<{
-    id: number
+    id: number | string
+    analysisRunId?: number | string | null
     module: FloodModule
     code: string
     role: string
     workspace?: string
     layerName?: string
+    styleName?: string | null
     registryLayerId?: number | string | null
     isPublic?: boolean
     publishedAt?: string
+    metadata?: { label?: { vi?: string; en?: string }; style?: string } | null
   }>
 }
 
@@ -124,6 +147,8 @@ export interface TrendConfigField {
   label: string
   description: string
   default: unknown
+  current?: unknown
+  hasOverride?: boolean
   unit?: string
   min?: number
   max?: number
