@@ -4,6 +4,7 @@ import { useApiQuery, useApiMutation, userService, authService } from '@/service
 import type {
   ApiResponse,
   AuthMeData,
+  CreateUserBody,
   Pagination,
   User,
   UserListData,
@@ -39,7 +40,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { KeyRound, Pen, Power, ShieldCheck, Trash2 } from 'lucide-react'
+import { KeyRound, Plus, Power, ShieldCheck, Trash2 } from 'lucide-react'
 import PageLayout from '@/layout/pageLayout'
 import { toast } from 'react-toastify'
 import UserDetailDialog from './UserDetailDialog'
@@ -49,8 +50,9 @@ import { useAuthStore } from '@/stores/common/useAuthStore'
 
 const ROLE_OPTIONS: { value: UserRoleCode; label: string }[] = [
   { value: 'system_admin', label: 'Quản trị hệ thống' },
-  { value: 'so_nnmt', label: 'Sở NN&MT' },
-  { value: 'ubnd_tinh', label: 'UBND tỉnh' },
+  { value: 'ubnd_tp', label: 'UBND thành phố' },
+  { value: 'so_tnmt', label: 'Sở TN&MT' },
+  { value: 'so_xd', label: 'Sở Xây dựng' },
   { value: 'citizen', label: 'Người dân' },
 ]
 
@@ -69,7 +71,6 @@ function roleLabel(code?: string | null, fallback?: string | null) {
 export default function User(): JSX.Element {
   const currentUser = useAuthStore((s) => s.user)
   const canCreate = hasPerm(currentUser, 'users', 'create')
-  const canUpdate = hasPerm(currentUser, 'users', 'update')
   const canDelete = hasPerm(currentUser, 'users', 'delete')
   const canChangeRole = hasPerm(currentUser, 'users', 'change_role')
   const canChangeStatus = hasPerm(currentUser, 'users', 'change_status')
@@ -142,7 +143,7 @@ export default function User(): JSX.Element {
 
   // Create mutation
   const createMutation = useApiMutation(
-    (data: any) => userService.create(data),
+    (data: CreateUserBody) => userService.create(data),
     {
       onSuccess: () => {
         dbQuery.refetch()
@@ -226,11 +227,6 @@ export default function User(): JSX.Element {
     setFormDialogOpen(true)
   }
 
-  function openEditDialog(u: any) {
-    setSelectedUserId(u.id)
-    setFormDialogOpen(true)
-  }
-
   function openActiveDialog(u: any) {
     if (profileUser && String(u.id) === String(profileUser.id)) {
       toast.warning('Bạn không thể thay đổi trạng thái của tài khoản mình')
@@ -270,12 +266,7 @@ export default function User(): JSX.Element {
     setDeleteDialogOpen(true)
   }
 
-  function handleFormSubmit(data: any) {
-    if (selectedUserId) {
-      // In new API: no unified update endpoint. Nothing to submit from the form.
-      toast.info('Vui lòng dùng các thao tác Vai trò / Kích hoạt / Đặt lại mật khẩu để cập nhật')
-      return
-    }
+  function handleFormSubmit(data: CreateUserBody) {
     createMutation.mutate(data)
   }
 
@@ -366,6 +357,7 @@ export default function User(): JSX.Element {
 
             {canCreate && (
               <Button variant="default" onClick={openAddDialog}>
+                <Plus className="size-4" />
                 Thêm người dùng
               </Button>
             )}
@@ -422,19 +414,6 @@ export default function User(): JSX.Element {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {canUpdate && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openEditDialog(u)
-                            }}
-                            tooltip="Chỉnh sửa"
-                          >
-                            <Pen className="size-4" />
-                          </Button>
-                        )}
                         {canChangeRole && (
                           <Button
                             variant="ghost"

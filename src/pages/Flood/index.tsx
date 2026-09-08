@@ -20,6 +20,7 @@ import {
   RefreshCcw,
   RotateCcw,
   Settings2,
+  Trash2,
   Waves,
   X,
 } from 'lucide-react'
@@ -43,6 +44,16 @@ import { buildGeoserverRasterTileUrl, buildMapProxyRasterTileUrl } from '@/lib/g
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Dialog,
   DialogContent,
@@ -164,6 +175,9 @@ export default function FloodPage() {
     min: 0,
     max: 1,
   })
+  const [cancelingRunId, setCancelingRunId] = useState<number | null>(null)
+  const [deletingRunId, setDeletingRunId] = useState<number | null>(null)
+  const [resettingLegendCode, setResettingLegendCode] = useState<string | null>(null)
 
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ['flood'] })
@@ -315,6 +329,13 @@ export default function FloodPage() {
   const cancelMutation = useApiMutation((id: number) => floodService.cancel(id), {
     onSuccess: () => refreshAll(),
   })
+  const deleteRunMutation = useApiMutation((id: number) => floodService.deleteRun(id), {
+    onSuccess: (_data, id) => {
+      refreshAll()
+      setSelectedRunId((current) => (current === id ? null : current))
+      toast.success(`Đã xóa lượt phân tích #${id}`)
+    },
+  })
   const publishArtifactMutation = useApiMutation((id: number) => floodService.publishArtifact(id), {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'run', selectedRunId] }),
   })
@@ -392,7 +413,7 @@ export default function FloodPage() {
   const openRunOnMap = (runId: number) => {
     setSelectedRunId(runId)
     setLayerVisibility({})
-    window.setTimeout(() => mapSectionRef.current?.scrollIntoView({ behavior: 'smooth' }), 0)
+    setTimeout(() => mapSectionRef.current?.scrollIntoView({ behavior: 'smooth' }), 0)
   }
 
   return (
@@ -458,7 +479,7 @@ export default function FloodPage() {
           icon={Layers3}
           label="Lớp bản đồ đã công bố"
           value={String(publishedCount)}
-          hint="Số lớp raster đang hiển thị trên bản đồ"
+          hint="Số lớp dữ liệu đang hiển thị trên bản đồ"
         />
         <MetricCard
           icon={queue?.active ? Loader2 : CheckCircle2}
@@ -709,10 +730,7 @@ export default function FloodPage() {
                               size="icon-xs"
                               variant="destructive"
                               tooltip="Hủy"
-                              onClick={() => {
-                                if (window.confirm(`Hủy lượt chạy #${run.id}?`))
-                                  cancelMutation.mutate(run.id)
-                              }}
+                              onClick={() => setCancelingRunId(run.id)}
                             >
                               <Ban />
                             </Button>
@@ -725,6 +743,17 @@ export default function FloodPage() {
                               onClick={() => rerunMutation.mutate(run.id)}
                             >
                               <RotateCcw />
+                            </Button>
+                          ) : null}
+                          {canRun && !LIVE_STATUSES.has(run.status) ? (
+                            <Button
+                              size="icon-xs"
+                              variant="destructive"
+                              tooltip="Xóa lượt phân tích"
+                              disabled={deleteRunMutation.isPending}
+                              onClick={() => setDeletingRunId(run.id)}
+                            >
+                              <Trash2 />
                             </Button>
                           ) : null}
                         </div>
@@ -846,10 +875,7 @@ export default function FloodPage() {
                               size="icon-xs"
                               variant="outline"
                               tooltip="Khôi phục mặc định"
-                              onClick={() => {
-                                if (window.confirm(`Khôi phục '${legend.code}' về mặc định?`))
-                                  resetLegendMutation.mutate(legend.code)
-                              }}
+                              onClick={() => setResettingLegendCode(legend.code)}
                             >
                               <RotateCcw />
                             </Button>
@@ -950,7 +976,9 @@ export default function FloodPage() {
           <div className="space-y-5">
             <div className="grid max-w-xl gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="monitorStart">Bắt đầu giám sát *</Label>
+                <Label htmlFor="monitorStart">
+                  Bắt đầu giám sát <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="monitorStart"
                   type="date"
@@ -960,7 +988,9 @@ export default function FloodPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="monitorEnd">Kết thúc giám sát *</Label>
+                <Label htmlFor="monitorEnd">
+                  Kết thúc giám sát <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="monitorEnd"
                   type="date"
@@ -1198,6 +1228,105 @@ export default function FloodPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Run AlertDialog */}
+      <AlertDialog
+        open={cancelingRunId !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelingRunId(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận hủy lượt chạy</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn hủy lượt chạy #{cancelingRunId}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelMutation.isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (cancelingRunId !== null) {
+                  cancelMutation.mutate(cancelingRunId, {
+                    onSettled: () => setCancelingRunId(null),
+                  })
+                }
+              }}
+            >
+              {cancelMutation.isPending ? 'Đang hủy...' : 'Xác nhận hủy'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Run AlertDialog */}
+      <AlertDialog
+        open={deletingRunId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletingRunId(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa lượt phân tích</AlertDialogTitle>
+            <AlertDialogDescription>
+              Xóa vĩnh viễn lượt phân tích #{deletingRunId}? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteRunMutation.isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteRunMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletingRunId !== null) {
+                  deleteRunMutation.mutate(deletingRunId, {
+                    onSettled: () => setDeletingRunId(null),
+                  })
+                }
+              }}
+            >
+              {deleteRunMutation.isPending ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Legend AlertDialog */}
+      <AlertDialog
+        open={resettingLegendCode !== null}
+        onOpenChange={(open) => {
+          if (!open) setResettingLegendCode(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Khôi phục chú giải mặc định</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn khôi phục cấu hình chú giải &quot;{resettingLegendCode}&quot; về
+              mặc định?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetLegendMutation.isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resetLegendMutation.isPending}
+              onClick={() => {
+                if (resettingLegendCode) {
+                  resetLegendMutation.mutate(resettingLegendCode, {
+                    onSettled: () => setResettingLegendCode(null),
+                  })
+                }
+              }}
+            >
+              {resetLegendMutation.isPending ? 'Đang khôi phục...' : 'Khôi phục'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -1510,6 +1639,7 @@ function FloodMapPreview({
   const allVisible =
     publishedCodes.length > 0 && publishedCodes.every((code) => layerVisibility[code] ?? true)
 
+  const [unpublishAllDialogOpen, setUnpublishAllDialogOpen] = useState(false)
   const [tileUrls, setTileUrls] = useState<Record<string, string>>({})
   useEffect(() => {
     let cancelled = false
@@ -1545,7 +1675,6 @@ function FloodMapPreview({
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [published])
 
   const mapLayers = useMemo<FloodMapLayer[]>(
@@ -1611,10 +1740,7 @@ function FloodMapPreview({
                       size="xs"
                       variant="ghost"
                       className="text-muted-foreground h-6 text-[11px] hover:text-red-600"
-                      onClick={() => {
-                        if (window.confirm(`Gỡ công bố tất cả ${published.length} lớp?`))
-                          published.forEach((a) => onUnpublish(a.id))
-                      }}
+                      onClick={() => setUnpublishAllDialogOpen(true)}
                     >
                       <X className="size-3" />
                       Gỡ tất cả
@@ -1751,6 +1877,29 @@ function FloodMapPreview({
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={unpublishAllDialogOpen} onOpenChange={setUnpublishAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận gỡ công bố tất cả</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn gỡ công bố tất cả {published.length} lớp bản đồ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                published.forEach((a) => onUnpublish(a.id))
+                setUnpublishAllDialogOpen(false)
+              }}
+            >
+              Gỡ tất cả
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

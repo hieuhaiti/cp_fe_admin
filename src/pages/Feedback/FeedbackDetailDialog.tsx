@@ -45,25 +45,20 @@ interface FieldReportDetail {
   history?: FieldReportHistory[]
 }
 
-// Maps raw API status (pending, under_review, approved, resolved, rejected) to UI status keys
-function mapApiStatus(raw: string): string {
-  switch (raw.toLowerCase()) {
-    case 'pending':
-      return 'new'
-    case 'under_review':
-      return 'in_progress'
-    case 'approved':
-    case 'resolved':
-      return 'resolved'
-    default:
-      return raw
-  }
-}
 
 interface FeedbackDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   feedbackId: number | string | null
+}
+
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <span className="font-semibold">{label}:</span>
+      <div className="col-span-2">{children}</div>
+    </div>
+  )
 }
 
 export default function FeedbackDetailDialog({
@@ -81,14 +76,6 @@ export default function FeedbackDetailDialog({
 
   const feedback = ((dbQuery.data as ApiResponse<FieldReportDetail> | undefined)?.data ??
     null) as FieldReportDetail | null
-  const uiStatus = feedback ? mapApiStatus(feedback.status) : ''
-
-  const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-    <div className="grid grid-cols-3 gap-2">
-      <span className="font-semibold">{label}:</span>
-      <div className="col-span-2">{children}</div>
-    </div>
-  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -119,8 +106,8 @@ export default function FeedbackDetailDialog({
             )}
 
             <Row label="Trạng thái xử lý">
-              <Badge variant="outline" className={STATUS_CLASS[uiStatus] ?? ''}>
-                {STATUS_LABEL[uiStatus] ?? feedback.status}
+              <Badge variant="outline" className={STATUS_CLASS[feedback.status] ?? ''}>
+                {STATUS_LABEL[feedback.status] ?? feedback.status}
               </Badge>
             </Row>
 
@@ -192,15 +179,15 @@ export default function FeedbackDetailDialog({
               <Row label="Lịch sử xử lý">
                 <div className="space-y-2">
                   {feedback.history.map((entry, index) => {
-                    const fromUi = entry.previous_status
-                      ? mapApiStatus(entry.previous_status)
+                    const fromLabel = entry.previous_status
+                      ? STATUS_LABEL[entry.previous_status] ?? entry.previous_status
                       : null
-                    const toUi = mapApiStatus(entry.new_status)
+                    const toLabel = STATUS_LABEL[entry.new_status] ?? entry.new_status
                     return (
                       <div key={index} className="rounded border p-2 text-sm">
                         <p className="font-medium">
-                          {fromUi ? `${STATUS_LABEL[fromUi] ?? fromUi} → ` : ''}
-                          {STATUS_LABEL[toUi] ?? entry.new_status}
+                          {fromLabel ? `${fromLabel} → ` : ''}
+                          {toLabel}
                         </p>
                         {entry.reason && (
                           <p className="text-muted-foreground mt-1">{entry.reason}</p>

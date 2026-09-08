@@ -1,26 +1,29 @@
 import apiClient from './common/apiClient'
-import type { ApiResponse, RemoteImage, RemoteImageListData, RemoteImageListParams } from '@/types/api'
-import { serviceRemoteSensingPath, serviceAdminRemoteSensingPath } from '@/constant/serviceConstant'
+import type {
+  RemoteImage,
+  RemoteImageListData,
+  RemoteImageListParams,
+  CreateSatelliteImageRequest,
+  PublishCollectionRequest,
+  PublishCollectionResponse,
+  SatelliteImageMember,
+  SatelliteImageListData,
+  CollectionGroup,
+  CollectionGroupListData,
+} from '@/types/api'
+import {
+  serviceRemoteSensingPath,
+  serviceAdminRemoteSensingPath,
+} from '@/constant/serviceConstant'
 
-type CreateRemoteSensingImageBody = {
-  sceneCode: string
-  title: string
-  platform: string
-  thematicGroup: string
-  coverageKey: string
-  acquiredAt: string
-  productLevel: string
-  resolutionM: number
-  cloudCoverPercent: number
-  fileObjectId: number | string
-}
+export type CreateRemoteSensingImageBody = CreateSatelliteImageRequest
 
-type PatchRemoteSensingCategoryBody = {
+export type PatchRemoteSensingCategoryBody = {
   thematicGroup: string
   expectedUpdatedAt: string
 }
 
-type PublishRemoteSensingImageBody = {
+export type PublishRemoteSensingImageBody = {
   code: string
   nameVi: string
   category: string
@@ -30,6 +33,26 @@ type PublishRemoteSensingImageBody = {
   legendConfig?: Record<string, unknown>
   metadata?: Record<string, unknown>
   isPublic?: boolean
+}
+
+export interface ListSatelliteImagesParams {
+  page?: number
+  limit?: number
+  q?: string
+  coverageKey?: string
+  status?: 'all' | 'unpublished' | 'standalone' | 'time_series' | 'in_use' | 'cleanup_pending' | 'cleanup_failed'
+  platform?: string
+  thematicGroup?: string
+  from?: string
+  to?: string
+  sort?: 'acquiredAt:asc' | 'acquiredAt:desc'
+}
+
+export interface ListCollectionsParams {
+  page?: number
+  limit?: number
+  q?: string
+  sort?: 'latestAcquiredAt:desc' | 'latestAcquiredAt:asc' | 'totalImages:desc' | 'totalImages:asc'
 }
 
 export default {
@@ -52,24 +75,63 @@ export default {
     }),
 
   /** GET /admin/remote-sensing/images?page=&limit= */
-  listImages: (params?: Pick<RemoteImageListParams, 'page' | 'limit'>) =>
-    apiClient.get<RemoteImageListData>(`${serviceAdminRemoteSensingPath}/images`, { params }),
+  listImages: (params?: ListSatelliteImagesParams) =>
+    apiClient.get<SatelliteImageListData | SatelliteImageMember[]>(
+      `${serviceAdminRemoteSensingPath}/images`,
+      { params }
+    ),
+
+  /** GET /admin/remote-sensing/collections?page=&limit= */
+  listCollections: (params?: ListCollectionsParams) =>
+    apiClient.get<CollectionGroupListData | CollectionGroup[]>(
+      `${serviceAdminRemoteSensingPath}/collections`,
+      { params }
+    ),
 
   /** POST /admin/remote-sensing/images */
-  createImage: (data: CreateRemoteSensingImageBody) =>
-    apiClient.post<RemoteImage>(`${serviceAdminRemoteSensingPath}/images`, data),
+  createImage: (data: CreateSatelliteImageRequest) =>
+    apiClient.post<SatelliteImageMember>(`${serviceAdminRemoteSensingPath}/images`, data),
 
-  /** POST /admin/remote-sensing/images/:id/publish — uploads the GeoTIFF to GeoServer and creates a map layer. */
+  /** POST /admin/remote-sensing/collections/:coverageKey/publish */
+  publishCollection: (coverageKey: string, data: PublishCollectionRequest) =>
+    apiClient.post<PublishCollectionResponse>(
+      `${serviceAdminRemoteSensingPath}/collections/${coverageKey}/publish`,
+      data
+    ),
+
+  /** POST /admin/remote-sensing/images/:id/publish — single raster layer */
   publishImage: (imageId: number | string, data: PublishRemoteSensingImageBody) =>
     apiClient.post(`${serviceAdminRemoteSensingPath}/images/${imageId}/publish`, data),
 
   /** PATCH /admin/remote-sensing/images/:satelliteImageId/category */
   updateCategory: (imageId: number | string, data: PatchRemoteSensingCategoryBody) =>
-    apiClient.patch<RemoteImage>(`${serviceAdminRemoteSensingPath}/images/${imageId}/category`, data),
+    apiClient.patch<SatelliteImageMember>(
+      `${serviceAdminRemoteSensingPath}/images/${imageId}/category`,
+      data
+    ),
+
+  /** PATCH /admin/remote-sensing/images/:id/coverage-key */
+  updateCoverageKey: (imageId: number | string, coverageKey: string) =>
+    apiClient.patch<SatelliteImageMember>(
+      `${serviceAdminRemoteSensingPath}/images/${imageId}/coverage-key`,
+      { coverageKey }
+    ),
+
+  /** POST /admin/remote-sensing/collections/merge */
+  mergeCollections: (sourceCoverageKeys: string[], targetCoverageKey: string) =>
+    apiClient.post<{ updatedCount: number; targetCoverageKey: string }>(
+      `${serviceAdminRemoteSensingPath}/collections/merge`,
+      { sourceCoverageKeys, targetCoverageKey }
+    ),
 
   /** DELETE /admin/remote-sensing/images/:satelliteImageId?expectedUpdatedAt= */
-  deleteImage: (imageId: number | string, expectedUpdatedAt: string) =>
-    apiClient.del<ApiResponse<{}>>(`${serviceAdminRemoteSensingPath}/images/${imageId}`, undefined, {
-      params: { expectedUpdatedAt },
-    }),
+  deleteImage: (imageId: number | string, expectedUpdatedAt: string, deleteFiles = false) =>
+    apiClient.del<Record<string, unknown>>(
+      `${serviceAdminRemoteSensingPath}/images/${imageId}`,
+      undefined,
+      {
+        params: { expectedUpdatedAt, deleteFiles },
+      }
+    ),
 }
+

@@ -1,104 +1,88 @@
-export type PdfMapTheme = 'lop_phu_nhiet' | 'chay_rung' | 'lop_phu_rung' | 'khac' | string
-
 export interface PdfMapTranslation {
   title: string
   description?: string | null
 }
 
+/**
+ * Shape returned by GET /admin/cms/pdf-maps and /admin/cms/pdf-maps/:id.
+ * Mirrors the actual columns of `cms.pdf_maps` joined with `core.file_objects`.
+ * Server responses are snake_case; camelCase aliases are provided for
+ * pages/components that prefer them, but only fields that truly exist are kept.
+ */
 export interface PdfMap {
   id: number
-  themeCode: PdfMapTheme
-  year?: number | null
-  scale?: string | null
-  region?: string | null
-  preparingAgency?: string | null
-  fileUrl?: string
-  fileName?: string
-  mimeType?: string
-  thumbnailUrl?: string | null
-  isPublic?: boolean
-  visibility?: 'public' | 'internal'
+  title: string
+  description?: string | null
+  visibility: 'public' | 'internal'
+  createdAt?: string
+  updatedAt?: string
+  createdBy?: number | null
+  updatedBy?: number | null
+
+  // snake_case as returned by the API
   scale_label?: string | null
   map_year?: number | null
   preparing_agency?: string | null
-  fileSize?: number | null
-  uploadedBy?: number | null
-  uploadedByName?: string | null
-  createdBy?: number | null
-  updatedBy?: number | null
-  createdAt?: string
-  updatedAt?: string
+  original_name?: string | null
+  size_bytes?: number | string | null
+  created_at?: string
+  updated_at?: string
 
-  // resolved by ?lang=
-  title?: string
-  description?: string | null
+  // camelCase convenience aliases (not sent by the API, resolved client-side)
+  scaleLabel?: string | null
+  mapYear?: number | null
+  preparingAgency?: string | null
+  fileName?: string | null
+  fileSize?: number | string | null
 
   // admin detail may include both languages
   translations?: {
     vi?: PdfMapTranslation
     en?: PdfMapTranslation
   }
-
-  // legacy snake_case (kept for legacy code)
-  name?: string
-  image_url?: string | null
-  file_name?: string | null
-  file_size?: number | string | null
-  mime_type?: string | null
-  original_name?: string | null
-  size_bytes?: number | string | null
-  is_active?: boolean
-  created_by?: number
-  created_at?: string
-  updated_at?: string
 }
 
-/** Alias so existing pages/dialogs typed against `MapImage` keep compiling. */
+/** Alias so pages/dialogs previously typed against `MapImage` keep compiling. */
 export type MapImage = PdfMap
 
 export interface PdfMapListData {
   items: PdfMap[]
 }
 
-/** Legacy alias */
-export interface MapImageListData {
-  mapImages: MapImage[]
-  pagination: import('./index').Pagination
-}
-
 export interface PdfMapListParams {
   page?: number
   limit?: number
-  theme?: PdfMapTheme
-  isPublic?: boolean
+  q?: string
   yearFrom?: number
   yearTo?: number
-  sortBy?: string
+  scaleLabel?: string
+  visibility?: 'public' | 'internal'
+  sortBy?: 'id' | 'year' | 'created_at' | 'updated_at' | 'title'
   sortOrder?: 'ASC' | 'DESC'
-  q?: string
-
-  // legacy
-  is_active?: boolean
 }
 
 export type MapImageListParams = PdfMapListParams
 
-/** Kept for legacy multipart-based dialogs */
-export interface MapImageFormData {
-  name: string
+export interface CreatePdfMapBody {
+  title: string
+  scaleLabel: string
+  mapYear: number
+  preparingAgency: string
   description?: string
-  image_url?: File
-  is_active?: boolean
+  visibility: 'public' | 'internal'
+  fileObjectId: number | string
 }
 
 export interface UpdatePdfMapBody {
-  themeCode?: PdfMapTheme
-  year?: number
-  scale?: string
-  region?: string
-  thumbnailUrl?: string
-  isPublic?: boolean
+  title?: string
+  scaleLabel?: string
+  mapYear?: number
+  preparingAgency?: string
+  description?: string
+  visibility?: 'public' | 'internal'
   expectedUpdatedAt: string
+
+  /** Kept for callers that still build translation-shaped patches. */
   translations?: {
     vi?: PdfMapTranslation
     en?: PdfMapTranslation

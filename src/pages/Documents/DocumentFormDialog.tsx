@@ -103,7 +103,7 @@ export default function DocumentFormDialog({
     setValue,
     formState: { errors },
   } = useForm<DocumentFormValues>({
-    resolver: zodResolver(documentSchema) as any,
+    resolver: zodResolver(documentSchema),
     defaultValues: DEFAULT_VALUES,
   })
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useSidebarStore } from '@/stores/common/useSidebarStore'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,23 @@ function isPathActive(pathname: string, item: Pick<NavItem, 'path' | 'subpath'>)
   // Nested routes: match `/foo/bar` under `/foo`, but avoid matching `/foobar`.
   if (path !== '/' && pathname.startsWith(`${path}/`)) return true
   return false
+}
+
+/**
+ * Trong danh sách sub-item, chỉ giữ lại mục khớp "cụ thể nhất" (path dài nhất).
+ * Tránh trường hợp `/map-layers` vẫn sáng khi đang ở `/map-layers/time-series`.
+ */
+function resolveActiveSubPath(
+  pathname: string,
+  subItems?: Pick<NavItem, 'path' | 'subpath'>[]
+): string | null {
+  if (!subItems?.length) return null
+  let best: string | null = null
+  for (const sub of subItems) {
+    if (!isPathActive(pathname, sub)) continue
+    if (best === null || (sub.path?.length ?? 0) > best.length) best = sub.path ?? null
+  }
+  return best
 }
 
 export function SideBar() {
@@ -50,18 +67,12 @@ export function SideBar() {
     navigate(path)
   }
 
-  // Auto-open parent menu whose subItems contain the active path
-  useEffect(() => {
+  const activeSubMenu = useMemo(() => {
     const parent = filteredNav.find(
-      (item) =>
-        item.subItems?.some((sub) => isPathActive(location.pathname, sub as any)) ?? false
+      (item) => resolveActiveSubPath(location.pathname, item.subItems) !== null
     )
-    if (parent && isExpanded) setOpenSubMenu(parent.path)
-  }, [location.pathname, filteredNav, isExpanded])
-
-  useEffect(() => {
-    if (!isExpanded) setOpenSubMenu(null)
-  }, [isExpanded])
+    return parent?.path ?? null
+  }, [filteredNav, location.pathname])
 
   return (
     <div className="bg-card flex h-full flex-col">
@@ -69,14 +80,14 @@ export function SideBar() {
         {isExpanded ? (
           <div className="flex items-center gap-2">
             <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
-              <span className="text-primary-foreground text-sm font-bold">KT</span>
+              <span className="text-primary-foreground text-sm font-bold">CP</span>
             </div>
             <span className="text-foreground font-semibold">Cẩm Phả GIS</span>
           </div>
         ) : (
           <div className="flex w-full justify-center">
             <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
-              <span className="text-primary-foreground text-sm font-bold">KT</span>
+              <span className="text-primary-foreground text-sm font-bold">CP</span>
             </div>
           </div>
         )}
@@ -85,12 +96,11 @@ export function SideBar() {
       <nav className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
           {filteredNav.map((item) => {
+            const activeSubPath = resolveActiveSubPath(location.pathname, item.subItems)
             const selfActive = isPathActive(location.pathname, item)
-            const childActive =
-              item.subItems?.some((sub) => isPathActive(location.pathname, sub as any)) ?? false
-            const isActive = selfActive || childActive
+            const isActive = selfActive || activeSubPath !== null
             const hasSubItems = !!item.subItems && item.subItems.length > 0
-            const isSubOpen = openSubMenu === item.path
+            const isSubOpen = isExpanded && (openSubMenu === item.path || activeSubMenu === item.path)
 
             return (
               <Tooltip key={item.path}>
@@ -149,7 +159,7 @@ export function SideBar() {
                     {hasSubItems && isSubOpen && isExpanded && (
                       <div className="mt-1 ml-4 space-y-1 border-l pl-2">
                         {item.subItems?.map((sub) => {
-                          const subActive = isPathActive(location.pathname, sub as any)
+                          const subActive = sub.path === activeSubPath
                           return (
                             <Button
                               key={sub.path}
@@ -203,3 +213,6 @@ function hasAnyRestriction(item: NavItem): boolean {
 }
 
 export default SideBar
+
+
+

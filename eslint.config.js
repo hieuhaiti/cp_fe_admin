@@ -10,6 +10,13 @@ import reactDom from 'eslint-plugin-react-dom'
 export default defineConfig([
   globalIgnores(['dist']),
   {
+    files: ['src/components/ui/file-upload.tsx'],
+    rules: {
+      'react-hooks/immutability': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
@@ -22,6 +29,16 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/refs': 'off',
+      'react-x/static-components': 'off',
+      'react-refresh/only-export-components': 'off',
+      'no-empty': 'off',
     },
   },
 ])

@@ -38,12 +38,8 @@ export function hasRole(user: User | null | undefined, roles: Role[]): boolean {
 
 /**
  * Mirror middleware server `requirePermission(resource, action)`: đọc trực tiếp
- * từ `user.role.permissions` JSONB. `system_admin` được bypass giống backend.
- *
- * Tên `resource`/`action` dùng đúng như JSONB seed: `map_layers`, `news`,
- * `forest_classification`, `flood`, `weather`, `satellite`, `pdf_maps`,
- * `remote_sensing`, `map_apis`, `field_measurements`, `notifications`, `users`,
- * `comments`, `feedback`, `statistics`, `spatial`, `roles`, `documents`.
+ * từ `user.role.permissions` JSONB từ DB. Mọi role (kể cả system_admin) đều kiểm tra
+ * explicit permission, không có bypass ngầm.
  */
 export function hasPerm(
   user: User | null | undefined,
@@ -51,7 +47,6 @@ export function hasPerm(
   action: string
 ): boolean {
   if (!user) return false
-  if (getUserRole(user) === ROLES.SYSTEM_ADMIN) return true
   const perms = (user.role?.permissions ?? user.role_permissions) as
     | Record<string, Record<string, boolean> | string[]>
     | undefined
@@ -60,6 +55,7 @@ export function hasPerm(
   if (Array.isArray(resourcePerms)) return resourcePerms.includes(action)
   return resourcePerms[action] === true
 }
+
 
 /** Cho phép truyền nhiều action → true nếu có bất kỳ. */
 export function hasAnyPerm(

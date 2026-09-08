@@ -75,7 +75,6 @@ export default function ForestMap({
       map.remove()
       mapRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Raster lifecycle theo URL. Đổi URL → xoá source cũ + add lại.

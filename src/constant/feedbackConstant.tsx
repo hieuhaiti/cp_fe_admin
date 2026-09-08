@@ -20,22 +20,37 @@ export const PRIORITY_DOT: Record<string, string> = {
 
 // ── Processing status ─────────────────────────────────────────────
 export const STATUS_LABEL: Record<string, string> = {
-  new: 'Mới',
-  in_progress: 'Đang xử lý',
+  pending: 'Chờ tiếp nhận',
+  under_review: 'Đang xem xét',
+  approved: 'Đã duyệt',
   resolved: 'Đã xử lý',
   rejected: 'Từ chối',
+
+  // Fallbacks / legacy
+  new: 'Chờ tiếp nhận',
+  in_progress: 'Đang xem xét',
 }
 export const STATUS_CLASS: Record<string, string> = {
-  new: 'bg-amber-50 text-amber-700 border-amber-200',
-  in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  under_review: 'bg-sky-50 text-sky-700 border-sky-200',
+  approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   resolved: 'bg-green-50 text-green-700 border-green-200',
   rejected: 'bg-red-50 text-red-700 border-red-200',
+
+  // Fallbacks / legacy
+  new: 'bg-amber-50 text-amber-700 border-amber-200',
+  in_progress: 'bg-sky-50 text-sky-700 border-sky-200',
 }
 export const STATUS_DOT: Record<string, string> = {
-  new: 'bg-amber-500',
-  in_progress: 'bg-blue-500',
+  pending: 'bg-amber-500',
+  under_review: 'bg-sky-500',
+  approved: 'bg-emerald-500',
   resolved: 'bg-green-500',
   rejected: 'bg-red-500',
+
+  // Fallbacks / legacy
+  new: 'bg-amber-500',
+  in_progress: 'bg-sky-500',
 }
 
 // ── Category ─────────────────────────────────────────────────────

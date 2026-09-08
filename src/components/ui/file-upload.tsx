@@ -255,11 +255,13 @@ function FileUpload(props: FileUploadProps) {
   });
 
   const store = React.useMemo<Store>(() => {
-    let state: StoreState = {
-      files,
-      dragOver: false,
-      invalid: invalid,
-    };
+    const stateRef: { current: StoreState } = {
+      current: {
+        files,
+        dragOver: false,
+        invalid,
+      },
+    }
 
     function reducer(state: StoreState, action: StoreAction): StoreState {
       switch (action.type) {
@@ -386,19 +388,19 @@ function FileUpload(props: FileUploadProps) {
     }
 
     return {
-      getState: () => state,
+      getState: () => stateRef.current,
       dispatch: (action) => {
-        state = reducer(state, action);
+        stateRef.current = reducer(stateRef.current, action)
         for (const listener of listeners) {
-          listener();
+          listener()
         }
       },
       subscribe: (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
+        listeners.add(listener)
+        return () => listeners.delete(listener)
       },
-    };
-  }, [listeners, files, invalid, propsRef, urlCache]);
+    }
+  }, [listeners, files, invalid, propsRef, urlCache])
 
   const acceptTypes = React.useMemo(
     () => accept?.split(",").map((t) => t.trim()) ?? null,
@@ -786,6 +788,8 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
         dataTransfer.items.add(file);
       }
 
+      // The File API requires assigning a DataTransfer FileList to the input element.
+      // eslint-disable-next-line react-hooks/immutability
       inputElement.files = dataTransfer.files;
       inputElement.dispatchEvent(new Event("change", { bubbles: true }));
     },
@@ -825,6 +829,8 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
         dataTransfer.items.add(file);
       }
 
+      // The File API requires assigning a DataTransfer FileList to the input element.
+      // eslint-disable-next-line react-hooks/immutability
       inputElement.files = dataTransfer.files;
       inputElement.dispatchEvent(new Event("change", { bubbles: true }));
     },
@@ -863,7 +869,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       tabIndex={context.disabled ? undefined : 0}
       {...dropzoneProps}
       className={cn(
-        "relative flex select-none flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-disabled:pointer-events-none data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20",
+        "relative flex select-none flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 sm:p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-disabled:pointer-events-none data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20",
         className,
       )}
       onClick={onClick}
@@ -1039,7 +1045,7 @@ function FileUploadItem(props: FileUploadItemProps) {
         dir={context.dir}
         {...itemProps}
         className={cn(
-          "relative flex items-center gap-2.5 rounded-md border p-3",
+          "relative flex items-center gap-2.5 rounded-md border p-2.5 sm:p-3",
           className,
         )}
       >
@@ -1104,7 +1110,7 @@ function FileUploadItemPreview(props: FileUploadItemPreviewProps) {
       data-slot="file-upload-preview"
       {...previewProps}
       className={cn(
-        "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border bg-accent/50 [&>svg]:size-10",
+        "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border bg-accent/50 [&>svg]:size-5 sm:[&>svg]:size-6",
         className,
       )}
     >
@@ -1310,7 +1316,7 @@ interface FileUploadItemDeleteProps extends React.ComponentProps<"button"> {
 }
 
 function FileUploadItemDelete(props: FileUploadItemDeleteProps) {
-  const { asChild, onClick: onClickProp, ...deleteProps } = props;
+  const { asChild, className, onClick: onClickProp, ...deleteProps } = props;
 
   const store = useStoreContext(ITEM_DELETE_NAME);
   const itemContext = useFileUploadItemContext(ITEM_DELETE_NAME);
@@ -1340,6 +1346,7 @@ function FileUploadItemDelete(props: FileUploadItemDeleteProps) {
       aria-describedby={itemContext.nameId}
       data-slot="file-upload-item-delete"
       {...deleteProps}
+      className={cn("shrink-0", className)}
       onClick={onClick}
     />
   );

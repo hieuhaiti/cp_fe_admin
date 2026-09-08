@@ -48,23 +48,9 @@ export default {
     apiClient.get<CitizenFeedback>(`${serviceAdminFeedbackPath}/${feedbackId}`),
 
   /** PATCH /admin/field-reports/:feedbackId/review */
-  updateStatus: (feedbackId: number | string, data: UpdateFeedbackStatusBody) => {
-    const legacyStatus = data.status ?? data.toStatus
-    const statusMap: Record<string, string> = {
-      new: 'pending',
-      in_progress: 'under_review',
-      resolved: 'approved',
-      rejected: 'rejected',
-    }
-    const status = legacyStatus ? (statusMap[legacyStatus] ?? legacyStatus) : undefined
-    const payload = {
-      status,
-      expectedUpdatedAt: data.expectedUpdatedAt,
-    }
-
-    return apiClient.patch<CitizenFeedback>(
+  updateStatus: (feedbackId: number | string, data: UpdateFeedbackStatusBody) =>
+    apiClient.patch<CitizenFeedback>(
       `${serviceAdminFeedbackPath}/${feedbackId}/review`,
-      payload
-    )
-  },
+      data
+    ),
 }

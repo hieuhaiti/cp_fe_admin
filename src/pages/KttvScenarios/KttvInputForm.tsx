@@ -10,8 +10,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { kttvScenarioService } from '@/service'
+import { getMappedErrorMessage } from '@/validators/mapLayerApiValidators'
 import type { ApiResponse } from '@/types/api'
-import type { FloodScenario, FloodSimulationResult } from '@/service/kttvScenarioService'
+import type {
+  FloodScenario,
+  FloodScenarioListData,
+  FloodSimulationResult,
+} from '@/service/kttvScenarioService'
 
 const CAM_PHA = { lng: 107.303749, lat: 21.002361 }
 const OWM_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY as string
@@ -52,7 +57,7 @@ export default function KttvInputForm(): JSX.Element {
     setValue,
     formState: { errors },
   } = useForm<InputFormValues>({
-    resolver: zodResolver(inputSchema) as any,
+    resolver: zodResolver(inputSchema),
     defaultValues: { rainfall: '', tide: '' },
   })
 
@@ -78,10 +83,9 @@ export default function KttvInputForm(): JSX.Element {
         rainfall: Number(values.rainfall),
         tide: values.tide ? Number(values.tide) : null,
       })
-      const result = (res as ApiResponse<FloodSimulationResult>)?.data ?? (res as any)
-      setSimResult(result)
-    } catch (err: any) {
-      toast.error(err?.body?.message ?? err?.message ?? 'Lỗi khi tra cứu kịch bản')
+      setSimResult(res?.data ?? null)
+    } catch (err: unknown) {
+      toast.error(getMappedErrorMessage(err, 'Lỗi khi tra cứu kịch bản'))
     } finally {
       setSimLoading(false)
     }
@@ -95,7 +99,7 @@ export default function KttvInputForm(): JSX.Element {
       // Fetch all scenarios to resolve matched id and find currently active ones
       const allRes = await kttvScenarioService.getAll({ page: 1, limit: 100 })
       const items: FloodScenario[] =
-        (allRes as ApiResponse<any>)?.data?.items ?? []
+        (allRes as ApiResponse<FloodScenarioListData>)?.data?.items ?? []
 
       // scenarioId may be null when server used hardcoded fallback — resolve via code
       let matchedId = scenarioId ? Number(scenarioId) : 0
@@ -124,8 +128,8 @@ export default function KttvInputForm(): JSX.Element {
         `Đã kích hoạt kịch bản "${scenarioName}" — lớp "${simResult.nameVi}"`,
       )
       queryClient.invalidateQueries({ queryKey: ['kttv-scenarios'] })
-    } catch (err: any) {
-      toast.error(err?.body?.message ?? err?.message ?? 'Lỗi khi kích hoạt kịch bản')
+    } catch (err: unknown) {
+      toast.error(getMappedErrorMessage(err, 'Lỗi khi kích hoạt kịch bản'))
     } finally {
       setActivating(false)
     }
@@ -228,10 +232,7 @@ export default function KttvInputForm(): JSX.Element {
                 <span className="text-muted-foreground">Lớp bản đồ:</span>{' '}
                 <code className="font-mono">{simResult.nameVi}</code>
               </p>
-              <p>
-                <span className="text-muted-foreground">GeoServer:</span>{' '}
-                <code className="font-mono text-xs">{simResult.geoserverLayer}</code>
-              </p>
+
             </div>
           )}
 

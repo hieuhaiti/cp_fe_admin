@@ -1,4 +1,4 @@
-﻿import { z } from 'zod'
+import { z } from 'zod'
 import type { CreateMapLayerApiBody, UpdateMapLayerApiBody } from '@/types/api'
 
 export const createMapLayerApiSchema = z.object({
@@ -20,10 +20,22 @@ export const editMapLayerApiFormSchema = createMapLayerApiSchema.extend({
   layer_id: z.number().int().optional(),
 })
 
-export const updateMapLayerApiSchema = createMapLayerApiSchema.partial().refine(
-  (value) => Object.values(value).some((field) => field !== undefined),
-  { message: 'Cần ít nhất 1 trường thay đổi' }
-)
+export const updateMapLayerApiSchema = z
+  .object({
+    name: z.string().trim().min(3).max(150).optional(),
+    scope: z
+      .object({
+        read: z.boolean().optional(),
+        rate_per_min: z.number().int().min(1).max(6000).optional(),
+        bbox_limit: z.number().positive().max(360).optional(),
+      })
+      .optional(),
+    is_active: z.boolean().optional(),
+    expires_at: z.string().datetime({ offset: true }).nullable().optional(),
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: 'Cần ít nhất 1 trường thay đổi',
+  })
 
 export const listQuerySchema = z.object({
   page: z.number().int().min(1).default(1),
@@ -97,19 +109,35 @@ export function buildUpdatePayload(
   return payload as UpdateMapLayerApiBody
 }
 
-export function validateCreatePayload(values: CreateMapLayerApiBody) {
-  return createMapLayerApiSchema.safeParse(normalizeMapLayerApiInput(values))
+export function validateCreatePayload(
+  values: CreateMapLayerApiBody
+): { success: true; data: CreateMapLayerApiBody } | { success: false; error: z.ZodError } {
+  const parsed = createMapLayerApiSchema.safeParse(normalizeMapLayerApiInput(values))
+  if (!parsed.success) return { success: false, error: parsed.error }
+  return { success: true, data: parsed.data as CreateMapLayerApiBody }
 }
 
-export function validateUpdatePayload(values: UpdateMapLayerApiBody) {
-  return updateMapLayerApiSchema.safeParse(values)
+export function validateUpdatePayload(
+  values: UpdateMapLayerApiBody
+): { success: true; data: UpdateMapLayerApiBody } | { success: false; error: z.ZodError } {
+  if (Object.keys(values).length === 0) {
+    return {
+      success: false as const,
+      error: new z.ZodError([
+        { code: z.ZodIssueCode.custom, path: [], message: 'Cần ít nhất 1 trường thay đổi' },
+      ]),
+    }
+  }
+  const parsed = updateMapLayerApiSchema.safeParse(values)
+  if (!parsed.success) return { success: false, error: parsed.error }
+  return { success: true, data: parsed.data as UpdateMapLayerApiBody }
 }
 
 export function getMappedErrorMessage(error: unknown, fallback: string) {
   const status = (error as { status?: number; body?: { status?: number } })?.status
   const bodyStatus = (error as { body?: { status?: number } })?.body?.status
   const code = status ?? bodyStatus
-  const serverMessage = (error as { body?: { message?: string }; message?: string })?.body?.message
+  const serverMessage = (error as { body?: { message?: string } })?.body?.message
 
   if (serverMessage) return serverMessage
 
@@ -119,5 +147,7 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
   if (code === 409) return 'API key hoặc cấu hình chia sẻ đã tồn tại. Vui lòng kiểm tra lại.'
   if (code === 400) return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.'
 
+  // Client-side failures (network/timeout/runtime) carry no Server `body`; show
+  // the caller's localized fallback instead of leaking raw Error text into UI.
   return fallback
 }

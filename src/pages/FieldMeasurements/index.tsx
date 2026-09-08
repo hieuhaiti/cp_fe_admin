@@ -271,8 +271,8 @@ export default function FieldMeasurementsPage() {
       anchor.download = `field-measurements-${new Date().toISOString().slice(0, 10)}.xlsx`
       anchor.click()
       URL.revokeObjectURL(url)
-    } catch (err: any) {
-      toast.error(err?.message || 'Không thể xuất Excel')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Không thể xuất Excel')
     }
   }
 
@@ -343,8 +343,8 @@ export default function FieldMeasurementsPage() {
                 <SelectItem value="50">50</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={exportGeoJson} tooltip="Xuất GeoJSON đã xác minh">
-              <Download className="size-4" /> GeoJSON
+            <Button variant="outline" onClick={exportGeoJson} tooltip="Xuất dữ liệu đường nét đã xác minh">
+              <Download className="size-4" /> Dữ liệu đường nét
             </Button>
             <Button variant="outline" onClick={exportXlsx} tooltip="Xuất Excel đã xác minh">
               <Download className="size-4" /> Excel
@@ -484,7 +484,7 @@ export default function FieldMeasurementsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-xs">Feature ID</TableHead>
+                          <TableHead className="text-xs">Mã đối tượng</TableHead>
                           <TableHead className="text-xs">Loại đất</TableHead>
                           <TableHead className="text-right text-xs">Chồng lấp</TableHead>
                         </TableRow>
@@ -519,17 +519,11 @@ export default function FieldMeasurementsPage() {
                   khi có geom để tránh khởi tạo map rỗng. */}
               {detail.geom ? (
                 <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs">Hình học GeoJSON</p>
+                  <p className="text-muted-foreground text-xs">Phạm vi đo trên bản đồ</p>
                   <GeoJsonMapPreview geojson={detail.geom} heightClassName="h-72" />
-                  <details className="text-muted-foreground text-[10px]">
-                    <summary className="cursor-pointer">Xem raw JSON</summary>
-                    <code className="mt-1 block max-h-32 overflow-auto whitespace-pre-wrap">
-                      {JSON.stringify(detail.geom)}
-                    </code>
-                  </details>
                 </div>
               ) : (
-                <Info label="Hình học GeoJSON" value="—" />
+                <Info label="Phạm vi đo trên bản đồ" value="—" />
               )}
               <Info label="Ảnh hiện trường" value={`${detail.photos?.length ?? 0} ảnh`} />
               {canReview && detail.status === 'submitted' && (

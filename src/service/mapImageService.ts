@@ -12,8 +12,12 @@ import storageService from './storageService'
 function toCanonicalPdfMapPatch(data: UpdatePdfMapBody) {
   return {
     expectedUpdatedAt: data.expectedUpdatedAt,
-    title: data.translations?.vi?.title,
-    visibility: data.isPublic === undefined ? undefined : data.isPublic ? 'public' : 'internal',
+    title: data.translations?.vi?.title ?? data.title,
+    description: data.description,
+    scaleLabel: data.scaleLabel,
+    mapYear: data.mapYear,
+    preparingAgency: data.preparingAgency,
+    visibility: data.visibility,
   }
 }
 
@@ -88,8 +92,10 @@ export default {
   update: (pdfMapId: number | string, data: UpdatePdfMapBody) => {
     requireExpectedUpdatedAt(data.expectedUpdatedAt)
     const body = toCanonicalPdfMapPatch(data)
-    if (body.title === undefined && body.visibility === undefined) {
-      return Promise.reject(new Error('The current API only supports changing the PDF map title or visibility.'))
+    const hasChange = [body.title, body.description, body.scaleLabel, body.mapYear, body.preparingAgency, body.visibility]
+      .some((value) => value !== undefined)
+    if (!hasChange) {
+      return Promise.reject(new Error('Chưa có trường nào thay đổi để cập nhật.'))
     }
     return apiClient.patch<PdfMap>(`${serviceAdminPdfMapPath}/${pdfMapId}`, body)
   },

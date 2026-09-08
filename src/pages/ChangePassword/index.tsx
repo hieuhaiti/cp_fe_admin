@@ -82,7 +82,9 @@ export default function ChangePasswordPage() {
       <Card className="p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-xl">
           <div className="space-y-2">
-            <Label htmlFor="currentPassword">Mật khẩu hiện tại</Label>
+            <Label htmlFor="currentPassword">
+              Mật khẩu hiện tại <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="currentPassword"
               type="password"
@@ -96,7 +98,9 @@ export default function ChangePasswordPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="newPassword">Mật khẩu mới</Label>
+            <Label htmlFor="newPassword">
+              Mật khẩu mới <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="newPassword"
               type="password"
@@ -110,7 +114,9 @@ export default function ChangePasswordPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
+            <Label htmlFor="confirmPassword">
+              Xác nhận mật khẩu mới <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="confirmPassword"
               type="password"

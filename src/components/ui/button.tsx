@@ -73,4 +73,5 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = 'Button'
 
+// buttonVariants is intentionally exported for non-component primitives.
 export { Button, buttonVariants }

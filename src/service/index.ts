@@ -24,10 +24,9 @@ export { default as mapLayerApiService } from './mapLayerApiService'
 // Alias matching Postman naming
 export { default as mapApiService } from './mapLayerApiService'
 
-// GEE / satellite / weather / flood
-// Weather and field-measurement modules remain available for legacy compatibility,
+// GEE / satellite / flood
+// Field-measurement modules remain available for legacy compatibility,
 // but they are no longer exposed in the admin navigation or routes.
-export { default as weatherService } from './weatherService'
 export { default as remoteSensingService } from './remoteSensingService'
 export { default as floodService } from './floodService'
 export { default as satelliteService } from './satelliteService'

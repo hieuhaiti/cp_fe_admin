@@ -35,6 +35,7 @@ import { mapLayerApiService, mapLayerService, useApiMutation, useApiQuery } from
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import type {
   ApiResponse,
+  MapApiKeyIssueData,
   MapLayer,
   MapLayerApi,
   MapLayerApiListData,
@@ -177,8 +178,9 @@ export default function MapLayerApiListPage(): JSX.Element {
   const regenerateMutation = useApiMutation(
     ({ id, name }: { id: number; name?: string }) => mapLayerApiService.regenerate(id, name),
     {
-      onSuccess: (response: any) => {
-        const key = response?.data?.apiKey || response?.data?.raw_key || response?.data?.token
+      onSuccess: (response: ApiResponse<MapApiKeyIssueData>) => {
+        const issued = response?.data
+        const key = issued?.apiKey || issued?.raw_key || issued?.token
         toast.success(key ? `Đã xoay key. Key mới: ${key}` : 'Đã xoay key thành công')
         listQuery.refetch()
         setRegenerateDialogOpen(false)

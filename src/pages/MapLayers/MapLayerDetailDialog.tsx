@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { mapLayerService, useApiQuery } from '@/service'
 import type { ApiResponse, MapLayer } from '@/types/api'
 import { formatDateTime } from '@/lib/date'
-import { getMapLayerCategoryLabel } from '@/constant/mapLayerConstant'
+import { getMapLayerCategoryLabel, ROLE_LABEL_MAP } from '@/constant/mapLayerConstant'
 import {
   buildMapProxyExportUrl,
   downloadGeoJsonFile,
@@ -14,7 +14,7 @@ import {
 } from '@/lib/geoserver'
 import { toast } from 'react-toastify'
 import { useState } from 'react'
-import { CalendarClock, Database, Download, Info, RefreshCw } from 'lucide-react'
+import { CalendarClock, Database, Download, Info, RefreshCw, ShieldCheck } from 'lucide-react'
 
 interface MapLayerDetailDialogProps {
   open: boolean
@@ -36,15 +36,7 @@ function getLayerDetail(response?: ApiResponse<MapLayerDetailData>): MapLayer | 
   return data as MapLayer
 }
 
-function formatJson(value: unknown): string {
-  if (value === null || value === undefined) return '-'
-  if (typeof value === 'string') return value
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return String(value)
-  }
-}
+
 
 function formatCount(value?: number | string | null): string {
   if (value === null || value === undefined || value === '') return '-'
@@ -76,21 +68,7 @@ function DetailField({
   )
 }
 
-function JsonValue({ value, emptyLabel }: { value?: unknown; emptyLabel: string }) {
-  if (
-    value === null ||
-    value === undefined ||
-    (typeof value === 'object' && Object.keys(value).length === 0)
-  ) {
-    return <p className="text-muted-foreground text-sm">{emptyLabel}</p>
-  }
 
-  return (
-    <pre className="bg-muted/60 max-h-56 overflow-auto rounded-md border p-3 text-xs whitespace-pre-wrap">
-      {formatJson(value)}
-    </pre>
-  )
-}
 
 function BooleanBadge({
   value,
@@ -144,7 +122,7 @@ export default function MapLayerDetailDialog({
   //  3. Còn lại → dùng GeoJSON (WFS).
   const isRaster = String(layer?.geometry_type || '').toUpperCase() === 'RASTER'
   const preferTiff = isRaster
-  const downloadFormatLabel = preferTiff ? 'GeoTIFF' : 'GeoJSON'
+  const downloadFormatLabel = preferTiff ? 'ảnh bản đồ' : 'dữ liệu đường nét'
   const canDownload = !!(layer?.id && isPublished)
   const [downloading, setDownloading] = useState(false)
 
@@ -160,8 +138,9 @@ export default function MapLayerDetailDialog({
         await downloadGeoJsonFile(downloadUrl, baseName)
       }
       toast.success(`Đã tải xuống ${downloadFormatLabel}`)
-    } catch (err: any) {
-      toast.error(err?.message || `Không thể tải ${downloadFormatLabel}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      toast.error(message || `Không thể tải ${downloadFormatLabel}`)
     } finally {
       setDownloading(false)
     }
@@ -173,7 +152,7 @@ export default function MapLayerDetailDialog({
         <div className="shrink-0 border-b px-6 py-5 pr-12">
           <DialogTitle>Chi tiết lớp dữ liệu bản đồ</DialogTitle>
           <DialogDescription className="mt-1">
-            Thông tin metadata, nguồn dữ liệu và cấu hình công bố của lớp đã chọn
+            Thông tin nghiệp vụ, nguồn dữ liệu và trạng thái công bố của lớp đã chọn
           </DialogDescription>
         </div>
 
@@ -210,9 +189,10 @@ export default function MapLayerDetailDialog({
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <BooleanBadge
-                    value={layer.is_active}
-                    trueLabel="Đang hoạt động"
-                    falseLabel="Ngừng hoạt động"
+                    value={layer.publish_status === 'published'}
+                    trueLabel="Đã xuất bản"
+                    falseLabel="Bản nháp"
+                    tone="success"
                   />
                   <BooleanBadge
                     value={layer.is_public}
@@ -226,14 +206,6 @@ export default function MapLayerDetailDialog({
                     falseLabel="Tắt mặc định"
                     tone="warning"
                   />
-                  <Badge
-                    variant="outline"
-                    className={
-                      isPublished ? 'border-info/30 bg-info/10 text-info' : 'text-muted-foreground'
-                    }
-                  >
-                    {isPublished ? 'Đã công bố bản đồ' : 'Chưa công bố bản đồ'}
-                  </Badge>
                   <Button
                     variant="outline"
                     size="sm"
@@ -241,10 +213,10 @@ export default function MapLayerDetailDialog({
                     onClick={handleDownload}
                     tooltip={
                       canDownload
-                          ? preferTiff
-                          ? 'Tải GeoTIFF qua cổng WCS của máy chủ'
-                          : 'Tải feature vector dạng GeoJSON qua cổng WFS của máy chủ'
-                        : 'Layer chưa công bố lên GeoServer'
+                        ? preferTiff
+                          ? 'Tải ảnh bản đồ'
+                          : 'Tải dữ liệu đường nét'
+                        : 'Lớp dữ liệu chưa được công bố'
                     }
                   >
                     <Download className="size-4" aria-hidden="true" />
@@ -271,7 +243,7 @@ export default function MapLayerDetailDialog({
                 </CardHeader>
                 <CardContent>
                   <dl className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
-                    <DetailField label="ID">{layer.id ?? '-'}</DetailField>
+
                     <DetailField label="Mã lớp">
                       <CodeValue>{layer.code}</CodeValue>
                     </DetailField>
@@ -307,79 +279,35 @@ export default function MapLayerDetailDialog({
                 <CardContent>
                   <dl className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
                     <DetailField label="Kiểu dữ liệu">
-                      <Badge variant="secondary">{layer.geometry_type || '-'}</Badge>
+                      <Badge variant="secondary">
+                        {String(layer.geometry_type || '').toUpperCase().includes('POINT')
+                          ? 'Dữ liệu điểm'
+                          : String(layer.geometry_type || '').toUpperCase().includes('LINE')
+                            ? 'Dữ liệu đường'
+                            : String(layer.geometry_type || '').toUpperCase().includes('POLYGON')
+                              ? 'Dữ liệu vùng'
+                              : String(layer.geometry_type || '').toUpperCase() === 'RASTER'
+                                ? 'Ảnh bản đồ'
+                                : 'Chưa xác định'}
+                      </Badge>
                     </DetailField>
                     <DetailField label="Hệ tọa độ">
                       {layer.epsg_code || layer.srid ? (
-                        <CodeValue>EPSG:{layer.epsg_code ?? layer.srid}</CodeValue>
+                        <CodeValue>{layer.epsg_code ?? layer.srid}</CodeValue>
                       ) : (
                         '-'
                       )}
                     </DetailField>
-                    <DetailField label="Kiểu lưu trữ">
-                      <CodeValue>{layer.storage_kind}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Schema">
-                      <CodeValue>{layer.schema_name}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Bảng dữ liệu">
-                      <CodeValue>{layer.table_name}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Cột hình học">
-                      <CodeValue>{layer.geometry_column}</CodeValue>
-                    </DetailField>
                     <DetailField label="Số đối tượng">
                       {formatCount(layer.feature_count)}
                     </DetailField>
-                    <DetailField label="Mức zoom nhỏ nhất">{layer.min_zoom ?? '-'}</DetailField>
-                    <DetailField label="Mức zoom lớn nhất">{layer.max_zoom ?? '-'}</DetailField>
-                    <DetailField label="Trường nhãn">
-                      <CodeValue>{layer.label_field}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Tệp/đối tượng lưu trữ" wide>
-                      <CodeValue>{layer.object_key}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Phạm vi không gian" wide>
-                      <JsonValue
-                        value={layer.bbox ?? layer.metadata?.boundsWgs84}
-                        emptyLabel="Chưa có thông tin phạm vi."
-                      />
-                    </DetailField>
+                    <DetailField label="Mức thu phóng nhỏ nhất">{layer.min_zoom ?? '-'}</DetailField>
+                    <DetailField label="Mức thu phóng lớn nhất">{layer.max_zoom ?? '-'}</DetailField>
+
                   </dl>
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Database className="text-primary size-4" aria-hidden="true" />
-                    Metadata và công bố
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <dl className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
-                    <DetailField label="Trạng thái công bố">
-                      <CodeValue>{layer.publish_status}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Trạng thái dọn dẹp">
-                      <CodeValue>{layer.cleanup_status}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Tên style">
-                      <CodeValue>{layer.style_name}</CodeValue>
-                    </DetailField>
-                    <DetailField label="Phiên bản">{layer.version ?? '-'}</DetailField>
-                    <DetailField label="Cấu hình chú giải" wide>
-                      <JsonValue
-                        value={layer.legend_config}
-                        emptyLabel="Chưa có cấu hình chú giải."
-                      />
-                    </DetailField>
-                    <DetailField label="Metadata nguồn" wide>
-                      <JsonValue value={layer.metadata} emptyLabel="Chưa có metadata nguồn." />
-                    </DetailField>
-                  </dl>
-                </CardContent>
-              </Card>
 
               <Card className="lg:col-span-2">
                 <CardHeader className="pb-4">
@@ -393,7 +321,7 @@ export default function MapLayerDetailDialog({
                     <DetailField label="Ngày tạo">
                       {createdAt ? formatDateTime(createdAt) : '-'}
                     </DetailField>
-                    <DetailField label="Cập nhật metadata">
+                    <DetailField label="Ngày cập nhật">
                       {updatedAt ? formatDateTime(updatedAt) : '-'}
                     </DetailField>
                     <DetailField label="Cập nhật dữ liệu gần nhất">
@@ -402,6 +330,85 @@ export default function MapLayerDetailDialog({
                   </dl>
                 </CardContent>
               </Card>
+
+              {Array.isArray((layer as any).permissions) && (layer as any).permissions.length > 0 && (
+                <Card className="lg:col-span-2">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <ShieldCheck className="text-primary size-4" aria-hidden="true" />
+                      Phân quyền truy cập theo vai trò
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="border-b text-xs font-medium text-muted-foreground">
+                          <tr>
+                            <th className="pb-2">Vai trò</th>
+                            <th className="pb-2 text-center">Xem</th>
+                            <th className="pb-2 text-center">Xuất dữ liệu</th>
+                            <th className="pb-2 text-center">Chỉnh sửa</th>
+                            <th className="pb-2 text-center">Xóa</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {(layer as any).permissions.map((p: any) => (
+                            <tr key={p.roleCode} className="hover:bg-muted/30">
+                              <td className="py-2.5 font-medium">
+                                {ROLE_LABEL_MAP[p.roleCode] || 'Vai trò người dùng'}
+                              </td>
+                              <td className="py-2.5 text-center">
+                                <span
+                                  className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                                    p.canView
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : 'bg-slate-100 text-slate-400'
+                                  }`}
+                                >
+                                  {p.canView ? 'Cho phép' : 'Chặn'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-center">
+                                <span
+                                  className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                                    p.canExport
+                                      ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                                      : 'bg-slate-100 text-slate-400'
+                                  }`}
+                                >
+                                  {p.canExport ? 'Cho phép' : 'Chặn'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-center">
+                                <span
+                                  className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                                    p.canEdit
+                                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                      : 'bg-slate-100 text-slate-400'
+                                  }`}
+                                >
+                                  {p.canEdit ? 'Cho phép' : 'Chặn'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-center">
+                                <span
+                                  className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                                    p.canDelete
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      : 'bg-slate-100 text-slate-400'
+                                  }`}
+                                >
+                                  {p.canDelete ? 'Cho phép' : 'Chặn'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         ) : (

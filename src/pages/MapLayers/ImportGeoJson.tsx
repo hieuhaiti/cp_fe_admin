@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import PageLayout from '@/layout/pageLayout'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -13,12 +13,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  FileUpload,
+  FileUploadDropzone,
+  FileUploadItem,
+  FileUploadItemDelete,
+  FileUploadItemMetadata,
+  FileUploadItemPreview,
+  FileUploadList,
+  FileUploadTrigger,
+} from '@/components/ui/file-upload'
 import { mapLayerService, useApiMutation } from '@/service'
 import { toast } from 'react-toastify'
 import { CheckCircle2, Download, FileJson, Info } from 'lucide-react'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
-import { MAP_LAYER_CATEGORY_OPTIONS } from '@/constant/mapLayerConstant'
+import CategorySelect from '@/components/common/CategorySelect'
+import { MAP_LAYER_CATEGORY_LABEL_VI, toCategorySlug } from '@/constant/mapLayerConstant'
 
 function extractGeoJson(raw: any): GeoJSON.GeoJSON | null {
   if (!raw || typeof raw !== 'object') return null
@@ -69,17 +80,26 @@ function downloadGeoJsonSample() {
   URL.revokeObjectURL(url)
 }
 
+const MAX_GEOJSON_SIZE = 50 * 1024 * 1024
+// Keep closed until a real import endpoint and contract tests are available.
+const GEOJSON_IMPORT_AVAILABLE = false
+
 export default function ImportGeoJsonPage(): JSX.Element {
   const user = useAuthStore((state) => state.user)
-  const canPublish = hasPerm(user, 'map_layers', 'publish')
+  const canPublish = hasPerm(user, 'layers', 'update')
   const [category, setCategory] = useState<string>('forest_district')
+  const [categoryName, setCategoryName] = useState<string>(
+    () => MAP_LAYER_CATEGORY_LABEL_VI.forest_district || 'Phân loại đối tượng theo huyện'
+  )
   const [name, setName] = useState<string>('')
   const [publishAfterImport, setPublishAfterImport] = useState<'true' | 'false'>(
     canPublish ? 'true' : 'false'
   )
-  const [file, setFile] = useState<File | null>(null)
+  const [geoJsonFiles, setGeoJsonFiles] = useState<File[]>([])
   const [previewGeoJson, setPreviewGeoJson] = useState<GeoJSON.GeoJSON | null>(null)
   const [previewError, setPreviewError] = useState<string>('')
+
+  const file = geoJsonFiles[0] ?? null
 
   const importMutation = useApiMutation(
     (payload: FormData) => mapLayerService.importGeoJson(payload),
@@ -87,8 +107,9 @@ export default function ImportGeoJsonPage(): JSX.Element {
       onSuccess: () => {
         setName('')
         setCategory('forest_district')
+        setCategoryName(MAP_LAYER_CATEGORY_LABEL_VI.forest_district || 'Phân loại đối tượng theo huyện')
         setPublishAfterImport(canPublish ? 'true' : 'false')
-        setFile(null)
+        setGeoJsonFiles([])
         setPreviewGeoJson(null)
         setPreviewError('')
       },
@@ -96,8 +117,20 @@ export default function ImportGeoJsonPage(): JSX.Element {
     true
   )
 
-  async function handleGeoJsonFileChange(selectedFile: File | null) {
-    setFile(selectedFile)
+  const onFileValidate = useCallback((f: File): string | null => {
+    const isGeoJson = /\.(geojson|json)$/i.test(f.name)
+    if (!isGeoJson) return 'Chỉ chấp nhận tệp có phần mở rộng .geojson hoặc .json'
+    if (f.size > MAX_GEOJSON_SIZE) return 'Kích thước file không được quá 50MB'
+    return null
+  }, [])
+
+  const onFileReject = useCallback((_f: File, message: string) => {
+    toast.error(message)
+  }, [])
+
+  async function handleGeoJsonFilesChange(files: File[]) {
+    setGeoJsonFiles(files)
+    const selectedFile = files[0] ?? null
     setPreviewGeoJson(null)
     setPreviewError('')
     if (!selectedFile) return
@@ -107,21 +140,26 @@ export default function ImportGeoJsonPage(): JSX.Element {
       const parsed = JSON.parse(text)
       const geojson = extractGeoJson(parsed)
       if (!geojson) {
-        setPreviewError('File không chứa GeoJSON hợp lệ để preview')
+        setPreviewError('Tệp không chứa dữ liệu đường nét hợp lệ để xem trước')
         return
       }
       setPreviewGeoJson(geojson)
     } catch {
-      setPreviewError('Không đọc được GeoJSON hoặc file JSON không hợp lệ')
+      setPreviewError('Không đọc được tệp dữ liệu hoặc nội dung tệp không hợp lệ')
     }
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!GEOJSON_IMPORT_AVAILABLE) return
 
     const trimmedName = name.trim()
-    if (!category) {
-      toast.error('Vui lòng chọn nhóm lớp')
+    const finalCategory = (category === 'other' || !category)
+      ? (toCategorySlug(categoryName) || 'other')
+      : category
+
+    if (!finalCategory || (finalCategory === 'other' && !categoryName.trim())) {
+      toast.error('Vui lòng chọn hoặc nhập nhóm lớp')
       return
     }
     if (!trimmedName) {
@@ -129,7 +167,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
       return
     }
     if (!file) {
-      toast.error('Vui lòng chọn file GeoJSON')
+      toast.error('Vui lòng chọn tệp dữ liệu đường nét')
       return
     }
 
@@ -151,7 +189,10 @@ export default function ImportGeoJsonPage(): JSX.Element {
     fd.append('source_format', 'geojson')
     fd.append('import_mode', 'overwrite')
     fd.append('srid_input', '4326')
-    fd.append('category', category)
+    fd.append('category', finalCategory)
+    if (categoryName.trim()) {
+      fd.append('category_name', categoryName.trim())
+    }
     fd.append('layer_kind', 'overlay')
     fd.append('is_public', publishAfterImport)
     fd.append('auto_publish', publishAfterImport)
@@ -161,29 +202,30 @@ export default function ImportGeoJsonPage(): JSX.Element {
 
   return (
     <PageLayout
-      title="Nhập GeoJSON"
-      description="Nhập dữ liệu GeoJSON để tạo lớp bản đồ mới"
+      title="Nhập dữ liệu đường nét"
+      description="Nhập dữ liệu đường nét để tạo lớp bản đồ mới"
     >
       <div className="mx-auto grid w-full max-w-6xl gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="p-4 sm:p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>
-                Nhóm lớp <span className="text-destructive">*</span>
-              </Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Chọn nhóm lớp" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MAP_LAYER_CATEGORY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div id="geojson-import-unavailable" className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="text-sm">
+              <p className="font-semibold">Tính năng nhập trực tiếp GeoJSON đang được hoàn thiện</p>
+              <p className="mt-1 text-xs opacity-90">
+                Hiện tại API backend chưa hỗ trợ nhập trực tiếp GeoJSON. Để nhập dữ liệu lớp bản đồ, vui lòng sử dụng chức năng tải ảnh nguồn GeoTIFF hoặc liên hệ quản trị hệ thống để nhập qua Shapefile / Excel.
+              </p>
             </div>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <CategorySelect
+              category={category}
+              categoryName={categoryName}
+              onCategoryChange={setCategory}
+              onCategoryNameChange={setCategoryName}
+              label="Nhóm lớp"
+              required
+              id="geojson-category"
+            />
 
             <div className="space-y-2">
               <Label htmlFor="layer-name">
@@ -198,7 +240,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
             </div>
 
             <div className="space-y-2">
-              <Label>Trạng thái sau import</Label>
+              <Label>Trạng thái sau khi nhập</Label>
               <Select
                 value={publishAfterImport}
                 onValueChange={(v) => setPublishAfterImport(v as 'true' | 'false')}
@@ -223,20 +265,51 @@ export default function ImportGeoJsonPage(): JSX.Element {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="geojson-file">
-                File GeoJSON <span className="text-destructive">*</span>
+              <Label>
+                Tệp dữ liệu đường nét <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="geojson-file"
-                type="file"
+              <FileUpload
+                label="Tệp dữ liệu đường nét *"
+                value={geoJsonFiles}
+                onValueChange={handleGeoJsonFilesChange}
+                onFileValidate={onFileValidate}
+                onFileReject={onFileReject}
                 accept=".geojson,.json,application/geo+json,application/json"
-                onChange={(e) => handleGeoJsonFileChange(e.target.files?.[0] ?? null)}
-              />
-              <p className="text-muted-foreground text-xs">Hỗ trợ: .geojson, .json</p>
+                maxFiles={1}
+                maxSize={MAX_GEOJSON_SIZE}
+                disabled={importMutation.isPending}
+              >
+                <FileUploadDropzone className="border-dashed">
+                  <div className="flex flex-col items-center gap-1 text-center">
+                    <FileJson className="text-muted-foreground size-6" />
+                    <p className="text-sm font-medium">Kéo thả tệp dữ liệu vào đây</p>
+                    <p className="text-muted-foreground text-xs">hoặc</p>
+                    <FileUploadTrigger asChild>
+                      <Button type="button" variant="outline" size="sm" disabled={importMutation.isPending}>
+                        Chọn tệp dữ liệu
+                      </Button>
+                    </FileUploadTrigger>
+                    <p className="text-muted-foreground text-xs">Hỗ trợ .geojson, .json · Tối đa 50MB</p>
+                  </div>
+                </FileUploadDropzone>
+                <FileUploadList>
+                  {geoJsonFiles.map((f) => (
+                    <FileUploadItem key={f.name} value={f}>
+                      <FileUploadItemPreview />
+                      <FileUploadItemMetadata />
+                      <FileUploadItemDelete asChild>
+                        <Button type="button" variant="ghost" size="sm" disabled={importMutation.isPending}>
+                          Xóa
+                        </Button>
+                      </FileUploadItemDelete>
+                    </FileUploadItem>
+                  ))}
+                </FileUploadList>
+              </FileUpload>
               {previewError && <p className="text-destructive text-xs">{previewError}</p>}
               {previewGeoJson && (
                 <div className="space-y-2">
-                  <p className="text-muted-foreground text-xs">Preview bản đồ từ file GeoJSON</p>
+                  <p className="text-muted-foreground text-xs">Xem trước dữ liệu trên bản đồ</p>
                   <GeoJsonMapPreview geojson={previewGeoJson} />
                 </div>
               )}
@@ -250,7 +323,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
                   setName('')
                   setCategory('forest_district')
                   setPublishAfterImport(canPublish ? 'true' : 'false')
-                  setFile(null)
+                  setGeoJsonFiles([])
                   setPreviewGeoJson(null)
                   setPreviewError('')
                 }}
@@ -259,8 +332,8 @@ export default function ImportGeoJsonPage(): JSX.Element {
               >
                 Làm mới
               </Button>
-              <Button type="submit" disabled={importMutation.isPending} className="w-full sm:w-auto">
-                {importMutation.isPending ? 'Đang nhập...' : 'Nhập GeoJSON'}
+              <Button id="geojson-import-submit" type="submit" disabled={!GEOJSON_IMPORT_AVAILABLE || importMutation.isPending} aria-describedby="geojson-import-unavailable" className="w-full sm:w-auto">
+                Nhập dữ liệu
               </Button>
             </div>
           </form>
@@ -272,8 +345,8 @@ export default function ImportGeoJsonPage(): JSX.Element {
               <FileJson size={18} />
             </div>
             <div>
-              <p className="font-semibold">Hướng dẫn GeoJSON</p>
-              <p className="text-muted-foreground text-xs">Chuẩn bị file trước khi import</p>
+              <p className="font-semibold">Hướng dẫn chuẩn bị tệp</p>
+              <p className="text-muted-foreground text-xs">Kiểm tra tệp trước khi nhập</p>
             </div>
           </div>
 
@@ -283,36 +356,29 @@ export default function ImportGeoJsonPage(): JSX.Element {
               Định dạng hợp lệ
             </div>
             <p className="text-muted-foreground text-xs">
-              Dữ liệu phải là `FeatureCollection`, `Feature` hoặc `Geometry`.
+              Tệp phải chứa dữ liệu hình học và tọa độ hợp lệ.
             </p>
           </div>
 
           <div className="space-y-2 text-sm">
-            <p className="font-medium">Checklist nhanh</p>
+            <p className="font-medium">Kiểm tra nhanh</p>
             <p className="text-muted-foreground flex items-start gap-2 text-xs">
               <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
-              File có phần mở rộng `.geojson` hoặc `.json`.
+              Tệp có phần mở rộng .geojson hoặc .json.
             </p>
             <p className="text-muted-foreground flex items-start gap-2 text-xs">
               <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
-              Mỗi feature có `geometry` hợp lệ và tọa độ đúng thứ tự.
+              Mỗi đối tượng có hình học và tọa độ hợp lệ.
             </p>
             <p className="text-muted-foreground flex items-start gap-2 text-xs">
               <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
-              Tên lớp rõ nghĩa để hệ thống sinh mã lớp ổn định.
+              Tên lớp rõ nghĩa để hệ thống tạo mã lớp ổn định.
             </p>
-          </div>
-
-          <div className="bg-muted/50 rounded-lg p-3">
-            <p className="mb-1 text-xs font-medium">Ví dụ cấu trúc tối thiểu</p>
-            <code className="text-muted-foreground block text-[11px] leading-5">
-              {`{"type":"FeatureCollection","features":[...]}`}
-            </code>
           </div>
 
           <Button type="button" variant="outline" className="w-full" onClick={downloadGeoJsonSample}>
             <Download size={16} />
-            Tải file mẫu GeoJSON
+            Tải tệp mẫu
           </Button>
         </Card>
       </div>

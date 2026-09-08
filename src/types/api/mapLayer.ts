@@ -16,6 +16,52 @@ export type SourceFormat = 'shapefile' | 'geojson' | 'kml' | 'geotiff' | 'filegd
 export type ImportMode = 'overwrite' | 'append'
 export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
+export interface MapLayerLegendEntry {
+  label: string
+  color: string
+}
+
+export interface MapLayerLegend {
+  entries: MapLayerLegendEntry[]
+}
+
+export interface MapLayerDefaultStyle {
+  // Polygon
+  fillColor?: string
+  fillOpacity?: number
+  fillAntialias?: boolean
+  // Line & Polygon stroke
+  strokeColor?: string
+  strokeOpacity?: number
+  strokeWidth?: number
+  strokeBlur?: number
+  strokeOffset?: number
+  strokeDasharray?: number[] | null
+  lineCap?: 'butt' | 'round' | 'square'
+  lineJoin?: 'bevel' | 'round' | 'miter'
+  // Point
+  circleColor?: string
+  circleOpacity?: number
+  circleRadius?: number
+  circleBlur?: number
+  circleStrokeColor?: string
+  circleStrokeOpacity?: number
+  circleStrokeWidth?: number
+  // Raster
+  rasterOpacity?: number
+  brightnessMin?: number
+  brightnessMax?: number
+  contrast?: number
+  saturation?: number
+  hueRotate?: number
+  fadeDuration?: number
+  resampling?: 'linear' | 'nearest'
+  // Common
+  opacity?: number
+  visible_by_default?: boolean
+  [key: string]: unknown
+}
+
 export interface MapLayer {
   id?: number | string
   code: string
@@ -32,8 +78,9 @@ export interface MapLayer {
   storage_kind?: string | null
   object_key?: string | null
   style_name?: string | null
-  legend_config?: Record<string, unknown> | null
-  metadata?: Record<string, unknown> | null
+  legend_config?: MapLayerLegend | null
+
+  metadata?: (Record<string, unknown> & { defaultStyle?: MapLayerDefaultStyle | null }) | null
   source_file_id?: number | string | null
   publish_status?: string | null
   cleanup_status?: string | null
@@ -42,7 +89,7 @@ export interface MapLayer {
   geoserver_layer?: string | null
   geoserver_store?: string | null
   source_url?: string | null
-  default_style?: Record<string, unknown> | null
+  default_style?: MapLayerDefaultStyle | null
   min_zoom?: number | null
   max_zoom?: number | null
   label_field?: string | null
@@ -87,8 +134,10 @@ export interface MapLayerListParams {
   layer_kind?: LayerKind
   data_year?: number
   geometry_type?: string
+  geometryType?: string
   is_active?: boolean
   is_public?: boolean
+  isPublic?: boolean
   publish_data?: boolean
 
   page?: number
@@ -113,6 +162,8 @@ export interface CreateMapLayerBody {
   is_public?: boolean
   is_enable_default?: boolean
   is_editable?: boolean
+  legend_config?: MapLayerLegend | null
+  metadata?: Record<string, unknown> | null
   expectedUpdatedAt?: string
 
   name?: string
@@ -121,11 +172,26 @@ export interface CreateMapLayerBody {
 }
 
 export interface PatchMapLayerBody {
+  nameVi?: string
   name_vi?: string
   name_en?: string | null
   is_public?: boolean
+  isPublic?: boolean
   category?: string
   category_name?: string | null
+  categoryName?: string | null
+  style_name?: string | null
+  styleName?: string | null
+  min_zoom?: number | null
+  minZoom?: number | null
+  max_zoom?: number | null
+  maxZoom?: number | null
+  legend_config?: MapLayerLegend | null
+  legendConfig?: MapLayerLegend | null
+  metadata?: Record<string, unknown> | null
+  is_enable_default?: boolean
+  isEnableDefault?: boolean
+  expectedUpdatedAt?: string
   data_year?: number | null
   sort_order?: number
 }
@@ -172,3 +238,26 @@ export interface CalculateLostAreaResult {
   area_ha: number
   perimeter_m?: number
 }
+
+export interface LayerCleanupJob {
+  id: number | string
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | string
+  attempt: number
+  maxAttempts: number
+  nextAttemptAt?: string | null
+  startedAt?: string | null
+  finishedAt?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface LayerCleanupStatus {
+  layerId: number | string
+  code: string
+  deletedAt?: string | null
+  cleanupStatus: 'none' | 'queued' | 'running' | 'complete' | 'failed' | string
+  updatedAt?: string | null
+  canRetry: boolean
+  job?: LayerCleanupJob | null
+}
+

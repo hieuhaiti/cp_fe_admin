@@ -53,8 +53,11 @@ type ProfileFormData = z.infer<typeof profileSchema>
 
 const roleLabels: Record<string, string> = {
   system_admin: 'Quản trị hệ thống',
-  ubnd_tinh: 'UBND tỉnh',
-  so_nnmt: 'Sở NN&MT',
+  ubnd_tp: 'UBND thành phố',
+  so_tnmt: 'Sở TN&MT',
+  so_xd: 'Sở Xây dựng',
+  ubnd_tinh: 'UBND tỉnh (legacy)',
+  so_nnmt: 'Sở NN&MT (legacy)',
   citizen: 'Người dân',
   admin: 'Quản trị viên',
 }
@@ -302,7 +305,9 @@ export default function ProfilePage() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="fullName">Họ và tên</Label>
+                    <Label htmlFor="fullName">
+                      Họ và tên <span className="text-destructive">*</span>
+                    </Label>
                     <div className="relative">
                       <UserRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                       <Input

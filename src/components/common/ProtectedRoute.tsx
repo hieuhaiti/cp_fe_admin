@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import { toast } from 'react-toastify'
@@ -21,6 +22,12 @@ export function ProtectedRoute({ roles, permission }: ProtectedRouteProps = {}) 
   const loggedOut = useAuthStore((s) => s.loggedOut)
   const user = useAuthStore((s) => s.user)
 
+  useEffect(() => {
+    if (!isInitializing && !isAuthenticated && !loggedOut) {
+      toast.error('Bạn cần đăng nhập để truy cập trang này.', { autoClose: 3000 })
+    }
+  }, [isInitializing, isAuthenticated, loggedOut])
+
   if (isInitializing) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -30,9 +37,6 @@ export function ProtectedRoute({ roles, permission }: ProtectedRouteProps = {}) 
   }
 
   if (!isAuthenticated) {
-    if (!loggedOut) {
-      toast.error('Bạn cần đăng nhập để truy cập trang này.', { autoClose: 3000 })
-    }
     return <Navigate to="/login" replace />
   }
 

@@ -8,8 +8,11 @@ import { formatDateTime } from '@/lib/date'
 
 const ROLE_LABELS: Record<string, string> = {
   system_admin: 'Quản trị hệ thống',
-  so_nnmt: 'Sở NN&MT',
-  ubnd_tinh: 'UBND tỉnh',
+  ubnd_tp: 'UBND thành phố',
+  so_tnmt: 'Sở TN&MT',
+  so_xd: 'Sở Xây dựng',
+  so_nnmt: 'Sở NN&MT (legacy)',
+  ubnd_tinh: 'UBND tỉnh (legacy)',
   citizen: 'Người dân',
 }
 
@@ -68,6 +71,15 @@ function PermissionList({ permissions }: { permissions: User['role_permissions']
   )
 }
 
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <span className="font-semibold">{label}:</span>
+      <div className="col-span-2">{children}</div>
+    </div>
+  )
+}
+
 export default function UserDetailDialog({ open, onOpenChange, userId }: UserDetailDialogProps) {
   const dbQuery = useApiQuery(
     ['user', userId],
@@ -77,7 +89,6 @@ export default function UserDetailDialog({ open, onOpenChange, userId }: UserDet
     false
   )
   const user = getUserDetail(dbQuery.data as ApiResponse<User | { user?: User }> | undefined)
-
   const fullName = user?.fullName ?? user?.full_name ?? null
   const avatarUrl = user?.avatarUrl ?? user?.avatar_url ?? null
   const addressDetail = user?.addressDetail ?? user?.address_detail ?? null
@@ -87,13 +98,6 @@ export default function UserDetailDialog({ open, onOpenChange, userId }: UserDet
   const lastLoginAt = user?.lastLoginAt ?? user?.last_login_at ?? user?.last_login ?? null
   const createdAt = user?.createdAt ?? user?.created_at ?? null
   const updatedAt = user?.updatedAt ?? user?.updated_at ?? null
-
-  const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-    <div className="grid grid-cols-3 gap-2">
-      <span className="font-semibold">{label}:</span>
-      <div className="col-span-2">{children}</div>
-    </div>
-  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,0 +1,104 @@
+/**
+ * ============================================================
+ * MANUAL TEST SCENARIO — FORM TẠO/SỬA LỚP DỮ LIỆU (MAP LAYER FORM DIALOG)
+ * ============================================================
+ *
+ * [CREATE - Thêm lớp dữ liệu mới]
+ * 1. Mở MapLayerFormDialog (nhấn "Thêm lớp dữ liệu").
+ * 2. Nhập các trường:
+ *    - Tên lớp dữ liệu: Lớp Ngập Lụt Cẩm Phả (Mã lớp tự sinh: lop_ngap_lut_cam_pha)
+ *    - Nhóm lớp: Ranh giới hành chính / Rừng / Ngập lụt
+ *    - Kiểu hình học: Polygon (hoặc Line, Point)
+ *    - Phạm vi: Nội bộ (is_public: false) hoặc Công khai (is_public: true)
+ *    - Properties (JSON): {"source": "survey_2026", "accuracy": "high"}
+ *    - Chú giải Legend: Nhãn "Khu vực ngập sâu" / Màu "#EF4444"
+ * 3. Nhấn "Tạo mới".
+ * 4. Kỳ vọng: Dữ liệu được chuẩn hóa, code sinh tự động chuẩn snake_case, submit thành công.
+ *
+ * [UPDATE / EDIT MODE - Chỉnh sửa lớp dữ liệu]
+ * 1. Mở dialog với layerCode có sẵn (ví dụ: flood_layer).
+ * 2. Kỳ vọng: Form tải đúng tên lớp, nhóm, kiểu hình học, trạng thái; trường mã code được giữ nguyên không đổi.
+ *
+ * [VALIDATION - Kiểm thử lỗi]
+ * - Để trống tên lớp dữ liệu -> Báo lỗi bắt buộc.
+ * - Nhập Properties JSON sai cấu trúc (ví dụ: "[1,2]") -> Báo lỗi định dạng JSON.
+ * ============================================================
+ */
+
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import MapLayerFormDialog from './MapLayerFormDialog'
+import { renderWithProviders } from '@/test/renderWithProviders'
+
+const queryMock = vi.hoisted(() => vi.fn())
+vi.mock('@/service', () => ({ mapLayerService: { getByCode: vi.fn() }, useApiQuery: queryMock }))
+
+function renderDialog(props: Partial<React.ComponentProps<typeof MapLayerFormDialog>> = {}) {
+  return renderWithProviders(<MapLayerFormDialog open layerCode={null} onOpenChange={vi.fn()} onSubmit={vi.fn()} {...props} />)
+}
+
+describe('MapLayerFormDialog', () => {
+  beforeEach(() => queryMock.mockReturnValue({ data: undefined, isLoading: false }))
+
+  it('renders create mode and validates a missing layer name', async () => {
+    const onSubmit = vi.fn()
+    renderDialog({ onSubmit })
+    expect(screen.getByRole('heading', { name: 'Thêm lớp dữ liệu mới' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    await waitFor(() => expect(onSubmit).not.toHaveBeenCalled())
+  })
+
+  it('creates a layer payload with normalized geometry and generated code', () => {
+    const onSubmit = vi.fn()
+    renderDialog({ onSubmit })
+    fireEvent.change(screen.getByLabelText('Tên lớp dữ liệu *'), { target: { value: 'Lớp Ngập Lụt' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'lop_ngap_lut', name_vi: 'Lớp Ngập Lụt', geometry_type: 'POLYGON', epsg_code: 4326,
+    }))
+  })
+
+
+
+  it('preloads edit mode and preserves the existing code and defaultStyle', () => {
+    queryMock.mockReturnValue({
+      data: {
+        data: {
+          code: 'flood_layer',
+          name: 'Lớp cũ',
+          name_vi: 'Lớp cũ',
+          category: 'forest_district',
+          category_name: 'Rừng',
+          geometry_type: 'POLYGON',
+          is_active: true,
+          is_public: true,
+          metadata: {
+            defaultStyle: {
+              fillColor: '#FF0000',
+              fillOpacity: 0.8,
+            },
+          },
+        },
+      },
+      isLoading: false,
+    })
+    const onSubmit = vi.fn()
+    renderDialog({ layerCode: 'flood_layer', onSubmit })
+    expect(screen.getByRole('heading', { name: 'Chỉnh sửa lớp dữ liệu' })).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Lớp cũ')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'flood_layer',
+        metadata: {
+          defaultStyle: {
+            fillColor: '#FF0000',
+            fillOpacity: 0.8,
+          },
+        },
+      })
+    )
+  })
+
+
+})

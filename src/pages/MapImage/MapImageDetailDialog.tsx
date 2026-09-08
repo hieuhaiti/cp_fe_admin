@@ -4,22 +4,15 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { mapImageService, useApiQuery } from '@/service'
-import type { ApiResponse, MapImage } from '@/types/api'
+import type { ApiResponse, PdfMap } from '@/types/api'
 import { formatDateTime } from '@/lib/date'
-import { CalendarClock, Download, FileImage, FileText, Globe, Info, Map as MapIcon } from 'lucide-react'
+import { CalendarClock, Download, FileText, Globe, Info, Ruler } from 'lucide-react'
 import { toast } from 'react-toastify'
 
 interface MapImageDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mapImageId: number | null
-}
-
-const THEME_LABEL: Record<string, string> = {
-  ngap_lut: 'Ngập lụt và thủy văn',
-  khac: 'Khác',
-  lop_phu_nhiet: 'Lớp phủ nhiệt',
-  lop_phu_rung: 'Lớp phủ đối tượng',
 }
 
 function formatFileSize(bytes?: number | string | null): string {
@@ -72,30 +65,26 @@ export default function MapImageDetailDialog({
     false,
     false
   )
-  const mapImage = (() => {
+  const pdfMap = (() => {
     const d = (dbQuery.data as ApiResponse<any>)?.data
-    return (d ? (d.mapImage ?? d.pdfMap ?? d) : null) as MapImage | null
+    return (d ? (d.pdfMap ?? d.mapImage ?? d) : null) as PdfMap | null
   })()
 
-  const titleVi = mapImage?.translations?.vi?.title || mapImage?.title || mapImage?.name || '-'
-  const titleEn = mapImage?.translations?.en?.title || ''
-  const descriptionVi =
-    mapImage?.translations?.vi?.description || mapImage?.description || ''
-  const descriptionEn = mapImage?.translations?.en?.description || ''
-  const fileName = mapImage?.fileName || mapImage?.file_name || mapImage?.original_name || ''
-  const fileSize = mapImage?.fileSize || mapImage?.file_size || mapImage?.size_bytes
-  const createdAt = mapImage?.createdAt || mapImage?.created_at
-  const updatedAt = mapImage?.updatedAt || mapImage?.updated_at
-  const uploader = mapImage?.uploadedByName || (mapImage?.uploadedBy ? `#${mapImage.uploadedBy}` : '-')
-  const isPublic = mapImage?.isPublic ?? mapImage?.visibility === 'public'
-  const scale = mapImage?.scale ?? mapImage?.scale_label
-  const year = mapImage?.year ?? mapImage?.map_year
-  const preparingAgency = mapImage?.region ?? mapImage?.preparing_agency
+  const title = pdfMap?.translations?.vi?.title || pdfMap?.title || '-'
+  const description = pdfMap?.translations?.vi?.description || pdfMap?.description || ''
+  const fileName = pdfMap?.original_name || pdfMap?.fileName || ''
+  const fileSize = pdfMap?.size_bytes ?? pdfMap?.fileSize
+  const createdAt = pdfMap?.createdAt || pdfMap?.created_at
+  const updatedAt = pdfMap?.updatedAt || pdfMap?.updated_at
+  const isPublic = pdfMap?.visibility === 'public'
+  const scaleLabel = pdfMap?.scale_label ?? pdfMap?.scaleLabel
+  const mapYear = pdfMap?.map_year ?? pdfMap?.mapYear
+  const preparingAgency = pdfMap?.preparing_agency ?? pdfMap?.preparingAgency
 
   const handleDownload = async () => {
-    if (!mapImage?.id) return
+    if (!pdfMap?.id) return
     try {
-      const response = await mapImageService.getDownloadUrl(mapImage.id)
+      const response = await mapImageService.getDownloadUrl(pdfMap.id)
       const url = response.data?.url
       if (!url) throw new Error('Máy chủ chưa trả về liên kết tải tệp.')
       window.open(url, '_blank', 'noopener,noreferrer')
@@ -108,26 +97,21 @@ export default function MapImageDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0">
         <div className="shrink-0 border-b px-6 py-5 pr-12">
-          <DialogTitle>Chi tiết ảnh bản đồ</DialogTitle>
+          <DialogTitle>Chi tiết bản đồ PDF</DialogTitle>
           <DialogDescription className="mt-1">
-            Thông tin chi tiết ảnh bản đồ đã chọn
+            Thông tin chi tiết bản đồ PDF đã chọn
           </DialogDescription>
         </div>
 
-        {mapImage ? (
+        {pdfMap ? (
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
             <div className="mb-5">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <div className="min-w-0">
-                  <h3 className="text-lg font-semibold wrap-break-word">{titleVi}</h3>
-                  {titleEn && (
-                    <p className="text-muted-foreground mt-0.5 text-sm italic wrap-break-word">
-                      {titleEn}
-                    </p>
-                  )}
+                  <h3 className="text-lg font-semibold wrap-break-word">{title}</h3>
                   <div className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
                     <span>ID</span>
-                    <CodeValue>{mapImage.id}</CodeValue>
+                    <CodeValue>{pdfMap.id}</CodeValue>
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
@@ -142,12 +126,7 @@ export default function MapImageDetailDialog({
                     <Globe className="mr-1 size-3" />
                     {isPublic ? 'Công khai' : 'Nội bộ'}
                   </Badge>
-                  {mapImage.themeCode && (
-                    <Badge variant="secondary">
-                      {THEME_LABEL[mapImage.themeCode] ?? mapImage.themeCode}
-                    </Badge>
-                  )}
-                  {year && <Badge variant="outline">Năm {year}</Badge>}
+                  {mapYear && <Badge variant="outline">Năm {mapYear}</Badge>}
                 </div>
               </div>
             </div>
@@ -156,8 +135,8 @@ export default function MapImageDetailDialog({
               <Card className="lg:col-span-2">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <FileImage className="text-primary size-4" aria-hidden="true" />
-                    Ảnh bản đồ
+                    <FileText className="text-primary size-4" aria-hidden="true" />
+                    Tệp bản đồ
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -166,7 +145,7 @@ export default function MapImageDetailDialog({
                     <p className="text-sm text-muted-foreground">
                       Tệp PDF được bảo vệ; liên kết tải sẽ được tạo khi mở tệp.
                     </p>
-                    <Button variant="outline" size="sm" disabled={!mapImage.id} onClick={handleDownload}>
+                    <Button variant="outline" size="sm" disabled={!pdfMap.id} onClick={handleDownload}>
                       <Download className="size-4" /> Mở / tải tệp
                     </Button>
                   </div>
@@ -182,27 +161,12 @@ export default function MapImageDetailDialog({
                 </CardHeader>
                 <CardContent>
                   <dl className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
-                    <DetailField label="Chủ đề">
-                      <CodeValue>
-                        {mapImage.themeCode
-                          ? (THEME_LABEL[mapImage.themeCode] ?? mapImage.themeCode)
-                          : '-'}
-                      </CodeValue>
-                    </DetailField>
-                    <DetailField label="Năm">{year ?? '-'}</DetailField>
-                    <DetailField label="Tỉ lệ">{scale || '-'}</DetailField>
-                    <DetailField label="Đơn vị lập">{preparingAgency || '-'}</DetailField>
-                    <DetailField label="Tiêu đề (VI)" wide>
-                      {mapImage.translations?.vi?.title || '-'}
-                    </DetailField>
-                    <DetailField label="Tiêu đề (EN)" wide>
-                      {mapImage.translations?.en?.title || '-'}
-                    </DetailField>
-                    <DetailField label="Mô tả (VI)" wide>
-                      <span className="whitespace-pre-wrap">{descriptionVi || '-'}</span>
-                    </DetailField>
-                    <DetailField label="Mô tả (EN)" wide>
-                      <span className="whitespace-pre-wrap">{descriptionEn || '-'}</span>
+                    <DetailField label="Năm">{mapYear ?? '-'}</DetailField>
+                    <DetailField label="Tỉ lệ">{scaleLabel || '-'}</DetailField>
+                    <DetailField label="Cơ quan lập" wide>{preparingAgency || '-'}</DetailField>
+                    <DetailField label="Tiêu đề" wide>{title}</DetailField>
+                    <DetailField label="Mô tả" wide>
+                      <span className="whitespace-pre-wrap">{description || '-'}</span>
                     </DetailField>
                   </dl>
                 </CardContent>
@@ -211,7 +175,7 @@ export default function MapImageDetailDialog({
               <Card>
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <MapIcon className="text-primary size-4" aria-hidden="true" />
+                    <Ruler className="text-primary size-4" aria-hidden="true" />
                     Tệp và nguồn
                   </CardTitle>
                 </CardHeader>
@@ -220,14 +184,10 @@ export default function MapImageDetailDialog({
                     <DetailField label="Tên tệp" wide>
                       <CodeValue>{fileName}</CodeValue>
                     </DetailField>
-                    <DetailField label="Loại tệp">
-                      <CodeValue>{mapImage.mimeType ?? mapImage.mime_type}</CodeValue>
-                    </DetailField>
                     <DetailField label="Kích thước">{formatFileSize(fileSize)}</DetailField>
                     <DetailField label="Truy cập tệp" wide>
                       Liên kết ngắn hạn được tạo khi người dùng chọn mở/tải tệp.
                     </DetailField>
-                    <DetailField label="Người tải lên">{uploader}</DetailField>
                   </dl>
                 </CardContent>
               </Card>
@@ -254,7 +214,7 @@ export default function MapImageDetailDialog({
           </div>
         ) : (
           <div className="text-muted-foreground flex min-h-56 items-center justify-center px-6">
-            {dbQuery.isLoading ? 'Đang tải dữ liệu...' : 'Không có dữ liệu ảnh bản đồ.'}
+            {dbQuery.isLoading ? 'Đang tải dữ liệu...' : 'Không có dữ liệu bản đồ PDF.'}
           </div>
         )}
       </DialogContent>

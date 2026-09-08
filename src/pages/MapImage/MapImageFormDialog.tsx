@@ -5,9 +5,8 @@ import { z } from 'zod'
 import { FileImage, FileText, Save } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { mapImageService, useApiQuery } from '@/service'
-import type { ApiResponse, MapImage, UpdatePdfMapBody } from '@/types/api'
-import { THEME_LABEL } from '@/constant/mapImageConstant'
-import { parseLink, isPdf } from '@/lib/utils'
+import type { ApiResponse, PdfMap, UpdatePdfMapBody } from '@/types/api'
+import { isPdf } from '@/lib/utils'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,13 +14,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   FileUpload,
   FileUploadDropzone,
@@ -33,25 +25,21 @@ import {
   FileUploadTrigger,
 } from '@/components/ui/file-upload'
 
-const mapImageSchema = z.object({
-  titleVi: z.string().trim().min(2, 'Tiêu đề tiếng Việt phải có ít nhất 2 ký tự').max(255),
-  titleEn: z.string().trim().max(255).optional().or(z.literal('')),
-  descriptionVi: z.string().trim().max(2000).optional().or(z.literal('')),
-  descriptionEn: z.string().trim().max(2000).optional().or(z.literal('')),
-  themeCode: z.string().trim().min(1, 'Vui lòng chọn chủ đề'),
-  year: z
+const pdfMapSchema = z.object({
+  title: z.string().trim().min(2, 'Tiêu đề phải có ít nhất 2 ký tự').max(300),
+  description: z.string().trim().max(5000).optional().or(z.literal('')),
+  mapYear: z
     .string()
     .trim()
     .refine((v) => /^\d+$/.test(v) && Number(v) >= 1900 && Number(v) <= 2200, {
-      message: 'Năm phải từ 1900 đến 2100',
+      message: 'Năm phải từ 1900 đến 2200',
     }),
-  scale: z.string().trim().min(1).max(120),
-  preparingAgency: z.string().trim().min(1, 'Cơ quan lập bản đồ là bắt buộc').max(255),
+  scaleLabel: z.string().trim().min(1, 'Vui lòng nhập tỉ lệ bản đồ').max(100),
+  preparingAgency: z.string().trim().min(1, 'Cơ quan lập bản đồ là bắt buộc').max(300),
   isPublic: z.boolean(),
-  thumbnailUrl: z.string().trim().max(500).optional().or(z.literal('')),
 })
 
-type MapImageFormValues = z.infer<typeof mapImageSchema>
+type PdfMapFormValues = z.infer<typeof pdfMapSchema>
 
 interface MapImageFormDialogProps {
   open: boolean
@@ -61,35 +49,27 @@ interface MapImageFormDialogProps {
   isLoading?: boolean
 }
 
-const ACCEPTED_MIME = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+const ACCEPTED_MIME = ['application/pdf']
 const MAX_FILE_SIZE = 20 * 1024 * 1024
 
-function toFormValues(mapImage: MapImage | null): MapImageFormValues {
+function toFormValues(pdfMap: PdfMap | null): PdfMapFormValues {
   return {
-    titleVi: mapImage?.translations?.vi?.title ?? mapImage?.title ?? mapImage?.name ?? '',
-    titleEn: mapImage?.translations?.en?.title ?? '',
-    descriptionVi: mapImage?.translations?.vi?.description ?? mapImage?.description ?? '',
-    descriptionEn: mapImage?.translations?.en?.description ?? '',
-    themeCode: mapImage?.themeCode ?? '',
-    year: mapImage?.year != null ? String(mapImage.year) : '',
-    scale: mapImage?.scale ?? '',
-    preparingAgency: mapImage?.preparingAgency ?? '',
-    isPublic: mapImage?.isPublic ?? true,
-    thumbnailUrl: mapImage?.thumbnailUrl ?? '',
+    title: pdfMap?.translations?.vi?.title ?? pdfMap?.title ?? '',
+    description: pdfMap?.translations?.vi?.description ?? pdfMap?.description ?? '',
+    mapYear: pdfMap?.map_year != null ? String(pdfMap.map_year) : pdfMap?.mapYear != null ? String(pdfMap.mapYear) : '',
+    scaleLabel: pdfMap?.scale_label ?? pdfMap?.scaleLabel ?? '',
+    preparingAgency: pdfMap?.preparing_agency ?? pdfMap?.preparingAgency ?? '',
+    isPublic: (pdfMap?.visibility ?? 'public') === 'public',
   }
 }
 
-const DEFAULT_VALUES: MapImageFormValues = {
-  titleVi: '',
-  titleEn: '',
-  descriptionVi: '',
-  descriptionEn: '',
-  themeCode: '',
-  year: '',
-  scale: '',
+const DEFAULT_VALUES: PdfMapFormValues = {
+  title: '',
+  description: '',
+  mapYear: '',
+  scaleLabel: '',
   preparingAgency: '',
   isPublic: true,
-  thumbnailUrl: '',
 }
 
 export default function MapImageFormDialog({
@@ -106,14 +86,14 @@ export default function MapImageFormDialog({
     false,
     false
   )
-  const mapImage = (() => {
+  const pdfMap = (() => {
     const d = (dbQuery.data as ApiResponse<any>)?.data
-    return (d ? (d.mapImage ?? d.pdfMap ?? d) : null) as MapImage | null
+    return (d ? (d.pdfMap ?? d.mapImage ?? d) : null) as PdfMap | null
   })()
   const isEdit = !!mapImageId
   const detailLoading = isEdit && dbQuery.isLoading
 
-  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [pdfFiles, setPdfFiles] = useState<File[]>([])
 
   const {
     register,
@@ -122,25 +102,25 @@ export default function MapImageFormDialog({
     watch,
     setValue,
     formState: { errors },
-  } = useForm<MapImageFormValues>({
-    resolver: zodResolver(mapImageSchema) as any,
+  } = useForm<PdfMapFormValues>({
+    resolver: zodResolver(pdfMapSchema),
     defaultValues: DEFAULT_VALUES,
   })
 
-  const originalValues = useMemo(() => toFormValues(mapImage), [mapImage])
+  const originalValues = useMemo(() => toFormValues(pdfMap), [pdfMap])
 
   useEffect(() => {
     if (!open) return
-    if (isEdit && mapImage) reset(toFormValues(mapImage))
+    if (isEdit && pdfMap) reset(toFormValues(pdfMap))
     else if (!isEdit) reset(DEFAULT_VALUES)
-    setImageFiles([])
-  }, [open, isEdit, mapImage, reset])
+    setPdfFiles([])
+  }, [open, isEdit, pdfMap, reset])
 
   const values = watch()
   const changedFields = useMemo(() => {
-    if (!isEdit) return new Set<keyof MapImageFormValues>()
-    const changed = new Set<keyof MapImageFormValues>()
-    ;(Object.keys(DEFAULT_VALUES) as Array<keyof MapImageFormValues>).forEach((key) => {
+    if (!isEdit) return new Set<keyof PdfMapFormValues>()
+    const changed = new Set<keyof PdfMapFormValues>()
+    ;(Object.keys(DEFAULT_VALUES) as Array<keyof PdfMapFormValues>).forEach((key) => {
       if ((values[key] ?? '') !== (originalValues[key] ?? '')) changed.add(key)
     })
     return changed
@@ -149,47 +129,43 @@ export default function MapImageFormDialog({
   const changedCount = changedFields.size
   const submitDisabled = isLoading || detailLoading || (isEdit && changedCount === 0)
 
-  const onImageValidate = useCallback((file: File): string | null => {
-    if (!ACCEPTED_MIME.includes(file.type)) return 'Chỉ chấp nhận PDF hoặc ảnh (JPG, PNG, WebP, GIF)'
+  const onPdfValidate = useCallback((file: File): string | null => {
+    if (!ACCEPTED_MIME.includes(file.type)) return 'Chỉ chấp nhận tệp PDF'
     if (file.size > MAX_FILE_SIZE) return 'Kích thước file không được quá 20MB'
     return null
   }, [])
 
-  const onImageReject = useCallback((file: File, message: string) => {
+  const onPdfReject = useCallback((file: File, message: string) => {
     const short = file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name
     toast.error(`${message}: "${short}"`)
   }, [])
 
-  const buildUpdatePayload = (data: MapImageFormValues): UpdatePdfMapBody => {
+  const buildUpdatePayload = (data: PdfMapFormValues): UpdatePdfMapBody => {
     const payload: UpdatePdfMapBody = {
-      expectedUpdatedAt: mapImage?.updatedAt ?? mapImage?.updated_at ?? '',
+      expectedUpdatedAt: pdfMap?.updatedAt ?? pdfMap?.updated_at ?? '',
     }
-    if (changedFields.has('isPublic')) payload.isPublic = data.isPublic
-
-    const translations: UpdatePdfMapBody['translations'] = {}
-    if (changedFields.has('titleVi')) {
-      translations.vi = {
-        title: data.titleVi.trim(),
-      }
-    }
-    if (Object.keys(translations).length > 0) payload.translations = translations
-
+    if (changedFields.has('title')) payload.title = data.title.trim()
+    if (changedFields.has('description')) payload.description = data.description?.trim() || ''
+    if (changedFields.has('mapYear')) payload.mapYear = Number(data.mapYear)
+    if (changedFields.has('scaleLabel')) payload.scaleLabel = data.scaleLabel.trim()
+    if (changedFields.has('preparingAgency')) payload.preparingAgency = data.preparingAgency.trim()
+    if (changedFields.has('isPublic')) payload.visibility = data.isPublic ? 'public' : 'internal'
     return payload
   }
 
-  const buildCreateFormData = (data: MapImageFormValues): FormData => {
+  const buildCreateFormData = (data: PdfMapFormValues): FormData => {
     const fd = new FormData()
-    fd.append('title', data.titleVi.trim())
-    if (data.descriptionVi?.trim()) fd.append('description', data.descriptionVi.trim())
-    fd.append('mapYear', data.year)
-    fd.append('scaleLabel', data.scale.trim())
+    fd.append('title', data.title.trim())
+    if (data.description?.trim()) fd.append('description', data.description.trim())
+    fd.append('mapYear', data.mapYear)
+    fd.append('scaleLabel', data.scaleLabel.trim())
     fd.append('preparingAgency', data.preparingAgency.trim())
     fd.append('visibility', data.isPublic ? 'public' : 'internal')
-    if (imageFiles[0]) fd.append('file', imageFiles[0])
+    if (pdfFiles[0]) fd.append('file', pdfFiles[0])
     return fd
   }
 
-  const handleFormSubmit = (data: MapImageFormValues) => {
+  const handleFormSubmit = (data: PdfMapFormValues) => {
     if (isEdit) {
       if (changedCount === 0) {
         toast.info('Chưa có thay đổi nào để lưu')
@@ -198,25 +174,24 @@ export default function MapImageFormDialog({
       onSubmit(buildUpdatePayload(data))
       return
     }
-    if (imageFiles.length === 0) {
-      toast.error('Vui lòng chọn file ảnh bản đồ')
+    if (pdfFiles.length === 0) {
+      toast.error('Vui lòng chọn tệp PDF bản đồ')
       return
     }
     onSubmit(buildCreateFormData(data))
   }
 
-  const existingFileUrl = mapImage?.fileUrl || mapImage?.image_url || ''
-  const existingThumbnailUrl = mapImage?.thumbnailUrl || ''
+  const existingFileName = pdfMap?.original_name || pdfMap?.fileName || ''
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
         <div className="shrink-0 border-b px-6 py-5 pr-12">
-          <DialogTitle>{isEdit ? 'Chỉnh sửa ảnh bản đồ' : 'Thêm ảnh bản đồ mới'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Chỉnh sửa bản đồ PDF' : 'Thêm bản đồ PDF mới'}</DialogTitle>
           <DialogDescription className="mt-1">
             {isEdit
-              ? 'Cập nhật thông tin ảnh bản đồ. Các trường không đổi sẽ không được gửi lên.'
-              : 'Điền đầy đủ thông tin và tải lên file bản đồ.'}
+              ? 'Cập nhật thông tin bản đồ PDF. Các trường không đổi sẽ không được gửi lên.'
+              : 'Điền đầy đủ thông tin và tải lên tệp PDF bản đồ.'}
           </DialogDescription>
         </div>
 
@@ -230,46 +205,19 @@ export default function MapImageFormDialog({
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-              {isEdit && existingFileUrl && (
+              {isEdit && existingFileName && (
                 <div className="space-y-2">
-                  <Label>Ảnh hiện tại</Label>
-                  <div className="grid gap-3 md:grid-cols-[1fr_160px]">
-                    <div className="bg-muted/40 flex min-h-44 items-center justify-center overflow-hidden rounded-md border">
-                      {isPdf(existingFileUrl) ? (
-                        <div className="flex flex-col items-center gap-2 py-8 text-center">
-                          <FileText className="text-primary size-10" />
-                          <span className="text-sm font-medium">Tệp PDF</span>
-                          <span className="text-muted-foreground max-w-56 truncate text-xs">
-                            {mapImage?.fileName || '-'}
-                          </span>
-                        </div>
-                      ) : (
-                        <img
-                          src={parseLink(existingFileUrl)}
-                          alt="Ảnh bản đồ"
-                          className="max-h-64 w-full object-contain"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs font-medium">Thumbnail</p>
-                      {existingThumbnailUrl ? (
-                        <div className="bg-muted/40 mt-1 flex h-32 items-center justify-center overflow-hidden rounded-md border">
-                          <img
-                            src={parseLink(existingThumbnailUrl)}
-                            alt="Thumbnail"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="text-muted-foreground bg-muted/20 mt-1 flex h-32 items-center justify-center rounded-md border border-dashed text-xs">
-                          Chưa có
-                        </div>
-                      )}
-                    </div>
+                  <Label>Tệp hiện tại</Label>
+                  <div className="bg-muted/40 flex min-h-24 items-center gap-3 rounded-md border p-4">
+                    {isPdf(existingFileName) ? (
+                      <FileText className="text-primary size-8 shrink-0" />
+                    ) : (
+                      <FileImage className="text-primary size-8 shrink-0" />
+                    )}
+                    <span className="text-sm font-medium truncate">{existingFileName}</span>
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    File chính không thay đổi được từ đây. Bạn có thể cập nhật link thumbnail bên dưới.
+                    Tệp bản đồ hiện không thể thay đổi từ đây. Chỉ có thể cập nhật thông tin mô tả.
                   </p>
                 </div>
               )}
@@ -277,33 +225,31 @@ export default function MapImageFormDialog({
               {!isEdit && (
                 <div className="space-y-2">
                   <Label>
-                    File bản đồ <span className="text-destructive">*</span>
+                    Tệp PDF bản đồ <span className="text-destructive">*</span>
                   </Label>
                   <FileUpload
-                    value={imageFiles}
-                    onValueChange={setImageFiles}
-                    onFileValidate={onImageValidate}
-                    onFileReject={onImageReject}
-                    accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,image/*,application/pdf"
+                    value={pdfFiles}
+                    onValueChange={setPdfFiles}
+                    onFileValidate={onPdfValidate}
+                    onFileReject={onPdfReject}
+                    accept=".pdf,application/pdf"
                     maxFiles={1}
                     maxSize={MAX_FILE_SIZE}
                   >
                     <FileUploadDropzone className="border-dashed">
                       <div className="flex flex-col items-center gap-1 text-center">
-                        <FileImage className="text-muted-foreground size-6" />
-                        <p className="text-sm font-medium">Kéo thả file vào đây</p>
+                        <FileText className="text-muted-foreground size-6" />
+                        <p className="text-sm font-medium">Kéo thả file PDF vào đây</p>
                         <FileUploadTrigger asChild>
                           <Button type="button" variant="outline" size="sm">
                             Chọn file
                           </Button>
                         </FileUploadTrigger>
-                        <p className="text-muted-foreground text-xs">
-                          PDF, JPG, PNG, WebP, GIF · tối đa 20MB
-                        </p>
+                        <p className="text-muted-foreground text-xs">Chỉ nhận PDF · tối đa 20MB</p>
                       </div>
                     </FileUploadDropzone>
                     <FileUploadList>
-                      {imageFiles.map((file) => (
+                      {pdfFiles.map((file) => (
                         <FileUploadItem key={file.name} value={file}>
                           <FileUploadItemPreview />
                           <FileUploadItemMetadata />
@@ -321,106 +267,62 @@ export default function MapImageFormDialog({
 
               <Separator />
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="titleVi">
-                    Tiêu đề (VI) <span className="text-destructive">*</span>
-                  </Label>
-                  <Input id="titleVi" {...register('titleVi')} placeholder="Biến động lớp phủ..." />
-                  {errors.titleVi && (
-                    <p className="text-destructive text-xs">{errors.titleVi.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="titleEn">Tiêu đề (EN)</Label>
-                  <Input id="titleEn" {...register('titleEn')} placeholder="Land cover change..." />
-                  {errors.titleEn && (
-                    <p className="text-destructive text-xs">{errors.titleEn.message}</p>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="title">
+                  Tiêu đề <span className="text-destructive">*</span>
+                </Label>
+                <Input id="title" {...register('title')} placeholder="Bản đồ thoát nước..." />
+                {errors.title && <p className="text-destructive text-xs">{errors.title.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Mô tả</Label>
+                <Textarea
+                  id="description"
+                  rows={3}
+                  {...register('description')}
+                  placeholder="Nội dung mô tả bản đồ"
+                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="descriptionVi">Mô tả (VI)</Label>
-                  <Textarea
-                    id="descriptionVi"
-                    rows={3}
-                    {...register('descriptionVi')}
-                    placeholder="Nội dung mô tả tiếng Việt"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="descriptionEn">Mô tả (EN)</Label>
-                  <Textarea
-                    id="descriptionEn"
-                    rows={3}
-                    {...register('descriptionEn')}
-                    placeholder="English description"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>
-                    Chủ đề <span className="text-destructive">*</span>
+                  <Label htmlFor="mapYear">
+                    Năm <span className="text-destructive">*</span>
                   </Label>
-                  <Select
-                    value={watch('themeCode')}
-                    onValueChange={(v) =>
-                      setValue('themeCode', v, { shouldDirty: true, shouldValidate: true })
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Chọn chủ đề" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(THEME_LABEL).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.themeCode && (
-                    <p className="text-destructive text-xs">{errors.themeCode.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="year">Năm</Label>
                   <Input
-                    id="year"
+                    id="mapYear"
                     type="number"
                     min={1900}
-                    max={2100}
-                    {...register('year')}
-                    placeholder="2023"
+                    max={2200}
+                    {...register('mapYear')}
+                    placeholder="2026"
                   />
-                  {errors.year && (
-                    <p className="text-destructive text-xs">{errors.year.message}</p>
+                  {errors.mapYear && (
+                    <p className="text-destructive text-xs">{errors.mapYear.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="scale">Tỉ lệ</Label>
-                  <Input id="scale" {...register('scale')} placeholder="1:50000" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="preparingAgency">Cơ quan lập bản đồ</Label>
-                  <Input id="preparingAgency" {...register('preparingAgency')} placeholder="UBND TP Cẩm Phả" />
-                  {errors.preparingAgency && (
-                    <p className="text-destructive text-xs">{errors.preparingAgency.message}</p>
+                  <Label htmlFor="scaleLabel">
+                    Tỉ lệ <span className="text-destructive">*</span>
+                  </Label>
+                  <Input id="scaleLabel" {...register('scaleLabel')} placeholder="1:25.000" />
+                  {errors.scaleLabel && (
+                    <p className="text-destructive text-xs">{errors.scaleLabel.message}</p>
                   )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="thumbnailUrl">Đường dẫn thumbnail (tùy chọn)</Label>
+                  <Label htmlFor="preparingAgency">
+                    Cơ quan lập bản đồ <span className="text-destructive">*</span>
+                  </Label>
                   <Input
-                    id="thumbnailUrl"
-                    {...register('thumbnailUrl')}
-                    placeholder="https://..."
+                    id="preparingAgency"
+                    {...register('preparingAgency')}
+                    placeholder="UBND thành phố Cẩm Phả"
                   />
+                  {errors.preparingAgency && (
+                    <p className="text-destructive text-xs">{errors.preparingAgency.message}</p>
+                  )}
                 </div>
               </div>
 

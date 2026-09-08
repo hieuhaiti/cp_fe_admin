@@ -1,11 +1,11 @@
-export type UserRoleCode = 'system_admin' | 'so_nnmt' | 'ubnd_tinh' | 'citizen'
+export type UserRoleCode = 'system_admin' | 'ubnd_tp' | 'so_tnmt' | 'so_xd' | 'citizen'
 
 export interface UserRole {
   id?: number
   code?: UserRoleCode | string
   name?: string
   description?: string
-  permissions?: Record<string, string[]> | string[]
+  permissions?: Record<string, string[] | Record<string, boolean>> | string[]
 }
 
 export interface User {

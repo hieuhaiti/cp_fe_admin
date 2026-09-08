@@ -15,11 +15,21 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const statusSchema = z.object({
-  status: z.enum(['new', 'in_progress', 'resolved', 'rejected'] as const),
-  note: z.string().max(1000, 'Ghi chú không được vượt quá 1000 ký tự').optional().or(z.literal('')),
-})
-type StatusFormValues = z.infer<typeof statusSchema>
+const feedbackReviewSchema = z
+  .object({
+    status: z.enum(['under_review', 'approved', 'rejected', 'resolved'] as const),
+    reason: z.string().trim().max(1000, 'Lý do không được vượt quá 1000 ký tự').optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.status === 'rejected' && (!value.reason || value.reason.length < 5)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['reason'],
+        message: 'Vui lòng nhập lý do từ chối có ít nhất 5 ký tự',
+      })
+    }
+  })
+type StatusFormValues = z.infer<typeof feedbackReviewSchema>
 
 interface FeedbackUpdateDialogProps {
   open: boolean
@@ -31,8 +41,9 @@ interface FeedbackUpdateDialogProps {
 }
 
 const STATUS_LABELS: { value: FeedbackStatus; label: string }[] = [
-  { value: 'new', label: 'Mới tiếp nhận' },
-  { value: 'in_progress', label: 'Đang xử lý' },
+  { value: 'pending', label: 'Chờ tiếp nhận' },
+  { value: 'under_review', label: 'Đang xem xét' },
+  { value: 'approved', label: 'Đã duyệt' },
   { value: 'resolved', label: 'Đã xử lý' },
   { value: 'rejected', label: 'Từ chối' },
 ]
@@ -46,27 +57,35 @@ export default function FeedbackUpdateDialog({
   canOverrideTransitions = false,
 }: FeedbackUpdateDialogProps) {
   const statusForm = useForm<StatusFormValues>({
-    resolver: zodResolver(statusSchema) as any,
+    resolver: zodResolver(feedbackReviewSchema),
     defaultValues: {
-      status: 'new',
-      note: '',
+      status: 'under_review',
+      reason: '',
     },
   })
 
   useEffect(() => {
     if (feedback) {
-      statusForm.reset({
-        status: feedback.status as any,
-        note: '',
-      })
+      const currentStatus: StatusFormValues['status'] =
+        feedback.status === 'approved' ||
+        feedback.status === 'rejected' ||
+        feedback.status === 'resolved' ||
+        feedback.status === 'under_review'
+          ? feedback.status
+          : 'under_review'
+      statusForm.reset({ status: currentStatus, reason: '' })
     }
   }, [feedback, open, statusForm])
 
+  const selectedStatus = statusForm.watch('status')
   const allowedStatuses = canOverrideTransitions
-    ? STATUS_LABELS.filter(({ value }) => value !== feedback?.status)
+    ? STATUS_LABELS.filter(({ value }) => value !== feedback?.status && value !== 'pending')
     : STATUS_LABELS.filter(({ value }) => {
-        if (feedback?.status === 'new') return value === 'in_progress' || value === 'rejected'
-        if (feedback?.status === 'in_progress') return value === 'resolved' || value === 'rejected'
+        if (feedback?.status === 'pending') return value === 'under_review' || value === 'rejected'
+        if (feedback?.status === 'under_review') {
+          return value === 'approved' || value === 'resolved' || value === 'rejected'
+        }
+        if (feedback?.status === 'approved') return value === 'resolved'
         return false
       })
 
@@ -102,13 +121,25 @@ export default function FeedbackUpdateDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="feedback-note">Ghi chú xử lý</Label>
+            <Label htmlFor="feedback-reason">
+              {selectedStatus === 'rejected' ? 'Lý do từ chối' : 'Lý do xử lý'}
+              {selectedStatus === 'rejected' && <span className="text-destructive"> *</span>}
+            </Label>
             <Textarea
-              id="feedback-note"
-              {...statusForm.register('note')}
+              id="feedback-reason"
+              {...statusForm.register('reason')}
               rows={4}
-              placeholder="Nhập ghi chú xử lý phản ánh..."
+              placeholder={
+                selectedStatus === 'rejected'
+                  ? 'Nhập lý do từ chối phản ánh...'
+                  : 'Nhập lý do hoặc ghi chú xử lý...'
+              }
             />
+            {statusForm.formState.errors.reason && (
+              <p className="text-destructive text-xs">
+                {statusForm.formState.errors.reason.message}
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

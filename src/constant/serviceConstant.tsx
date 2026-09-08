@@ -34,15 +34,13 @@ export const serviceMapImagePath = '/cms/pdf-maps'
 export const serviceMapLayerPath = '/admin/layers'
 export const serviceMapImportJobPath = '/admin/layers/imports'
 export const serviceMapRasterHarvestPath = '/map/rasters'
+export const serviceWebMapPath = '/web-map'
 
 // Map APIs (third-party sharing)
 export const serviceMapApiPath = '/admin/api-registry'
 export const serviceMapDataPath = '/shared'
 // Legacy aliases
 export const serviceMapLayerApiPath = '/map-apis'
-
-// Weather
-export const serviceWeatherPath = '/weather'
 
 // Remote Sensing
 export const serviceRemoteSensingPath = '/remote-sensing'

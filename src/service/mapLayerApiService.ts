@@ -3,6 +3,9 @@ import { serviceMapApiPath, serviceMapDataPath } from '@/constant/serviceConstan
 import type {
   ApiResponse,
   MapApi,
+  MapApiKey,
+  MapApiKeyIssueData,
+  MapApiKeyListData,
   MapApiListData,
   MapApiListParams,
   CreateMapApiBody,
@@ -103,6 +106,15 @@ async function toCanonicalUpdateBody(id: number | string, data: UpdateMapApiBody
   return { expectedVersion: version, name: data.name }
 }
 
+async function firstKeyOf(registryId: number | string): Promise<MapApiKey | undefined> {
+  const response = await apiClient.get<MapApiKeyListData | MapApiKey[]>(
+    `${serviceMapApiPath}/${registryId}/keys`
+  )
+  const raw = response.data
+  const items: MapApiKey[] = Array.isArray(raw) ? raw : (raw?.items ?? [])
+  return items.find((key) => key?.id !== undefined && key.id !== null)
+}
+
 const mapApiService = {
   // ── Admin CRUD ──
 
@@ -126,28 +138,27 @@ const mapApiService = {
 
   /** GET /admin/api-registry/:registryId/keys */
   getKeys: (registryId: number | string) =>
-    apiClient.get<any>(`${serviceMapApiPath}/${registryId}/keys`),
+    apiClient.get<MapApiKeyListData | MapApiKey[]>(`${serviceMapApiPath}/${registryId}/keys`),
 
   /** POST /admin/api-registry/keys/:apiKeyId/rotate */
   rotateKey: (apiKeyId: number | string, expiresInHours = 720) =>
-    apiClient.post<any>(`${serviceMapApiPath}/keys/${apiKeyId}/rotate`, { expiresInHours }),
+    apiClient.post<MapApiKeyIssueData>(`${serviceMapApiPath}/keys/${apiKeyId}/rotate`, {
+      expiresInHours,
+    }),
 
   /** POST /admin/api-registry/keys/:apiKeyId/revoke */
   revokeKey: (apiKeyId: number | string) =>
-    apiClient.post<any>(`${serviceMapApiPath}/keys/${apiKeyId}/revoke`),
+    apiClient.post<MapApiKeyIssueData>(`${serviceMapApiPath}/keys/${apiKeyId}/revoke`),
 
   /** Rotate or issue: get existing UUID key for registry and rotate it; if none, issue a new one */
   regenerate: async (registryId: number | string, keyName?: string) => {
-    const keysRes = await apiClient.get<any>(`${serviceMapApiPath}/${registryId}/keys`)
-    const raw = keysRes.data
-    const items: any[] = Array.isArray(raw) ? raw : (raw?.items ?? [])
-    const first = items.find((k: any) => k?.id)
+    const first = await firstKeyOf(registryId)
     if (first) {
-      return apiClient.post<any>(`${serviceMapApiPath}/keys/${first.id}/rotate`, {
+      return apiClient.post<MapApiKeyIssueData>(`${serviceMapApiPath}/keys/${first.id}/rotate`, {
         expiresInHours: 720,
       })
     }
-    return apiClient.post<any>(`${serviceMapApiPath}/${registryId}/keys`, {
+    return apiClient.post<MapApiKeyIssueData>(`${serviceMapApiPath}/${registryId}/keys`, {
       name: keyName ?? 'Khóa mới',
       consumer: keyName ?? 'Admin',
       scopes: ['features:read'],
@@ -158,12 +169,9 @@ const mapApiService = {
 
   /** Revoke first UUID key of registry */
   revoke: async (registryId: number | string) => {
-    const keysRes = await apiClient.get<any>(`${serviceMapApiPath}/${registryId}/keys`)
-    const raw = keysRes.data
-    const items: any[] = Array.isArray(raw) ? raw : (raw?.items ?? [])
-    const first = items.find((k: any) => k?.id)
+    const first = await firstKeyOf(registryId)
     if (!first) throw new Error('Không tìm thấy khóa API để thu hồi.')
-    return apiClient.post<any>(`${serviceMapApiPath}/keys/${first.id}/revoke`)
+    return apiClient.post<MapApiKeyIssueData>(`${serviceMapApiPath}/keys/${first.id}/revoke`)
   },
 
   /** DELETE /map-apis/:mapApiId */

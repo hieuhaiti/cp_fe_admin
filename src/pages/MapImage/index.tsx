@@ -49,7 +49,7 @@ export default function MapImagePage() {
     () => ({
       page,
       limit,
-      sortBy: 'id',
+      sortBy: 'id' as const,
       sortOrder: 'DESC' as const,
       ...(q.trim() ? { q: q.trim() } : {}),
     }),
@@ -152,13 +152,13 @@ export default function MapImagePage() {
             ) : items.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Chưa có ảnh bản đồ phù hợp.</TableCell></TableRow>
             ) : items.map((item) => {
-              const isPublic = item.isPublic ?? item.visibility === 'public'
-              const year = item.year ?? item.map_year
+              const isPublic = item.visibility === 'public'
+              const year = item.map_year ?? item.mapYear
               const createdAt = item.createdAt ?? item.created_at
               return (
               <TableRow key={item.id} className="cursor-pointer" onClick={() => { setSelectedId(item.id); setDetailOpen(true) }}>
                 <TableCell className="font-medium">{item.title || item.fileName || item.original_name || `Bản đồ #${item.id}`}</TableCell>
-                <TableCell>{item.scale_label ?? item.scale ?? '-'}</TableCell>
+                <TableCell>{item.scale_label ?? item.scaleLabel ?? '-'}</TableCell>
                 <TableCell>{year ?? '-'}</TableCell>
                 <TableCell><Badge variant={isPublic ? 'default' : 'secondary'}>{isPublic ? 'Công khai' : 'Nội bộ'}</Badge></TableCell>
                 <TableCell>{createdAt ? formatDate(createdAt) : '-'}</TableCell>

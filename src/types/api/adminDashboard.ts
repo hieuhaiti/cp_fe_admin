@@ -35,9 +35,19 @@ export interface FeedbackOverviewBlock {
   byStatus: Record<string, number>
 }
 
+export interface LayerOverviewBlock {
+  total: number
+  published: number
+  publicCount: number
+  latestUpdatedAt: string | null
+}
+
 export interface AdminDashboardOverview {
   flood: FloodOverviewBlock | null
   classification: ClassificationOverviewBlock | null
   landComposition: LandCompositionBlock | null
-  feedback: FeedbackOverviewBlock
+  feedback: FeedbackOverviewBlock | null
+  layers?: LayerOverviewBlock | null
+  generatedAt?: string
 }
+

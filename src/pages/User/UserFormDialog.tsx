@@ -18,8 +18,9 @@ import {
 
 const ROLE_OPTIONS: { value: UserRoleCode; label: string }[] = [
   { value: 'system_admin', label: 'Quản trị hệ thống' },
-  { value: 'so_nnmt', label: 'Sở NN&MT' },
-  { value: 'ubnd_tinh', label: 'UBND tỉnh' },
+  { value: 'ubnd_tp', label: 'UBND thành phố' },
+  { value: 'so_tnmt', label: 'Sở TN&MT' },
+  { value: 'so_xd', label: 'Sở Xây dựng' },
   { value: 'citizen', label: 'Người dân' },
 ]
 
@@ -41,7 +42,7 @@ const createUserSchema = z.object({
     .regex(/^[0-9+\-\s()]{8,20}$/, 'Số điện thoại không hợp lệ (8-20 ký tự)')
     .optional()
     .or(z.literal('')),
-  roleCode: z.enum(['system_admin', 'so_nnmt', 'ubnd_tinh', 'citizen'] as const),
+  roleCode: z.enum(['system_admin', 'ubnd_tp', 'so_tnmt', 'so_xd', 'citizen'] as const),
 })
 
 type CreateUserFormData = z.infer<typeof createUserSchema>
@@ -96,7 +97,7 @@ export default function UserFormDialog({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateUserFormData>({
-    resolver: zodResolver(createUserSchema) as any,
+    resolver: zodResolver(createUserSchema),
     defaultValues: {
       email: '',
       password: '',

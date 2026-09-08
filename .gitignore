@@ -38,3 +38,5 @@ dist-ssr
 # promt
 prompts/
 .shared
+
+coverage/

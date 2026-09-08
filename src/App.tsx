@@ -23,6 +23,8 @@ const UserPage = lazy(() => import('@/pages/User'))
 const NewsPage = lazy(() => import('@/pages/News'))
 const NewsCommentsPage = lazy(() => import('@/pages/NewsComments'))
 const MapLayerPage = lazy(() => import('@/pages/MapLayers'))
+const TimeSeriesPage = lazy(() => import('@/pages/TimeSeries'))
+const SourceImagesPage = lazy(() => import('@/pages/SourceImages'))
 const MapLayerApisPage = lazy(() => import('@/pages/MapLayerApis'))
 const MapLayerApiPublicPage = lazy(() => import('@/pages/MapLayerApis/MapLayerApiPublicPage'))
 const ImportGeoJsonPage = lazy(() => import('@/pages/MapLayers/ImportGeoJson'))
@@ -97,7 +99,7 @@ function App() {
               </Route>
               <Route
                 element={
-                  <ProtectedRoute permission={{ resource: 'comments', action: 'approve' }} />
+                  <ProtectedRoute permission={{ resource: 'news', action: 'update' }} />
                 }
               >
                 <Route path="/news-comments" element={<NewsCommentsPage />} />
@@ -105,19 +107,25 @@ function App() {
 
               {/* GIS */}
               <Route
-                element={<ProtectedRoute permission={{ resource: 'map_layers', action: 'read' }} />}
+                element={<ProtectedRoute permission={{ resource: 'layers', action: 'read' }} />}
               >
                 <Route path="/map-layers" element={<MapLayerPage />} />
               </Route>
               <Route
+                element={<ProtectedRoute permission={{ resource: 'raster', action: 'read' }} />}
+              >
+                <Route path="/map-layers/time-series" element={<TimeSeriesPage />} />
+                <Route path="/map-layers/source-images" element={<SourceImagesPage />} />
+              </Route>
+              <Route
                 element={
-                  <ProtectedRoute permission={{ resource: 'map_layers', action: 'create' }} />
+                  <ProtectedRoute permission={{ resource: 'layers', action: 'create' }} />
                 }
               >
                 <Route path="/map-layers/import-geojson" element={<ImportGeoJsonPage />} />
               </Route>
               <Route
-                element={<ProtectedRoute permission={{ resource: 'map_apis', action: 'read' }} />}
+                element={<ProtectedRoute permission={{ resource: 'api_registry', action: 'read' }} />}
               >
                 <Route path="/map-apis/*" element={<MapLayerApisPage />} />
               </Route>
@@ -155,7 +163,7 @@ function App() {
               </Route>
               <Route
                 element={
-                  <ProtectedRoute permission={{ resource: 'kttv_scenarios', action: 'read' }} />
+                  <ProtectedRoute permission={{ resource: 'flood', action: 'read' }} />
                 }
               >
                 <Route path="/kttv-scenarios" element={<KttvScenariosPage />} />
@@ -163,7 +171,7 @@ function App() {
 
               {/* Vận hành */}
               <Route
-                element={<ProtectedRoute permission={{ resource: 'feedback', action: 'read' }} />}
+                element={<ProtectedRoute permission={{ resource: 'field_report', action: 'read' }} />}
               >
                 <Route path="/feedbacks" element={<FeedbackPage />} />
               </Route>

@@ -33,6 +33,8 @@ const floodService = {
     apiClient.post<FloodRun>(`${serviceAdminFloodPath}/runs/${id}/rerun`, {}, noLang),
   cancel: (id: number) =>
     apiClient.post<FloodRun>(`${serviceAdminFloodPath}/runs/${id}/cancel`, {}, noLang),
+  deleteRun: (id: number) =>
+    apiClient.del<{ id: number }>(`${serviceAdminFloodPath}/runs/${id}`, undefined, noLang),
   publishArtifact: (id: number) =>
     apiClient.post(`${serviceAdminFloodPath}/artifacts/${id}/publish`, {}, noLang),
   unpublishArtifact: (id: number) =>

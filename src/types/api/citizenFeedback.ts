@@ -1,5 +1,5 @@
 export type FeedbackCategory = 'chay_rung' | 'vi_pham' | 'hien_trang'
-export type FeedbackStatus = 'new' | 'in_progress' | 'resolved' | 'rejected'
+export type FeedbackStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'resolved'
 export type FeedbackPriority = 'low' | 'normal' | 'high' | 'urgent'
 
 export interface FeedbackAttachment {
@@ -123,16 +123,9 @@ export interface FeedbackStatistics {
 }
 
 export interface UpdateFeedbackStatusBody {
-  status?: FeedbackStatus
+  status: Exclude<FeedbackStatus, 'pending'>
   reason?: string
-  expectedUpdatedAt?: string
-
-  // legacy
-  toStatus?: FeedbackStatus
-  note?: string
-  admin_response?: string
-  resolution_note?: string
-  is_location_verified?: boolean
+  expectedUpdatedAt: string
 }
 
 export interface FeedbackListParams {

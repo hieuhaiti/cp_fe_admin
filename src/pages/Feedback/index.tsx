@@ -59,13 +59,17 @@ function normalizeFeedback(item: any): CitizenFeedback {
   const userEmail = item.userEmail ?? item.sender_email ?? null
   const title = item.title ?? item.description ?? '-'
 
-  // Map API status to UI status
   const rawStatus = String(item.status ?? 'pending').toLowerCase()
-  let status: FeedbackStatus = 'new'
-  if (rawStatus === 'pending' || rawStatus === 'new') status = 'new'
-  else if (rawStatus === 'under_review' || rawStatus === 'in_progress') status = 'in_progress'
-  else if (rawStatus === 'approved' || rawStatus === 'resolved') status = 'resolved'
-  else if (rawStatus === 'rejected') status = 'rejected'
+  const status: FeedbackStatus =
+    rawStatus === 'under_review' || rawStatus === 'in_progress'
+      ? 'under_review'
+      : rawStatus === 'approved'
+        ? 'approved'
+        : rawStatus === 'resolved'
+          ? 'resolved'
+          : rawStatus === 'rejected'
+            ? 'rejected'
+            : 'pending'
 
   return {
     ...item,
@@ -103,7 +107,7 @@ function userNameOf(item: CitizenFeedback) {
 
 export default function FeedbackPage(): JSX.Element {
   const user = useAuthStore((s) => s.user)
-  const canHandle = hasPerm(user, 'feedback', 'update_status')
+  const canHandle = hasPerm(user, 'field_report', 'approve')
   const canOverrideTransitions = getUserRole(user) === ROLES.SYSTEM_ADMIN
   const showActions = canHandle
   const [currentPage, setCurrentPage] = useState(1)
@@ -118,14 +122,8 @@ export default function FeedbackPage(): JSX.Element {
     page: currentPage,
     limit,
     ...(searchValue && { q: searchValue }),
-
-    ...(filterStatus !== 'all' && {
-      status: (filterStatus === 'new'
-        ? 'pending'
-        : filterStatus === 'in_progress'
-          ? 'under_review'
-          : filterStatus) as FeedbackStatus,
-    }),
+    ...(filterCategory !== 'all' && { category: filterCategory }),
+    ...(filterStatus !== 'all' && { status: filterStatus }),
     ...(filterPriority !== 'all' && { priority: filterPriority }),
   }
 
@@ -222,8 +220,9 @@ export default function FeedbackPage(): JSX.Element {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tất cả TT</SelectItem>
-          <SelectItem value="new">Mới tiếp nhận</SelectItem>
-          <SelectItem value="in_progress">Đang xử lý</SelectItem>
+          <SelectItem value="pending">Chờ tiếp nhận</SelectItem>
+          <SelectItem value="under_review">Đang xem xét</SelectItem>
+          <SelectItem value="approved">Đã duyệt</SelectItem>
           <SelectItem value="resolved">Đã xử lý</SelectItem>
           <SelectItem value="rejected">Từ chối</SelectItem>
         </SelectContent>
@@ -399,8 +398,9 @@ export default function FeedbackPage(): JSX.Element {
                               tooltip="Cập nhật xử lý"
                               disabled={
                                 !canOverrideTransitions &&
-                                item.status !== 'new' &&
-                                item.status !== 'in_progress'
+                                item.status !== 'pending' &&
+                                item.status !== 'under_review' &&
+                                item.status !== 'approved'
                               }
                             >
                               <ClipboardEdit className="size-4" />
@@ -444,8 +444,8 @@ export default function FeedbackPage(): JSX.Element {
             statusMutation.mutate({
               id: selectedFeedback.id,
               data: {
-                toStatus: data.status as any,
-                note: data.note,
+                status: data.status,
+                reason: data.reason?.trim() || undefined,
                 expectedUpdatedAt: selectedFeedback.updatedAt ?? selectedFeedback.updated_at ?? '',
               },
             })

@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Pen, Trash2 } from 'lucide-react'
+import { Pen, Plus, Trash2 } from 'lucide-react'
 import PageLayout from '@/layout/pageLayout'
 import NewsDetailDialog from './NewsDetailDialog'
 import NewsFormDialog from './NewsFormDialog'
@@ -229,6 +229,7 @@ export default function News(): JSX.Element {
 
             {canCreate && (
               <Button variant="default" onClick={openAddDialog}>
+                <Plus className="size-4" />
                 Thêm tin tức
               </Button>
             )}

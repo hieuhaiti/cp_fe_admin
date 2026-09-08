@@ -12,14 +12,6 @@ export const PUBLIC_DOT: Record<string, string> = {
   false: 'bg-slate-400',
 }
 
-// ── Theme codes ───────────────────────────────────────────────────
-export const THEME_LABEL: Record<string, string> = {
-  lop_phu_nhiet: 'Lớp phủ nhiệt',
-  ngap_lut: 'Ngập lụt và thủy văn',
-  lop_phu_rung: 'Lớp phủ đối tượng',
-  khac: 'Khác',
-}
-
 // ── Legacy aliases (kept so pages not yet migrated keep compiling) ─
 export const ACTIVE_LABEL = PUBLIC_LABEL
 export const ACTIVE_CLASS = PUBLIC_CLASS

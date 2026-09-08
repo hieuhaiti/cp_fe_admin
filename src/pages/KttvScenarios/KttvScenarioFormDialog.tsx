@@ -28,6 +28,7 @@ import { kttvScenarioService, mapLayerService, useApiMutation, useApiQuery } fro
 import type { ApiResponse, MapLayer, MapLayerListData } from '@/types/api'
 import type { FloodScenario, FloodScenarioWriteBody } from '@/service/kttvScenarioService'
 import { useDebounce } from '@/hooks/useDebounce'
+import { getMappedErrorMessage } from '@/validators/mapLayerApiValidators'
 
 interface LayerComboboxProps {
   value: string
@@ -147,7 +148,8 @@ const scenarioSchema = z.object({
   is_active: z.boolean(),
 })
 
-type ScenarioFormValues = z.infer<typeof scenarioSchema>
+type ScenarioFormInputValues = z.input<typeof scenarioSchema>
+type ScenarioFormValues = z.output<typeof scenarioSchema>
 
 interface KttvScenarioFormDialogProps {
   open: boolean
@@ -162,7 +164,7 @@ function scenarioFromResponse(response: ApiResponse<any> | undefined): FloodScen
   return (data.scenario ?? data.floodScenario ?? data.item ?? data) as FloodScenario
 }
 
-const DEFAULT_VALUES: ScenarioFormValues = {
+const DEFAULT_VALUES: ScenarioFormInputValues = {
   code: '',
   name_vi: '',
   min_rainfall: '',
@@ -214,7 +216,7 @@ export default function KttvScenarioFormDialog({
     const d = (layersQuery.data as ApiResponse<MapLayerListData> | undefined)?.data
     if (!d) return []
     if (Array.isArray(d)) return d
-    return d?.items ?? (d as any)?.mapLayers ?? []
+    return d?.items ?? d?.mapLayers ?? []
   })()
 
   const {
@@ -225,8 +227,8 @@ export default function KttvScenarioFormDialog({
     setValue,
     control,
     formState: { errors },
-  } = useForm<ScenarioFormValues>({
-    resolver: zodResolver(scenarioSchema) as any,
+  } = useForm<ScenarioFormInputValues, unknown, ScenarioFormValues>({
+    resolver: zodResolver(scenarioSchema),
     defaultValues: DEFAULT_VALUES,
   })
 
@@ -239,10 +241,10 @@ export default function KttvScenarioFormDialog({
       reset({
         code: scenario.code ?? '',
         name_vi: scenario.name_vi ?? '',
-        min_rainfall: scenario.min_rainfall ?? '',
-        max_rainfall: scenario.max_rainfall ?? '',
-        min_tide: scenario.min_tide ?? '',
-        max_tide: scenario.max_tide ?? '',
+        min_rainfall: scenario.min_rainfall == null ? '' : String(scenario.min_rainfall),
+        max_rainfall: scenario.max_rainfall == null ? '' : String(scenario.max_rainfall),
+        min_tide: scenario.min_tide == null ? '' : String(scenario.min_tide),
+        max_tide: scenario.max_tide == null ? '' : String(scenario.max_tide),
         layer_code: scenario.layer_code ?? '',
         description: scenario.description ?? '',
         is_active: scenario.is_active !== false,
@@ -284,8 +286,8 @@ export default function KttvScenarioFormDialog({
   )
 
   const errorMessage = useMemo(() => {
-    const err = detailQuery.error as any
-    return err?.body?.message || err?.message || ''
+    if (!detailQuery.error) return ''
+    return getMappedErrorMessage(detailQuery.error, 'Không tải được chi tiết kịch bản')
   }, [detailQuery.error])
 
   const submitting = createMutation.isPending || updateMutation.isPending

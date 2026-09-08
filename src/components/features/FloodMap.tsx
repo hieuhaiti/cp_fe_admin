@@ -106,7 +106,6 @@ export default function FloodMap({
       map?.remove()
       if (mapRef.current === map) mapRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Rebuild sources/layers only when IDs or tile URLs change.

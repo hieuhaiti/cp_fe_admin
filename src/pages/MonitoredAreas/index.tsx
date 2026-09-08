@@ -54,14 +54,14 @@ const createSchema = z.object({
   note: z.string().max(2000).optional(),
   geomText: z
     .string()
-    .min(1, 'Nhập polygon GeoJSON')
+    .min(1, 'Nhập ranh giới khu vực')
     .refine((value) => {
       try {
         return polygonSchema.safeParse(JSON.parse(value)).success
       } catch {
         return false
       }
-    }, 'GeoJSON phải là Polygon hợp lệ, có ít nhất 4 điểm'),
+    }, 'Ranh giới khu vực phải hợp lệ và có ít nhất 4 điểm'),
 })
 
 type CreateForm = z.infer<typeof createSchema>
@@ -302,7 +302,9 @@ export default function MonitoredAreasPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="area-geom">Polygon GeoJSON</Label>
+              <Label htmlFor="area-geom">
+                Ranh giới khu vực <span className="text-destructive">*</span>
+              </Label>
               <Textarea
                 id="area-geom"
                 className="min-h-40 font-mono text-xs"

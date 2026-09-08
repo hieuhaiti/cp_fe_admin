@@ -63,6 +63,10 @@ interface NewsFormDialogProps {
   isLoading?: boolean
 }
 
+function isNews(value: unknown): value is NewsData['news'] {
+  return typeof value === 'object' && value !== null && 'id' in value
+}
+
 export default function NewsFormDialog({
   open,
   onOpenChange,
@@ -77,7 +81,8 @@ export default function NewsFormDialog({
     false,
     false
   )
-  const news = (dbQuery.data as ApiResponse<NewsData>)?.data?.news ?? null
+  const rawData = (dbQuery.data as ApiResponse<NewsData>)?.data
+  const news = isNews(rawData) ? rawData : rawData?.news ?? null
   const isEdit = !!news
   const [thumbnailFiles, setThumbnailFiles] = useState<File[]>([])
 
@@ -89,7 +94,7 @@ export default function NewsFormDialog({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<NewsFormValues>({
-    resolver: zodResolver(newsSchema) as any,
+    resolver: zodResolver(newsSchema),
     defaultValues: {
       title: '',
       content: '',
@@ -174,7 +179,7 @@ export default function NewsFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto p-4 sm:p-6">
         <DialogTitle>{isEdit ? 'Chỉnh sửa tin tức' : 'Thêm tin tức mới'}</DialogTitle>
         <DialogDescription>
           {isEdit ? 'Cập nhật thông tin bài viết' : 'Điền thông tin để tạo bài viết mới'}
@@ -223,7 +228,7 @@ export default function NewsFormDialog({
             <Input id="tags" {...register('tags')} placeholder="du-lich, bien-gioi, dak-lak" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Trạng thái</Label>
               <Select
@@ -282,7 +287,7 @@ export default function NewsFormDialog({
               maxFiles={1}
               maxSize={10 * 1024 * 1024}
             >
-              <FileUploadDropzone className="border-dashed">
+              <FileUploadDropzone className="border-dashed p-4 sm:p-6">
                 <div className="flex flex-col items-center gap-1 text-center">
                   <p className="text-sm font-medium">Kéo thả ảnh vào đây</p>
                   <p className="text-muted-foreground text-xs">hoặc</p>
@@ -300,7 +305,7 @@ export default function NewsFormDialog({
                     <FileUploadItemPreview />
                     <FileUploadItemMetadata />
                     <FileUploadItemDelete asChild>
-                      <Button type="button" variant="ghost" size="sm">
+                      <Button type="button" variant="ghost" size="sm" className="shrink-0">
                         Xóa
                       </Button>
                     </FileUploadItemDelete>
@@ -310,16 +315,17 @@ export default function NewsFormDialog({
             </FileUpload>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting || isLoading}
+              className="w-full sm:w-auto"
             >
               Hủy
             </Button>
-            <Button type="submit" disabled={isSubmitting || isLoading}>
+            <Button type="submit" disabled={isSubmitting || isLoading} className="w-full sm:w-auto">
               {isSubmitting || isLoading ? 'Đang xử lý...' : isEdit ? 'Cập nhật' : 'Tạo mới'}
             </Button>
           </div>

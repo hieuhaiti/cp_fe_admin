@@ -415,11 +415,15 @@ export default function NotificationSendPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm">Tiêu đề</label>
+            <label className="mb-1 block text-sm">
+              Tiêu đề <span className="text-destructive">*</span>
+            </label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm">Nội dung</label>
+            <label className="mb-1 block text-sm">
+              Nội dung <span className="text-destructive">*</span>
+            </label>
             <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
           </div>
 

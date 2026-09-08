@@ -3,27 +3,65 @@ import type {
   ApiResponse,
   ImportJob,
   MapLayer,
+  MapLayerLegend,
   MapLayerListData,
   MapLayerListParams,
+  TimeSeriesCatalogLayer,
+  LayerCleanupStatus,
 } from '@/types/api'
-import { serviceMapLayerPath, serviceMapImportJobPath } from '@/constant/serviceConstant'
+import {
+  serviceMapLayerPath,
+  serviceMapImportJobPath,
+  serviceWebMapPath,
+} from '@/constant/serviceConstant'
 
 type CanonicalLayerPatch = {
   expectedUpdatedAt: string
   nameVi?: string
   category?: string | null
   categoryName?: string | null
+  styleName?: string | null
   isPublic?: boolean
   isEnableDefault?: boolean
   minZoom?: number
   maxZoom?: number
-  legendConfig?: Record<string, unknown> | null
+  legendConfig?: MapLayerLegend | null
+  metadata?: Record<string, unknown> | null
 }
 
 function listItems(response: ApiResponse<MapLayerListData>): MapLayer[] {
   const data = response.data as MapLayerListData | MapLayer[] | undefined
   if (Array.isArray(data)) return data
   return data?.items ?? data?.mapLayers ?? []
+}
+
+function isTimeSeriesCatalogLayer(value: unknown): value is TimeSeriesCatalogLayer {
+  if (!value || typeof value !== 'object') return false
+  const layer = value as Partial<TimeSeriesCatalogLayer>
+  const members = layer.timeSeries?.members
+  return (
+    (typeof layer.id === 'number' || typeof layer.id === 'string') &&
+    typeof layer.code === 'string' &&
+    typeof layer.nameVi === 'string' &&
+    typeof layer.geoserverLayer === 'string' &&
+    layer.geoserverLayer.length > 0 &&
+    layer.timeSeries?.enabled === true &&
+    Array.isArray(layer.timeSeries.values) &&
+    layer.timeSeries.values.length > 0 &&
+    Array.isArray(members) &&
+    members.every(
+      (member) =>
+        (typeof member.imageId === 'number' || typeof member.imageId === 'string') &&
+        typeof member.sceneCode === 'string' &&
+        typeof member.acquiredAt === 'string' &&
+        (typeof member.fileObjectId === 'number' || typeof member.fileObjectId === 'string')
+    )
+  )
+}
+
+function timeSeriesCatalogItems(response: ApiResponse<unknown>): TimeSeriesCatalogLayer[] {
+  const data = response.data
+  return Array.isArray(data) ? data.filter(isTimeSeriesCatalogLayer) : []
 }
 
 async function resolveLayerId(idOrCode: number | string): Promise<number | string> {
@@ -50,14 +88,13 @@ function canonicalPatch(data: Record<string, unknown>): CanonicalLayerPatch {
     nameVi: (data.nameVi ?? data.name_vi) as string | undefined,
     category: data.category as string | null | undefined,
     categoryName: (data.categoryName ?? data.category_name) as string | null | undefined,
+    styleName: (data.styleName ?? data.style_name) as string | null | undefined,
     isPublic: (data.isPublic ?? data.is_public) as boolean | undefined,
     isEnableDefault: (data.isEnableDefault ?? data.is_enable_default) as boolean | undefined,
     minZoom: (data.minZoom ?? data.min_zoom) as number | undefined,
     maxZoom: (data.maxZoom ?? data.max_zoom) as number | undefined,
-    legendConfig: (data.legendConfig ?? data.legend_config) as
-      | Record<string, unknown>
-      | null
-      | undefined,
+    legendConfig: (data.legendConfig ?? data.legend_config) as MapLayerLegend | null | undefined,
+    metadata: data.metadata as Record<string, unknown> | null | undefined,
   }
 }
 
@@ -65,6 +102,15 @@ const unsupported = (name: string) =>
   Promise.reject(new Error(`${name} không có endpoint tương ứng trong Postman collection.`))
 
 export default {
+  /** GET /web-map/time-series-layers — documented Time Series catalog. */
+  getTimeSeriesCatalog: async () => {
+    const response = await apiClient.get<unknown>(`${serviceWebMapPath}/time-series-layers`)
+    return {
+      ...response,
+      data: timeSeriesCatalogItems(response),
+    } as ApiResponse<TimeSeriesCatalogLayer[]>
+  },
+
   /** GET /admin/layers?page=&limit= */
   getAll: (params?: MapLayerListParams) =>
     apiClient.get<MapLayerListData>(serviceMapLayerPath, { params }),
@@ -123,6 +169,18 @@ export default {
     return apiClient.del(`${serviceMapLayerPath}/${layerId}`, { expectedUpdatedAt })
   },
 
+  /** GET /admin/layers/:layerId/cleanup */
+  getCleanupStatus: async (idOrCode: number | string) => {
+    const layerId = await resolveLayerId(idOrCode)
+    return apiClient.get<LayerCleanupStatus>(`${serviceMapLayerPath}/${layerId}/cleanup`)
+  },
+
+  /** POST /admin/layers/:layerId/cleanup/retry */
+  retryCleanup: async (idOrCode: number | string) => {
+    const layerId = await resolveLayerId(idOrCode)
+    return apiClient.post<{ message: string }>(`${serviceMapLayerPath}/${layerId}/cleanup/retry`)
+  },
+
   /** POST /admin/layers/imports/shapefile */
   importShapefile: (data: {
     fileObjectId: number | string
@@ -159,12 +217,12 @@ export default {
   // Retained to avoid issuing requests to routes that do not exist in the
   // collection. Their UI flows need a product decision (import Shapefile/Excel
   // instead of direct/GeoJSON creation; no unpublish or active endpoint).
-  create: (_data: unknown) => unsupported('create'),
-  setActive: (_id: unknown, _data: unknown) => unsupported('setActive'),
-  toggleStatus: (_id: unknown, _active?: boolean) => unsupported('toggleStatus'),
-  unpublish: (_id: unknown) => unsupported('unpublish'),
-  importFile: (_data: unknown) => unsupported('importFile'),
-  importGeoJson: (_data: unknown) => unsupported('importGeoJson'),
-  listImportJobs: (_id: unknown) => unsupported('listImportJobs'),
-  harvestRaster: (_store: unknown, _data: unknown) => unsupported('harvestRaster'),
+  create: () => unsupported('create'),
+  setActive: () => unsupported('setActive'),
+  toggleStatus: () => unsupported('toggleStatus'),
+  unpublish: () => unsupported('unpublish'),
+  importFile: () => unsupported('importFile'),
+  importGeoJson: (_data?: FormData) => unsupported('importGeoJson'),
+  listImportJobs: () => unsupported('listImportJobs'),
+  harvestRaster: () => unsupported('harvestRaster'),
 }

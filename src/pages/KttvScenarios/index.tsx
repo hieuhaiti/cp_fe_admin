@@ -42,9 +42,9 @@ import KttvScenarioFormDialog from './KttvScenarioFormDialog'
 
 export default function KttvScenariosPage(): JSX.Element {
   const user = useAuthStore((s) => s.user)
-  const canCreate = hasPerm(user, 'kttv_scenarios', 'create')
-  const canUpdate = hasPerm(user, 'kttv_scenarios', 'update')
-  const canDelete = hasPerm(user, 'kttv_scenarios', 'delete')
+  const canCreate = hasPerm(user, 'flood', 'run')
+  const canUpdate = hasPerm(user, 'flood', 'run')
+  const canDelete = hasPerm(user, 'flood', 'run')
 
   const [currentPage, setCurrentPage] = useState(1)
   const [searchValue, setSearchValue] = useState('')
@@ -175,7 +175,11 @@ export default function KttvScenariosPage(): JSX.Element {
                   </TableRow>
                 ) : (
                   scenarios.map((item) => (
-                    <TableRow key={item.id}>
+                    <TableRow
+                      key={item.id}
+                      className="hover:cursor-pointer"
+                      onClick={() => openEditDialog(item)}
+                    >
                       <TableCell>{item.id}</TableCell>
                       <TableCell className="font-mono text-sm">{item.code}</TableCell>
                       <TableCell>{item.name_vi}</TableCell>
@@ -201,7 +205,10 @@ export default function KttvScenariosPage(): JSX.Element {
                               variant="ghost"
                               size="sm"
                               tooltip="Chỉnh sửa"
-                              onClick={() => openEditDialog(item)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openEditDialog(item)
+                              }}
                             >
                               <Pen className="size-4" />
                             </Button>
@@ -211,7 +218,10 @@ export default function KttvScenariosPage(): JSX.Element {
                               variant="ghost"
                               size="sm"
                               tooltip="Xóa"
-                              onClick={() => openDeleteDialog(item)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openDeleteDialog(item)
+                              }}
                               disabled={deleteMutation.isPending}
                             >
                               <Trash2 className="text-destructive size-4" />

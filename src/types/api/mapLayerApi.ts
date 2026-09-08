@@ -5,6 +5,11 @@ export interface MapApiScope {
   [key: string]: any
 }
 
+export type MapApiCreateResponse = MapApi & {
+  apiKey?: string
+  raw_key?: string
+}
+
 export interface MapApi {
   id: number
   name: string
@@ -99,11 +104,27 @@ export interface UpdateMapApiBody {
 export type CreateMapLayerApiBody = CreateMapApiBody
 export type UpdateMapLayerApiBody = UpdateMapApiBody
 
+/** A share key row returned by GET /admin/api-registry/:registryId/keys. */
+export interface MapApiKey {
+  id: number | string
+  name?: string
+  consumer?: string
+  scopes?: string[]
+  quotaPerMinute?: number
+  expiresAt?: string | null
+  revokedAt?: string | null
+}
+
+export interface MapApiKeyListData {
+  items?: MapApiKey[]
+}
+
 /** Response of POST /map-apis and /map-apis/:id/regenerate — raw key returned once. */
 export interface MapApiKeyIssueData {
-  api: MapApi
+  api?: MapApi
   apiKey?: string
   raw_key?: string
+  token?: string
 }
 
 /** Consumer-side (/map-data/*) — used from citizen apps */

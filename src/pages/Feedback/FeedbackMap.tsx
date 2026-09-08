@@ -183,9 +183,9 @@ export default function FeedbackMap({ onSelect }: FeedbackMapProps) {
       {!isLoading && !isError && !isEmpty && (
         <div className="bg-background/90 absolute bottom-3 left-3 z-10 flex flex-col gap-1 rounded-md border p-2 text-xs">
           {[
-            { color: '#f59e0b', label: 'Mới tiếp nhận' },
-            { color: '#3b82f6', label: 'Đang xử lý' },
-            { color: '#22c55e', label: 'Đã phê duyệt' },
+            { color: '#f59e0b', label: 'Chờ tiếp nhận' },
+            { color: '#3b82f6', label: 'Đang xem xét' },
+            { color: '#22c55e', label: 'Đã duyệt' },
             { color: '#16a34a', label: 'Đã xử lý' },
             { color: '#ef4444', label: 'Từ chối' },
           ].map(({ color, label }) => (

@@ -19,24 +19,28 @@ export const navConfig: NavItem[] = [
     icon: <LayoutDashboard />,
     name: 'Tổng quan',
     path: '/dashboard',
-    permission: { resource: 'statistics', action: 'dashboard' },
   },
   // ── GIS ──
   {
     icon: <Map />,
     name: 'Lớp bản đồ',
     path: '/map-layers',
-    permission: { resource: 'map_layers', action: 'read' },
+    permission: { resource: 'layers', action: 'read' },
     subItems: [
       {
         name: 'Quản lý lớp dữ liệu',
         path: '/map-layers',
-        permission: { resource: 'map_layers', action: 'read' },
+        permission: { resource: 'layers', action: 'read' },
       },
       {
-        name: 'Nhập file GIS',
-        path: '/map-layers/import-geojson',
-        permission: { resource: 'map_layers', action: 'create' },
+        name: 'Lớp dữ liệu chuỗi thời gian',
+        path: '/map-layers/time-series',
+        permission: { resource: 'raster', action: 'read' },
+      },
+      {
+        name: 'Kho ảnh nguồn GeoTIFF',
+        path: '/map-layers/source-images',
+        permission: { resource: 'raster', action: 'read' },
       },
     ],
   },
@@ -44,7 +48,7 @@ export const navConfig: NavItem[] = [
     icon: <Key />,
     name: 'API bản đồ',
     path: '/map-apis',
-    permission: { resource: 'map_apis', action: 'read' },
+    permission: { resource: 'api_registry', action: 'read' },
   },
 
   {
@@ -75,7 +79,7 @@ export const navConfig: NavItem[] = [
     icon: <Waves />,
     name: 'Kịch bản thủy văn',
     path: '/kttv-scenarios',
-    permission: { resource: 'kttv_scenarios', action: 'read' },
+    permission: { resource: 'flood', action: 'read' },
   },
   // ── Nội dung ──
   {
@@ -88,7 +92,7 @@ export const navConfig: NavItem[] = [
       {
         name: 'Bình luận',
         path: '/news-comments',
-        permission: { resource: 'comments', action: 'approve' },
+        permission: { resource: 'news', action: 'update' },
       },
     ],
   },
@@ -97,7 +101,7 @@ export const navConfig: NavItem[] = [
     icon: <AlertTriangle />,
     name: 'Phản ánh hiện trường',
     path: '/feedbacks',
-    permission: { resource: 'feedback', action: 'read' },
+    permission: { resource: 'field_report', action: 'read' },
   },
   // {
   //   icon: <Bell />,
@@ -116,6 +120,6 @@ export const navConfig: NavItem[] = [
   {
     icon: <MessageSquare />,
     name: 'Tài liệu hệ thống',
-    path: 'http://apicampha.tourismpj.pro.vn/uploads/HDSD_ADMIN_CAMPHA.pdf',
+    path: 'https://apicampha.tourismpj.pro.vn/uploads/HDSD_ADMIN_CAMPHA.pdf',
   },
 ]

@@ -33,6 +33,7 @@ import {
   CalendarDays,
   PersonStanding,
   Wheat,
+  Layers,
 } from 'lucide-react'
 import { formatDateTime } from '@/lib/date'
 import type {
@@ -49,9 +50,9 @@ import type {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const FEEDBACK_STATUS_LABEL: Record<string, string> = {
-  pending: 'Chờ xử lý',
+  pending: 'Chờ tiếp nhận',
   under_review: 'Đang xem xét',
-  approved: 'Đã tiếp nhận',
+  approved: 'Đã duyệt',
   rejected: 'Từ chối',
   resolved: 'Đã xử lý',
 }
@@ -169,10 +170,15 @@ export default function DashboardPage() {
     Number(userRes?.metadata?.total ?? userRes?.data?.pagination?.total ?? users.length) || 0
   const userBuckets = useMemo(() => bucketUsersByMonth(users, 6), [users])
 
-  // Feedback counts từ overview
+  // Feedback counts từ overview (đồng bộ công thức với Landing: pending + under_review)
   const feedbackTotal = overview?.feedback?.total ?? 0
-  const feedbackPending = overview?.feedback?.byStatus?.pending ?? 0
+  const feedbackPending =
+    (overview?.feedback?.byStatus?.pending ?? 0) +
+    (overview?.feedback?.byStatus?.under_review ?? 0)
   const feedbackResolved = overview?.feedback?.byStatus?.resolved ?? 0
+
+  // Layers
+  const layers = overview?.layers
 
   // Land composition
   const land = overview?.landComposition
@@ -215,26 +221,37 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* ── Hàng KPI: 5 số nổi bật ─────────────────────────────────────────── */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      {/* ── Hàng KPI: 6 số nổi bật ─────────────────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           icon={<MessageSquareWarning className="size-5 text-amber-600" />}
           label="Phản ánh hiện trường"
-          value={formatCount(feedbackTotal)}
+          value={overviewQuery.isLoading ? '…' : formatCount(feedbackTotal)}
           hint={`${formatCount(feedbackPending)} chờ xử lý · ${formatCount(feedbackResolved)} đã xử lý`}
           tone="bg-amber-50"
         />
         <KpiCard
+          icon={<Layers className="size-5 text-blue-600" />}
+          label="Lớp dữ liệu GIS"
+          value={overviewQuery.isLoading ? '…' : formatCount(layers?.total ?? 0)}
+          hint={
+            layers
+              ? `${formatCount(layers.published)} đã xuất bản · ${formatCount(layers.publicCount)} công khai`
+              : 'Chưa có lớp dữ liệu'
+          }
+          tone="bg-blue-50"
+        />
+        <KpiCard
           icon={<MessagesSquare className="size-5 text-sky-600" />}
           label="Bình luận chờ duyệt"
-          value={formatCount(commentTotal)}
+          value={commentQuery.isLoading ? '…' : formatCount(commentTotal)}
           hint="Bình luận cần kiểm duyệt"
           tone="bg-sky-50"
         />
         <KpiCard
           icon={<Users className="size-5 text-indigo-600" />}
           label="Người dùng"
-          value={formatCount(userTotal)}
+          value={userQuery.isLoading ? '…' : formatCount(userTotal)}
           hint="Tổng tài khoản trên hệ thống"
           tone="bg-indigo-50"
         />
@@ -307,10 +324,18 @@ export default function DashboardPage() {
           forestHa={forestHa}
           mineHa={mineHa}
           totalHa={totalHa}
+          forestPct={forestPct}
+          minePct={minePct}
           period={formatPeriod(cls?.year, cls?.month)}
+          snapshotStatus={cls?.status}
           loading={overviewQuery.isLoading}
         />
-        <RecentFeedbackCard items={feedbackItems} loading={feedbackQuery.isLoading} />
+        <RecentFeedbackCard
+          items={feedbackItems}
+          byStatus={overview?.feedback?.byStatus}
+          total={feedbackTotal}
+          loading={feedbackQuery.isLoading || overviewQuery.isLoading}
+        />
         <UnmoderatedCommentsCard
           items={commentItems}
           total={commentTotal}
@@ -374,9 +399,17 @@ function FloodOverviewCard({
             <Loader2 className="text-muted-foreground size-5 animate-spin" />
           </div>
         ) : !flood ? (
-          <p className="text-muted-foreground py-6 text-center text-sm">
-            Chưa có kết quả phân tích.
-          </p>
+          <div className="py-6 text-center">
+            <p className="text-muted-foreground text-sm">
+              Hiện chưa có đợt ngập lụt kích hoạt hoặc chưa có kết quả phân tích.
+            </p>
+            <Link
+              to="/flood"
+              className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+            >
+              Mở trung tâm ngập lụt <ArrowRight className="size-3" />
+            </Link>
+          </div>
         ) : (
           <>
             <FloodRow
@@ -444,32 +477,46 @@ function ForestVsMineCard({
   forestHa,
   mineHa,
   totalHa,
+  forestPct,
+  minePct,
   period,
+  snapshotStatus,
   loading,
 }: {
   forestHa: number | null
   mineHa: number | null
   totalHa: number | null
+  forestPct?: number | null
+  minePct?: number | null
   period: string
+  snapshotStatus?: string
   loading: boolean
 }) {
   const fHa = forestHa ?? 0
   const mHa = mineHa ?? 0
   const tHa = totalHa ?? 0
+  const otherHa = Math.max(tHa - fHa - mHa, 0)
   const data = [
-    { label: 'Rừng', value: fHa, fill: '#059669' },
-    { label: 'Khu mỏ', value: mHa, fill: '#57534e' },
-    { label: 'Khác', value: Math.max(tHa - fHa - mHa, 0), fill: '#94a3b8' },
+    { label: 'Rừng', value: fHa, fill: '#059669', pct: forestPct },
+    { label: 'Khu mỏ', value: mHa, fill: '#57534e', pct: minePct },
+    { label: 'Khác', value: otherHa, fill: '#94a3b8', pct: tHa > 0 ? (otherHa / tHa) * 100 : 0 },
   ]
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Trees className="size-4 text-emerald-600" />
-          Rừng & Mỏ tại Cẩm Phả
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Trees className="size-4 text-emerald-600" />
+            Rừng & Mỏ tại Cẩm Phả
+          </CardTitle>
+          {snapshotStatus && (
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+              {snapshotStatus === 'published' ? 'Đã xuất bản' : snapshotStatus}
+            </Badge>
+          )}
+        </div>
         <CardDescription>
-          Kỳ {period} · Tổng phân loại {formatHa(totalHa)}
+          Kỳ {period} · Tổng diện tích {formatHa(totalHa)}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
@@ -492,7 +539,10 @@ function ForestVsMineCard({
                   tickFormatter={(v) => Number(v).toLocaleString('vi-VN')}
                 />
                 <RechartsTooltip
-                  formatter={(value) => [formatHa(Number(value) || 0), 'Diện tích']}
+                  formatter={(value, _name, props: any) => [
+                    `${formatHa(Number(value) || 0)} (${formatPct(props?.payload?.pct)})`,
+                    'Diện tích',
+                  ]}
                 />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                   {data.map((entry, index) => (
@@ -514,16 +564,56 @@ function ForestVsMineCard({
   )
 }
 
-function RecentFeedbackCard({ items, loading }: { items: CitizenFeedback[]; loading: boolean }) {
+function RecentFeedbackCard({
+  items,
+  byStatus,
+  total,
+  loading,
+}: {
+  items: CitizenFeedback[]
+  byStatus?: Record<string, number>
+  total?: number
+  loading: boolean
+}) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquareWarning className="size-4 text-amber-600" />
-          Phản ánh mới nhất
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MessageSquareWarning className="size-4 text-amber-600" />
+            Phản ánh hiện trường
+          </CardTitle>
+          {total != null && total > 0 && (
+            <Badge variant="outline" className="font-normal text-xs">
+              Tổng {formatCount(total)}
+            </Badge>
+          )}
+        </div>
+        <CardDescription>
+          Tổng quan phân bổ trạng thái và 5 mục mới nhất
+        </CardDescription>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="space-y-3 pt-2">
+        {byStatus && Object.keys(byStatus).length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pb-2 border-b">
+            {Object.entries(FEEDBACK_STATUS_LABEL).map(([statusKey, label]) => {
+              const cnt = byStatus[statusKey] ?? 0
+              if (cnt === 0) return null
+              return (
+                <span
+                  key={statusKey}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium border ${
+                    FEEDBACK_STATUS_TONE[statusKey] || 'border-slate-200'
+                  }`}
+                >
+                  <span>{label}:</span>
+                  <span className="font-semibold">{cnt}</span>
+                </span>
+              )
+            })}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="text-muted-foreground size-5 animate-spin" />
@@ -559,7 +649,7 @@ function RecentFeedbackCard({ items, loading }: { items: CitizenFeedback[]; load
         )}
         <Link
           to="/feedbacks"
-          className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+          className="text-primary mt-1 inline-flex items-center gap-1 text-sm font-medium hover:underline"
         >
           Xem toàn bộ phản ánh <ArrowRight className="size-3" />
         </Link>

@@ -282,8 +282,6 @@ export default function ForestClassificationPage() {
       historyQuery.refetch()
     }, ANALYSIS_POLL_INTERVAL_MS)
     return () => clearInterval(timer)
-    // Query objects are intentionally excluded so polling is keyed only by pipeline state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
   }, [activeStatus])
 
   // Toast async pipeline failure once per snapshot id.

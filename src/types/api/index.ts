@@ -35,6 +35,7 @@ export type * from './mapLayerApi'
 // GEE / satellite / weather / flood / mobile
 export type * from './weather'
 export type * from './remoteSensing'
+export type * from './timeSeries'
 export type * from './geeProcessing'
 export type * from './flood'
 export type * from './satellite'

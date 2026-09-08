@@ -14,8 +14,8 @@ export const ACTIVE_DOT: Record<string, string> = {
 
 // ── Published status ──────────────────────────────────────────────
 export const PUBLISHED_LABEL: Record<string, string> = {
-  true: 'Đã công bố',
-  false: 'Chưa công bố',
+  true: 'Đã xuất bản',
+  false: 'Bản nháp',
 }
 export const PUBLISHED_CLASS: Record<string, string> = {
   true: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -24,6 +24,15 @@ export const PUBLISHED_CLASS: Record<string, string> = {
 export const PUBLISHED_DOT: Record<string, string> = {
   true: 'bg-sky-500',
   false: 'bg-slate-400',
+}
+
+// ── Role label mapping ────────────────────────────────────────────
+export const ROLE_LABEL_MAP: Record<string, string> = {
+  system_admin: 'Quản trị hệ thống',
+  ubnd_tp: 'UBND TP Cẩm Phả',
+  so_tnmt: 'Sở Tài nguyên & Môi trường',
+  so_xd: 'Sở Xây dựng',
+  citizen: 'Người dân',
 }
 
 // ── Public status ─────────────────────────────────────────────────
@@ -92,3 +101,20 @@ export function getMapLayerCategoryLabel(key?: string | null): string {
       .replace(/\b\w/g, (c) => c.toUpperCase())
   )
 }
+
+export function toCategorySlug(value: string): string {
+  if (!value || !value.trim()) return ''
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 50)
+  if (!normalized) return ''
+  return /^[a-z]/.test(normalized) ? normalized : `cat_${normalized}`
+}
+
+

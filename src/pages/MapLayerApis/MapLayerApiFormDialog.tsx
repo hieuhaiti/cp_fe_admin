@@ -4,7 +4,12 @@ import { AlertCircle, Loader2, Pen, Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import MapLayerApiForm from '@/components/map-layer-apis/MapLayerApiForm'
 import { mapLayerApiService, useApiMutation, useApiQuery } from '@/service'
-import type { ApiResponse, CreateMapLayerApiBody, MapLayerApi } from '@/types/api'
+import type {
+  ApiResponse,
+  CreateMapLayerApiBody,
+  MapApiCreateResponse,
+  MapLayerApi,
+} from '@/types/api'
 import {
   getMappedErrorMessage,
   validateCreatePayload,
@@ -42,7 +47,7 @@ export default function MapLayerApiFormDialog({
   const createMutation = useApiMutation(
     (payload: CreateMapLayerApiBody) => mapLayerApiService.create(payload),
     {
-      onSuccess: (response: any) => {
+      onSuccess: (response: ApiResponse<MapApiCreateResponse>) => {
         const rawKey = response?.data?.apiKey || response?.data?.raw_key
         toast.success(rawKey ? `Tạo API key thành công: ${rawKey}` : 'Tạo API key thành công', {
           autoClose: rawKey ? 12000 : 3000,
@@ -127,7 +132,7 @@ export default function MapLayerApiFormDialog({
                   toast.error(parsed.error.issues[0]?.message ?? 'Payload create không hợp lệ')
                   return
                 }
-                createMutation.mutate(parsed.data as any)
+                createMutation.mutate(parsed.data)
               }}
               onSubmitUpdate={(payload) => {
                 const parsed = validateUpdatePayload(payload)
@@ -135,7 +140,7 @@ export default function MapLayerApiFormDialog({
                   toast.error(parsed.error.issues[0]?.message ?? 'Payload update không hợp lệ')
                   return
                 }
-                updateMutation.mutate(parsed.data as any)
+                updateMutation.mutate(parsed.data)
               }}
             />
           </div>

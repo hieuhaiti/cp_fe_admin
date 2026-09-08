@@ -6,6 +6,7 @@ import type {
   CreateMapLayerBody,
   MapLayer,
   MapLayerListData,
+  MapLayerListParams,
   Pagination,
 } from '@/types/api'
 import {
@@ -71,9 +72,9 @@ function getPagination(data: unknown): Partial<Pagination> {
 export default function MapLayerPage(): JSX.Element {
   const user = useAuthStore((s) => s.user)
   const canCreateRaster = hasPerm(user, 'raster', 'create') && hasPerm(user, 'layers', 'create')
-  const canUpdate = hasPerm(user, 'map_layers', 'update')
-  const canDelete = hasPerm(user, 'map_layers', 'delete')
-  const canPublish = hasPerm(user, 'map_layers', 'publish')
+  const canUpdate = hasPerm(user, 'layers', 'update')
+  const canDelete = hasPerm(user, 'layers', 'delete')
+  const canPublish = hasPerm(user, 'layers', 'update')
   const showActions = canUpdate || canDelete || canPublish
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [limit, setLimit] = useState<number>(10)
@@ -81,14 +82,14 @@ export default function MapLayerPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [geometryFilter, setGeometryFilter] = useState<string>('all')
 
-  const queryParams = {
+  const queryParams: MapLayerListParams = {
     page: currentPage,
     limit,
     sortBy: 'created_at',
-    sortOrder: 'DESC' as const,
+    sortOrder: 'DESC',
     ...(searchValue && { q: searchValue }),
-    ...(statusFilter !== 'all' && { publish_status: statusFilter }),
-    ...(geometryFilter !== 'all' && { geometry_type: geometryFilter }),
+    ...(statusFilter === 'published' ? { isPublic: true } : statusFilter === 'draft' ? { isPublic: false } : {}),
+    ...(geometryFilter !== 'all' ? { geometryType: geometryFilter } : {}),
   }
 
   const dbQuery = useApiQuery(
@@ -124,7 +125,7 @@ export default function MapLayerPage(): JSX.Element {
 
   const updateMutation = useApiMutation(
     (payload: { code: string; data: CreateMapLayerBody }) =>
-      mapLayerService.update(payload.code, payload.data as any),
+      mapLayerService.update(payload.code, { ...payload.data }),
     {
       onSuccess: () => {
         dbQuery.refetch()
@@ -236,9 +237,10 @@ export default function MapLayerPage(): JSX.Element {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Mọi hình học</SelectItem>
-                <SelectItem value="point">Point</SelectItem>
-                <SelectItem value="line">Line</SelectItem>
-                <SelectItem value="polygon">Polygon</SelectItem>
+                <SelectItem value="POINT">Dữ liệu điểm</SelectItem>
+                <SelectItem value="LINESTRING">Dữ liệu đường</SelectItem>
+                <SelectItem value="POLYGON">Dữ liệu vùng</SelectItem>
+                <SelectItem value="RASTER">Dữ liệu Raster</SelectItem>
               </SelectContent>
             </Select>
 
@@ -261,7 +263,7 @@ export default function MapLayerPage(): JSX.Element {
 
             {canCreateRaster && (
               <Button variant="outline" onClick={() => setGeoTiffDialogOpen(true)}>
-                Thêm GeoTIFF
+                Thêm lớp ảnh bản đồ
               </Button>
             )}
           </div>
@@ -305,6 +307,7 @@ export default function MapLayerPage(): JSX.Element {
                     <span className="text-muted-foreground block truncate font-mono text-xs">
                       {layer.code}
                     </span>
+
                   </TableCell>
                   <TableCell>
                     {layer.category_name || getMapLayerCategoryLabel(layer.category)}
@@ -317,12 +320,14 @@ export default function MapLayerPage(): JSX.Element {
                         badgeClass={PUBLISHED_CLASS[String(layer.publish_status === 'published')]}
                         dotClass={PUBLISHED_DOT[String(layer.publish_status === 'published')]}
                       />
-                      <Badge variant={layer.geoserver_layer ? 'default' : 'outline'}>
-                        {layer.geoserver_layer ? 'Đã công bố' : 'Chưa công bố'}
-                      </Badge>
                       <Badge variant={layer.is_public ? 'secondary' : 'outline'}>
                         {layer.is_public ? 'Công khai' : 'Nội bộ'}
                       </Badge>
+                      {layer.is_enable_default && (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                          Bật mặc định
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{layer.created_at ? formatDate(layer.created_at) : '-'}</TableCell>
@@ -401,10 +406,16 @@ export default function MapLayerPage(): JSX.Element {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa lớp "
-              {layerToDelete?.name_vi || layerToDelete?.name || layerToDelete?.code}"? Hành động này
-              không thể hoàn tác.
+            <AlertDialogDescription className="space-y-2 text-xs">
+              <span>
+                Bạn có chắc chắn muốn xóa lớp &quot;
+                {layerToDelete?.name_vi || layerToDelete?.name || layerToDelete?.code}&quot;? Lớp sẽ được gỡ khỏi bản đồ và tiến trình giải phóng tài nguyên GeoServer sẽ được kích hoạt.
+              </span>
+              {layerToDelete?.storage_kind === 'geotiff_minio' && (
+                <span className="block rounded border border-primary/20 bg-primary/5 p-2 text-foreground font-medium">
+                  Lưu ý: Tệp ảnh viễn thám GeoTIFF gốc vẫn được bảo toàn trong <strong>Kho ảnh nguồn</strong>. Bạn có thể công bố lại thành lớp mới hoặc xóa tệp vĩnh viễn tại đó bất cứ lúc nào.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

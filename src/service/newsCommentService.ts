@@ -21,14 +21,12 @@ export default {
   create: (newsId: number | string, data: CreatePublicCommentBody) =>
     apiClient.post<NewsComment>(`${serviceNewsPath}/${newsId}/comments`, data),
 
-  /** GET /admin/cms/news/:newsId/comments */
+  /** GET /admin/cms/news/comments (all) or /admin/cms/news/:newsId/comments */
   getAll: (params?: NewsCommentAdminListParams) => {
     const { newsId, targetId, ...query } = params ?? {}
-    const pathId = newsId ?? targetId ?? 1
-    return apiClient.get<NewsCommentListData>(
-      `${serviceAdminNewsPath}/${pathId}/comments`,
-      { params: query },
-    )
+    const pathId = newsId ?? targetId
+    const url = pathId ? `${serviceAdminNewsPath}/${pathId}/comments` : serviceAdminNewsCommentsPath
+    return apiClient.get<NewsCommentListData>(url, { params: query })
   },
 
   /** PATCH /admin/cms/news/comments/:commentId */
