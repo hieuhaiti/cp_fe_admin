@@ -100,5 +100,43 @@ describe('MapLayerFormDialog', () => {
     )
   })
 
+  it('allows toggling between UI and JSON mode for defaultStyle and submits correctly', async () => {
+    const onSubmit = vi.fn()
+    renderDialog({ onSubmit })
+    fireEvent.change(screen.getByLabelText('Tên lớp dữ liệu *'), { target: { value: 'Lớp Thử Nghiệm' } })
 
+    // Bấm nút JSON thứ hai (của phần kiểu vẽ defaultStyle)
+    const jsonButtons = screen.getAllByRole('button', { name: /JSON/i })
+    expect(jsonButtons.length).toBe(2)
+    fireEvent.click(jsonButtons[1])
+
+    const styleTextarea = screen.getByPlaceholderText(/fillColor/i)
+    expect(styleTextarea).toBeInTheDocument()
+
+    fireEvent.change(styleTextarea, {
+      target: {
+        value: JSON.stringify({
+          fillColor: '#10B981',
+          fillOpacity: 0.65,
+          strokeColor: '#047857',
+        }),
+      },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'lop_thu_nghiem',
+          metadata: {
+            defaultStyle: {
+              fillColor: '#10B981',
+              fillOpacity: 0.65,
+              strokeColor: '#047857',
+            },
+          },
+        })
+      )
+    })
+  })
 })

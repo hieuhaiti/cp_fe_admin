@@ -102,7 +102,7 @@ export default function KttvScenariosPage(): JSX.Element {
   return (
     <PageLayout title="Kịch bản thủy văn" description="Quản lý kịch bản phát hiện sự kiện ngập lụt">
       <Tabs defaultValue="manage" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full sm:w-80 grid-cols-2">
           <TabsTrigger value="manage">Quản lý kịch bản</TabsTrigger>
           <TabsTrigger value="input">Nhập kịch bản</TabsTrigger>
         </TabsList>
@@ -119,7 +119,7 @@ export default function KttvScenariosPage(): JSX.Element {
               setCurrentPage(1)
             }}
             filter={
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Select
                   value={`${limit}`}
                   onValueChange={(v) => {

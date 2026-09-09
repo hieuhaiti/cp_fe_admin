@@ -192,7 +192,7 @@ export default function News(): JSX.Element {
           setCurrentPage(1)
         }}
         filter={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               value={statusFilter}
               onValueChange={(v) => {

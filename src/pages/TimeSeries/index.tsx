@@ -5,6 +5,7 @@ import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { TruncatedBadge } from '@/components/common/TruncatedBadge'
 import {
   Select,
   SelectContent,
@@ -214,9 +215,14 @@ export default function TimeSeriesPage() {
                     <TableCell className="text-xs">
                       {coverageKey ? (
                         <div className="flex items-center gap-1.5">
-                          <Badge variant="outline" className="font-mono text-[11px] font-normal">
+                          <TruncatedBadge
+                            variant="outline"
+                            maxWidthClass="max-w-44"
+                            className="font-mono text-[11px] font-normal"
+                            label={coverageKey}
+                          >
                             {coverageKey}
-                          </Badge>
+                          </TruncatedBadge>
                           <Button
                             type="button"
                             variant="ghost"

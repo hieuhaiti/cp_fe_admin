@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
-import { Plus, Trash2, ListChecks } from 'lucide-react'
+import { Plus, Trash2, ListChecks, FileCode } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -168,6 +168,13 @@ function LegendEditor({ entries, onEntriesChange, onJsonValidityChange }: Legend
 
 
 
+  function handleSwitchToJson() {
+    setJsonText(stringifyLegendEntries(entries))
+    setJsonError(null)
+    onJsonValidityChange?.(true)
+    setMode('json')
+  }
+
   function handleSwitchToUi() {
     if (jsonText.trim()) {
       try {
@@ -239,7 +246,15 @@ function LegendEditor({ entries, onEntriesChange, onJsonValidityChange }: Legend
             <ListChecks className="size-4" aria-hidden="true" />
             Danh sách
           </Button>
-
+          <Button
+            type="button"
+            variant={mode === 'json' ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={handleSwitchToJson}
+          >
+            <FileCode className="size-4" aria-hidden="true" />
+            JSON
+          </Button>
         </div>
       </div>
 
@@ -349,6 +364,13 @@ function StyleEditor({
 
 
 
+  function handleSwitchToJson() {
+    setJsonText(stringifyStyle(style))
+    setJsonError(null)
+    onJsonValidityChange?.(true)
+    setMode('json')
+  }
+
   function handleSwitchToUi() {
     if (jsonText.trim()) {
       const { style: parsed, error } = parseStyleJson(jsonText)
@@ -433,7 +455,15 @@ function StyleEditor({
             <ListChecks className="size-4" aria-hidden="true" />
             Danh sách
           </Button>
-
+          <Button
+            type="button"
+            variant={mode === 'json' ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={handleSwitchToJson}
+          >
+            <FileCode className="size-4" aria-hidden="true" />
+            JSON
+          </Button>
         </div>
       </div>
 

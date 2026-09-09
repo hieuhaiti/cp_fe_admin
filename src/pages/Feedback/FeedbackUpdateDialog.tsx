@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,6 +7,13 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { STATUS_CLASS, STATUS_LABEL } from '@/constant/feedbackConstant'
+import {
+  FEEDBACK_REVIEW_STATUSES,
+  getFeedbackNextStatuses,
+  type FeedbackReviewStatus,
+} from '@/constant/feedbackTransitions'
 import {
   Select,
   SelectContent,
@@ -15,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const feedbackReviewSchema = z
+export const feedbackReviewSchema = z
   .object({
     status: z.enum(['under_review', 'approved', 'rejected', 'resolved'] as const),
     reason: z.string().trim().max(1000, 'Lý do không được vượt quá 1000 ký tự').optional(),
@@ -29,9 +36,10 @@ const feedbackReviewSchema = z
       })
     }
   })
-type StatusFormValues = z.infer<typeof feedbackReviewSchema>
 
-interface FeedbackUpdateDialogProps {
+export type StatusFormValues = z.infer<typeof feedbackReviewSchema>
+
+export interface FeedbackUpdateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   feedback: CitizenFeedback | null
@@ -40,13 +48,56 @@ interface FeedbackUpdateDialogProps {
   canOverrideTransitions?: boolean
 }
 
-const STATUS_LABELS: { value: FeedbackStatus; label: string }[] = [
-  { value: 'pending', label: 'Chờ tiếp nhận' },
-  { value: 'under_review', label: 'Đang xem xét' },
-  { value: 'approved', label: 'Đã duyệt' },
-  { value: 'resolved', label: 'Đã xử lý' },
-  { value: 'rejected', label: 'Từ chối' },
-]
+export interface StatusOption {
+  value: FeedbackReviewStatus
+  label: string
+}
+
+export const STATUS_OPTIONS: StatusOption[] = FEEDBACK_REVIEW_STATUSES.map((value) => ({
+  value,
+  label: STATUS_LABEL[value] ?? value,
+}))
+
+/**
+ * Danh sách trạng thái kế tiếp hợp lệ, tra cứu từ nguồn luật duy nhất
+ * (`FEEDBACK_TRANSITIONS`, sao chép từ trigger PostgreSQL).
+ */
+export function getAllowedStatuses(
+  currentStatus?: FeedbackStatus | null,
+  canOverride = false
+): StatusOption[] {
+  return getFeedbackNextStatuses(currentStatus, canOverride).map((value) => ({
+    value,
+    label: STATUS_LABEL[value] ?? value,
+  }))
+}
+
+/**
+ * Trạng thái được chọn sẵn khi mở form.
+ *
+ * Luôn phải là một giá trị nằm trong `allowed`, nếu không Radix Select sẽ không
+ * tìm thấy SelectItem khớp và render trigger rỗng.
+ */
+export function getDefaultTargetStatus(
+  currentStatus: FeedbackStatus | null | undefined,
+  allowed: StatusOption[]
+): FeedbackReviewStatus {
+  if (allowed.length === 0) return 'under_review'
+
+  // Ưu tiên bước tiến tự nhiên của quy trình thay vì phần tử đầu danh sách.
+  const preferred: Partial<Record<FeedbackStatus, FeedbackReviewStatus>> = {
+    pending: 'under_review',
+    under_review: 'approved',
+    approved: 'resolved',
+  }
+
+  const candidate = currentStatus ? preferred[currentStatus] : undefined
+  if (candidate && allowed.some((option) => option.value === candidate)) {
+    return candidate
+  }
+
+  return allowed[0].value
+}
 
 export default function FeedbackUpdateDialog({
   open,
@@ -56,6 +107,11 @@ export default function FeedbackUpdateDialog({
   isLoading = false,
   canOverrideTransitions = false,
 }: FeedbackUpdateDialogProps) {
+  const allowedStatuses = useMemo(
+    () => getAllowedStatuses(feedback?.status, canOverrideTransitions),
+    [feedback?.status, canOverrideTransitions]
+  )
+
   const statusForm = useForm<StatusFormValues>({
     resolver: zodResolver(feedbackReviewSchema),
     defaultValues: {
@@ -65,59 +121,88 @@ export default function FeedbackUpdateDialog({
   })
 
   useEffect(() => {
-    if (feedback) {
-      const currentStatus: StatusFormValues['status'] =
-        feedback.status === 'approved' ||
-        feedback.status === 'rejected' ||
-        feedback.status === 'resolved' ||
-        feedback.status === 'under_review'
-          ? feedback.status
-          : 'under_review'
-      statusForm.reset({ status: currentStatus, reason: '' })
+    if (feedback && open) {
+      const initialStatus = getDefaultTargetStatus(feedback.status, allowedStatuses)
+      const initialReason = feedback.reviewReason ?? feedback.review_reason ?? ''
+      statusForm.reset({
+        status: initialStatus,
+        reason: initialReason,
+      })
     }
-  }, [feedback, open, statusForm])
+  }, [feedback, open, allowedStatuses, statusForm])
 
   const selectedStatus = statusForm.watch('status')
-  const allowedStatuses = canOverrideTransitions
-    ? STATUS_LABELS.filter(({ value }) => value !== feedback?.status && value !== 'pending')
-    : STATUS_LABELS.filter(({ value }) => {
-        if (feedback?.status === 'pending') return value === 'under_review' || value === 'rejected'
-        if (feedback?.status === 'under_review') {
-          return value === 'approved' || value === 'resolved' || value === 'rejected'
-        }
-        if (feedback?.status === 'approved') return value === 'resolved'
-        return false
-      })
+  const referenceCode = feedback?.reference_code || feedback?.referenceCode
+  const contentText = feedback?.title || feedback?.description || '-'
+  const currentStatusLabel = feedback?.status
+    ? STATUS_LABEL[feedback.status] ?? feedback.status
+    : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
-        <DialogTitle>Cập nhật phản ánh</DialogTitle>
-        <DialogDescription>
-          Phản ánh: <span className="font-medium">{feedback?.title}</span>
+        <DialogTitle>Cập nhật trạng thái phản ánh</DialogTitle>
+        <DialogDescription asChild>
+          <div className="text-muted-foreground mt-2 space-y-2 text-sm">
+            {referenceCode && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">Mã phản ánh:</span>
+                <span className="bg-muted text-foreground rounded px-2 py-0.5 font-mono text-xs font-semibold">
+                  {referenceCode}
+                </span>
+              </div>
+            )}
+            <div>
+              <span className="font-medium text-foreground">Phản ánh: </span>
+              <span className="font-medium text-foreground">{contentText}</span>
+            </div>
+            {feedback?.sender_name && (
+              <div>
+                <span className="font-medium text-foreground">Người gửi: </span>
+                <span>{feedback.sender_name}</span>
+                {feedback.sender_email ? ` (${feedback.sender_email})` : ''}
+              </div>
+            )}
+            {feedback?.status && (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="font-medium text-foreground">Trạng thái hiện tại:</span>
+                <Badge variant="outline" className={STATUS_CLASS[feedback.status] ?? ''}>
+                  {currentStatusLabel}
+                </Badge>
+              </div>
+            )}
+          </div>
         </DialogDescription>
 
         <form onSubmit={statusForm.handleSubmit(onUpdateStatus)} className="mt-4 space-y-4">
           <div className="space-y-2">
             <Label>Trạng thái xử lý</Label>
-            <Controller
-              name="status"
-              control={statusForm.control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allowedStatuses.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
+            {allowedStatuses.length > 0 ? (
+              <Controller
+                name="status"
+                control={statusForm.control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isLoading}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Chọn trạng thái tiếp theo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allowedStatuses.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            ) : (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                Phản ánh hiện đang ở trạng thái{' '}
+                <span className="font-semibold">{currentStatusLabel}</span>, không có trạng thái tiếp
+                theo khả dụng.
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -134,6 +219,7 @@ export default function FeedbackUpdateDialog({
                   ? 'Nhập lý do từ chối phản ánh...'
                   : 'Nhập lý do hoặc ghi chú xử lý...'
               }
+              disabled={isLoading || allowedStatuses.length === 0}
             />
             {statusForm.formState.errors.reason && (
               <p className="text-destructive text-xs">

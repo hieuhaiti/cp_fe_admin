@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { TruncatedBadge } from '@/components/common/TruncatedBadge'
 import { formatDateTime } from '@/lib/date'
 function formatFileSize(bytes?: number | string | null): string {
   if (!bytes) return '—'
@@ -37,19 +38,29 @@ function LayerStatusBadge({
 
   if (!isDeleted) {
     return (
-      <Badge variant="default" className="gap-1 font-mono text-[10px] bg-emerald-600 hover:bg-emerald-700">
-        <span className="size-1.5 rounded-full bg-white animate-pulse" />
-        {layer.code}
-      </Badge>
+      <TruncatedBadge
+        variant="default"
+        maxWidthClass="max-w-36"
+        className="gap-1 font-mono text-[10px] bg-emerald-600 hover:bg-emerald-700"
+        label={layer.code}
+      >
+        <span className="size-1.5 shrink-0 rounded-full bg-white animate-pulse" />
+        <span className="truncate">{layer.code}</span>
+      </TruncatedBadge>
     )
   }
 
   const cleanup = layer.cleanupStatus || 'none'
   if (cleanup === 'complete') {
     return (
-      <Badge variant="secondary" className="font-mono text-[10px]">
+      <TruncatedBadge
+        variant="secondary"
+        maxWidthClass="max-w-36"
+        className="font-mono text-[10px]"
+        label={`Đã dọn: ${layer.code}`}
+      >
         Đã dọn: {layer.code}
-      </Badge>
+      </TruncatedBadge>
     )
   }
 
@@ -58,10 +69,11 @@ function LayerStatusBadge({
       <button
         type="button"
         onClick={() => onViewCleanup?.(layer.id)}
-        className="inline-flex items-center gap-1 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+        className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+        title={`Đang dọn (${layer.code})`}
       >
-        <Clock className="size-2.5 animate-spin" />
-        Đang dọn ({layer.code})
+        <Clock className="size-2.5 shrink-0 animate-spin" />
+        <span className="truncate">Đang dọn ({layer.code})</span>
       </button>
     )
   }
@@ -71,18 +83,24 @@ function LayerStatusBadge({
       <button
         type="button"
         onClick={() => onViewCleanup?.(layer.id)}
-        className="inline-flex items-center gap-1 rounded bg-destructive/15 text-destructive px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-destructive/30 hover:bg-destructive/25 transition-colors"
+        className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-destructive/15 text-destructive px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-destructive/30 hover:bg-destructive/25 transition-colors"
+        title={`Dọn lỗi (${layer.code})`}
       >
-        <AlertCircle className="size-2.5" />
-        Dọn lỗi ({layer.code})
+        <AlertCircle className="size-2.5 shrink-0" />
+        <span className="truncate">Dọn lỗi ({layer.code})</span>
       </button>
     )
   }
 
   return (
-    <Badge variant="outline" className="font-mono text-[10px]">
+    <TruncatedBadge
+      variant="outline"
+      maxWidthClass="max-w-36"
+      className="font-mono text-[10px]"
+      label={`Đã xóa: ${layer.code}`}
+    >
       Đã xóa: {layer.code}
-    </Badge>
+    </TruncatedBadge>
   )
 }
 

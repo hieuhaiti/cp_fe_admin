@@ -28,6 +28,7 @@ export interface NewsComment {
 
   // snake_case (API response)
   news_id?: number | string
+  news_title?: string | null
   user_id?: number | string | null
   /** API v2: full display name returned by the backend directly */
   full_name?: string | null

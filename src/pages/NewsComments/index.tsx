@@ -167,7 +167,7 @@ export default function NewsComments(): JSX.Element {
           setCurrentPage(1)
         }}
         filter={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               value={selectedNewsId != null ? String(selectedNewsId) : 'all'}
               onValueChange={(v) => {
@@ -259,7 +259,7 @@ export default function NewsComments(): JSX.Element {
                   c.status !== undefined
                     ? c.status === 'approved'
                     : (c.isApproved ?? c.is_approved)
-                const itemNewsTitle = c.newsTitle ?? (c as any).news_title
+                const itemNewsTitle = c.newsTitle ?? c.news_title
                 const createdAt = c.createdAt ?? c.created_at
 
                 return (

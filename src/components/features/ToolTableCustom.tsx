@@ -43,11 +43,13 @@ export default function ToolTableCustom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced])
   return (
-    <Card className={`flex h-full flex-col overflow-hidden p-6 ${className ?? ''}`}>
+    <Card
+      className={`@container flex h-full flex-col overflow-hidden p-4 sm:p-6 ${className ?? ''}`}
+    >
       {/* Header sticky section */}
       <div className="bg-card sticky top-0 z-10 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="relative w-64">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative w-full min-w-48 sm:w-64">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
             <Input
               placeholder="Tìm kiếm..."
@@ -69,18 +71,18 @@ export default function ToolTableCustom({
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-2">{filter}</div>
+          <div className="flex flex-wrap items-center gap-2">{filter}</div>
         </div>
       </div>
 
-      {/* Table area with overflow */}
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      {/* Table area with responsive 2D overflow */}
+      <div className="min-h-0 flex-1 overflow-auto">{children}</div>
 
       {/* Footer sticky section */}
       <div className="bg-card sticky bottom-0 z-10 pt-4">
         <hr className="mb-4" />
         {pagination && pagination.totalPages > 1 ? (
-          <div className="flex flex-nowrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-muted-foreground text-sm whitespace-nowrap">
               Hiển thị trang <span className="font-semibold">{pagination.currentPage}</span> /{' '}
               {pagination.totalPages}

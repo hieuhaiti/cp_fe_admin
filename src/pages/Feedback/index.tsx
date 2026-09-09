@@ -308,7 +308,7 @@ export default function FeedbackPage(): JSX.Element {
                 <TableHead>Tiêu đề</TableHead>
                 <TableHead className="w-28">Loại</TableHead>
                 <TableHead className="w-24">Ưu tiên</TableHead>
-                <TableHead className="w-28">Trạng thái</TableHead>
+                <TableHead className="w-32 min-w-32">Trạng thái</TableHead>
                 <TableHead className="">Người gửi</TableHead>
                 <TableHead className="w-32">Ngày tạo</TableHead>
                 {showActions && <TableHead className="w-24 text-right">Hành động</TableHead>}
@@ -345,6 +345,11 @@ export default function FeedbackPage(): JSX.Element {
                       <TableCell>{item.id}</TableCell>
                       <TableCell>
                         <div className="max-w-64">
+                          {(item.referenceCode || item.reference_code) && (
+                            <span className="font-mono text-[11px] text-muted-foreground block truncate">
+                              {item.referenceCode || item.reference_code}
+                            </span>
+                          )}
                           <p className="line-clamp-2 font-medium">{item.title}</p>
                           {locationText && (
                             <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">

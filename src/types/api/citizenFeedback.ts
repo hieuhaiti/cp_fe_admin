@@ -1,4 +1,4 @@
-export type FeedbackCategory = 'chay_rung' | 'vi_pham' | 'hien_trang'
+export type FeedbackCategory = 'ngap_lut' | 'vi_pham' | 'hien_trang' | 'chay_rung'
 export type FeedbackStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'resolved'
 export type FeedbackPriority = 'low' | 'normal' | 'high' | 'urgent'
 

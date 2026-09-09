@@ -56,7 +56,7 @@ const ROLE_OPTIONS: { value: UserRoleCode; label: string }[] = [
   { value: 'citizen', label: 'Người dân' },
 ]
 
-function roleCodeOf(user: User | any) {
+function roleCodeOf(user: User) {
   const role = user?.role
   if (typeof role === 'string') return role
   return user?.roleCode ?? role?.code ?? user?.role_name ?? null
@@ -300,7 +300,7 @@ export default function User(): JSX.Element {
         searchValue={searchValue}
         setSearchValue={setSearchValue}
         filter={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               value={roleFilter}
               onValueChange={(v) => {
@@ -390,7 +390,7 @@ export default function User(): JSX.Element {
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((u: any) => {
+              users.map((u: User) => {
                 const isActive = u.isActive ?? u.is_active ?? true
                 const roleCode = roleCodeOf(u)
                 const roleName = u.role_name_vi ?? u.role?.name ?? u.role_name
