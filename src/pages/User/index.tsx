@@ -417,7 +417,7 @@ export default function User(): JSX.Element {
                         {canChangeRole && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openChangeRoleDialog(u)
@@ -430,7 +430,7 @@ export default function User(): JSX.Element {
                         {canResetPassword && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openResetPasswordDialog(u)
@@ -443,7 +443,7 @@ export default function User(): JSX.Element {
                         {canChangeStatus && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openActiveDialog(u)
@@ -462,7 +462,7 @@ export default function User(): JSX.Element {
                         {canDelete && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openDeleteDialog(u)

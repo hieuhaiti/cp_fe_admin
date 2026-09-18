@@ -166,7 +166,7 @@ export default function TimeSeriesPage() {
             <TableRow>
               <TableHead className="w-12">STT</TableHead>
               <TableHead>Mã lớp</TableHead>
-              <TableHead>Khóa chuỗi</TableHead>
+              <TableHead>Mã nhóm</TableHead>
               <TableHead>Tên lớp</TableHead>
               <TableHead>Nhóm dữ liệu</TableHead>
               <TableHead>Số mốc</TableHead>
@@ -228,12 +228,12 @@ export default function TimeSeriesPage() {
                             variant="ghost"
                             size="icon"
                             className="size-6 text-muted-foreground hover:text-foreground"
-                            title="Sao chép khóa chuỗi"
-                            aria-label={`Sao chép khóa chuỗi ${coverageKey}`}
+                            title="Sao chép mã nhóm"
+                            aria-label={`Sao chép mã nhóm ${coverageKey}`}
                             onClick={(event) => {
                               event.stopPropagation()
                               navigator.clipboard.writeText(coverageKey)
-                              toast.success(`Đã sao chép khóa: ${coverageKey}`)
+                              toast.success(`Đã sao chép mã nhóm: ${coverageKey}`)
                             }}
                           >
                             <Copy className="size-3" />
@@ -267,7 +267,7 @@ export default function TimeSeriesPage() {
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon-xs"
                           tooltip="Xem chi tiết"
                           onClick={(event) => {
                             event.stopPropagation()
@@ -280,7 +280,7 @@ export default function TimeSeriesPage() {
                         {canUpdate && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             tooltip="Chỉnh sửa"
                             onClick={(event) => {
                               event.stopPropagation()
@@ -294,7 +294,7 @@ export default function TimeSeriesPage() {
                         {canDelete && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             tooltip="Xóa"
                             onClick={(event) => {
                               event.stopPropagation()

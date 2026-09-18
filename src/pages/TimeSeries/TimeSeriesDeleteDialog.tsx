@@ -75,7 +75,7 @@ export default function TimeSeriesDeleteDialog({
 
         <div className="grid gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive lg:grid-cols-2">
           <div className="space-y-1.5">
-            <p className="font-semibold">Hệ quả trên lớp Time Series</p>
+            <p className="font-semibold">Hệ quả trên lớp dữ liệu theo thời gian</p>
             <p>• Lớp dữ liệu sẽ được gỡ khỏi hệ thống bản đồ.</p>
             <p>• Lớp sẽ ngừng hiển thị trên web và ứng dụng di động.</p>
           </div>

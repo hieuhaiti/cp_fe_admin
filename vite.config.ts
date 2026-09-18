@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@radix-ui/react-compose-refs': path.resolve(__dirname, './src/lib/compose-refs.ts'),
     },
   },
   test: {
@@ -16,5 +17,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    server: {
+      deps: {
+        inline: [/@radix-ui/],
+      },
+    },
   },
 })

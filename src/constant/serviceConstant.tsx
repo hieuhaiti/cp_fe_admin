@@ -53,6 +53,7 @@ export const serviceStatisticsPath = '/statistics'
 
 // Flood / Hydrology
 export const serviceAdminFloodPath = '/admin/flood'
+export const serviceAdminFloodWeatherForecastPath = '/admin/flood/weather/forecast'
 export const serviceFloodPath = '/flood'
 export const serviceAdminFieldReportPath = '/admin/field-reports'
 

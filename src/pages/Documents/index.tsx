@@ -168,7 +168,7 @@ export default function DocumentsPage() {
                       {canUpdate && (
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="icon-xs"
                           tooltip="Chỉnh sửa"
                           onClick={(e) => { e.stopPropagation(); setSelectedId(item.id); setFormOpen(true) }}
                         >
@@ -178,7 +178,7 @@ export default function DocumentsPage() {
                       {canDelete && (
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="icon-xs"
                           tooltip="Xóa"
                           onClick={(e) => { e.stopPropagation(); setDeleteItem(item) }}
                         >

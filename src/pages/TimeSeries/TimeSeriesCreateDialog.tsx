@@ -408,7 +408,7 @@ export default function TimeSeriesCreateDialog({
                   <Input
                     id="time-series-group-search"
                     aria-label="Tìm kiếm nhóm dữ liệu chuỗi thời gian"
-                    placeholder="Tìm theo tên hoặc khóa nhóm…"
+                    placeholder="Tìm theo tên hoặc mã nhóm…"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0"
@@ -540,7 +540,7 @@ export default function TimeSeriesCreateDialog({
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-xs text-muted-foreground">
-                      Khóa nhóm: <strong className="font-mono text-foreground">{selectedGroup.coverageKey}</strong>
+                      Mã nhóm: <strong className="font-mono text-foreground">{selectedGroup.coverageKey}</strong>
                     </span>
                     <Button
                       type="button"
@@ -571,14 +571,14 @@ export default function TimeSeriesCreateDialog({
                         </Button>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Các ảnh thuộc nhóm "{selectedGroup.coverageKey}" sẽ được đổi khóa chuỗi sang nhóm đích để cùng tổng hợp. Lớp bản đồ độc lập (nếu có) vẫn hoạt động bình thường.
+                        Các ảnh thuộc nhóm "{selectedGroup.coverageKey}" sẽ được chuyển sang nhóm đích để cùng tổng hợp. Lớp bản đồ độc lập (nếu có) vẫn hoạt động bình thường.
                       </p>
                       <div className="flex items-center gap-2">
                         <Input
                           list="available-merge-target-groups"
                           value={targetMergeKey}
                           onChange={(e) => setTargetMergeKey(toCoverageKey(e.target.value))}
-                          placeholder="Chọn hoặc nhập khóa nhóm đích"
+                          placeholder="Chọn hoặc nhập mã nhóm đích"
                           className="h-8 text-xs font-mono flex-1 bg-background"
                           disabled={isMerging}
                         />
@@ -677,7 +677,7 @@ export default function TimeSeriesCreateDialog({
                           </p>
                         ) : (
                           <p className="text-[10px] text-muted-foreground">
-                            Định danh trên GeoServer. Có thể chỉnh sửa (vd: thêm _v2) nếu mã cũ đã bị xóa.
+                            Định danh của lớp trên hệ thống bản đồ. Có thể chỉnh sửa (vd: thêm _v2) nếu mã cũ đã bị xóa.
                           </p>
                         )}
                       </div>
@@ -767,7 +767,7 @@ export default function TimeSeriesCreateDialog({
 
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-lg border bg-muted/30 p-3">
-                      <span className="text-xs text-muted-foreground">Ảnh cùng khóa nhóm</span>
+                      <span className="text-xs text-muted-foreground">Ảnh cùng nhóm</span>
                       <strong className="mt-1 block text-lg">{selectedGroup.images.length}</strong>
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-3">
@@ -789,7 +789,7 @@ export default function TimeSeriesCreateDialog({
               <div className="flex items-start gap-2.5">
                 <ServerCog className="mt-0.5 size-4 shrink-0 text-primary" />
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  Hệ thống gom toàn bộ ảnh cùng khóa nhóm và sắp xếp theo ngày thu nhận.
+                  Hệ thống gom toàn bộ ảnh cùng nhóm và sắp xếp theo ngày thu nhận.
                 </p>
               </div>
               <div className="flex items-start gap-2.5">
@@ -801,7 +801,7 @@ export default function TimeSeriesCreateDialog({
               <div className="flex items-start gap-2.5">
                 <Info className="mt-0.5 size-4 shrink-0 text-primary" />
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  Muốn thêm mốc? Tải ảnh vào cùng khóa nhóm tại Kho ảnh viễn thám rồi công bố lại.
+                  Muốn thêm mốc? Tải ảnh vào cùng nhóm tại Kho ảnh viễn thám rồi công bố lại.
                 </p>
               </div>
             </aside>
@@ -846,7 +846,7 @@ export default function TimeSeriesCreateDialog({
               {form.formState.isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Server đang tổng hợp…
+                  Hệ thống đang tổng hợp…
                 </>
               ) : (
                 <>

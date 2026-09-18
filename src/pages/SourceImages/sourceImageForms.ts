@@ -19,9 +19,9 @@ export type RepublishLayerFormValues = z.infer<typeof republishLayerFormSchema>
 export const changeCoverageKeyFormSchema = z.object({
   coverageKey: z
     .string()
-    .min(2, 'Khóa nhóm phải có từ 2 ký tự trở lên')
-    .max(120, 'Khóa nhóm tối đa 120 ký tự')
-    .regex(/^[a-z0-9][a-z0-9_-]{1,119}$/, 'Khóa nhóm chỉ gồm chữ thường, số, dấu gạch ngang hoặc gạch dưới'),
+    .min(2, 'Tên nhóm chuỗi thời gian phải có từ 2 ký tự trở lên')
+    .max(120, 'Tên nhóm chuỗi thời gian tối đa 120 ký tự')
+    .regex(/^[a-z0-9][a-z0-9_-]{1,119}$/, 'Tên nhóm chỉ gồm chữ thường, số, dấu gạch ngang hoặc gạch dưới'),
 })
 
 export type ChangeCoverageKeyFormValues = z.infer<typeof changeCoverageKeyFormSchema>

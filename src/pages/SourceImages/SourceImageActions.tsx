@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, RefreshCw, AlertTriangle, Trash2, Send, Layers } from 'lucide-react'
 import { mapLayerService } from '@/service'
+import { formatLifecycleStatus } from '@/lib/uiTerminology'
 import type { SatelliteImageMember, LayerCleanupStatus } from '@/types/api'
 import {
   republishLayerFormSchema,
@@ -143,7 +144,7 @@ export function RepublishLayerDialog({
               <p className="text-[11px] text-destructive">{form.formState.errors.code.message}</p>
             ) : (
               <p className="text-[10px] text-muted-foreground">
-                Định danh duy nhất trên GeoServer. Hãy nhập mã mới nếu mã lớp cũ đã bị xóa.
+                Định danh duy nhất của lớp bản đồ. Hãy nhập mã mới nếu mã lớp cũ đã bị xóa.
               </p>
             )}
           </div>
@@ -228,14 +229,14 @@ export function ChangeCoverageKeyDialog({
       await import('@/service').then((m) =>
         m.remoteSensingService.updateCoverageKey(image.id, values.coverageKey)
       )
-      toast.success('Cập nhật khóa chuỗi thời gian thành công!')
+      toast.success('Cập nhật nhóm chuỗi thời gian thành công!')
       onOpenChange(false)
       onSuccess()
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         (error as Error).message ||
-        'Không thể cập nhật khóa nhóm'
+        'Không thể cập nhật nhóm chuỗi thời gian'
       toast.error(message)
     } finally {
       setIsSubmitting(false)
@@ -273,7 +274,7 @@ export function ChangeCoverageKeyDialog({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 pt-2">
             <div className="space-y-1">
               <Label htmlFor="change-coverage-key" className="text-xs font-semibold">
-                Khóa nhóm chuỗi thời gian <span className="text-destructive">*</span>
+                Nhóm chuỗi thời gian <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="change-coverage-key"
@@ -363,7 +364,7 @@ export function CleanupDetailDialog({
         <DialogHeader>
           <DialogTitle>Trạng thái dọn dẹp lớp dữ liệu</DialogTitle>
           <DialogDescription>
-            Theo dõi tiến trình giải phóng tài nguyên GeoServer sau khi lớp bản đồ bị xóa.
+            Theo dõi tiến trình giải phóng tài nguyên hệ thống sau khi lớp bản đồ bị xóa.
           </DialogDescription>
         </DialogHeader>
 
@@ -380,7 +381,7 @@ export function CleanupDetailDialog({
                 <span className="font-mono font-semibold">{cleanupData.code}</span>
               </div>
               <div>
-                <span className="text-muted-foreground block text-[11px]">Trạng thái cleanup</span>
+                <span className="text-muted-foreground block text-[11px]">Trạng thái xử lý</span>
                 <Badge
                   variant={
                     cleanupData.cleanupStatus === 'complete'
@@ -391,7 +392,7 @@ export function CleanupDetailDialog({
                   }
                   className="mt-0.5 text-[10px]"
                 >
-                  {cleanupData.cleanupStatus}
+                  {formatLifecycleStatus(cleanupData.cleanupStatus)}
                 </Badge>
               </div>
             </div>
@@ -405,8 +406,8 @@ export function CleanupDetailDialog({
                     <strong className="font-mono">{cleanupData.job.attempt} / {cleanupData.job.maxAttempts}</strong>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Trạng thái job:</span>{' '}
-                    <span className="font-mono font-semibold">{cleanupData.job.status}</span>
+                    <span className="text-muted-foreground">Trạng thái tiến trình:</span>{' '}
+                    <span className="font-mono font-semibold">{formatLifecycleStatus(cleanupData.job.status)}</span>
                   </div>
                   {cleanupData.job.nextAttemptAt && (
                     <div className="col-span-2 text-muted-foreground">

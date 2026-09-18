@@ -298,7 +298,7 @@ export default function NewsComments(): JSX.Element {
                         {canApprove && (
                           <Button
                             variant={toApprovedFlag(isApproved) ? 'outline' : 'default'}
-                            size="sm"
+                            size="icon-xs"
                             disabled={toApprovedFlag(isApproved) || approveMutation.isPending}
                             onClick={(e) => {
                               e.stopPropagation()
@@ -320,7 +320,7 @@ export default function NewsComments(): JSX.Element {
                         {canDelete && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openDeleteDialog(c)

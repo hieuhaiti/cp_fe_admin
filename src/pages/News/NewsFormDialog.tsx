@@ -225,7 +225,7 @@ export default function NewsFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="tags">Tags (phân cách bằng dấu phẩy)</Label>
-            <Input id="tags" {...register('tags')} placeholder="du-lich, bien-gioi, dak-lak" />
+            <Input id="tags" {...register('tags')} placeholder="cam-pha, moi-truong, ngap-lut" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

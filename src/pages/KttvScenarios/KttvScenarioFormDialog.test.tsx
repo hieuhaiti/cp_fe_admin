@@ -68,6 +68,12 @@ const editResponse = {
     is_active: true,
   },
 }
+const caiTaoResponse = {
+  data: {
+    ...editResponse.data,
+    type: 'cai_tao',
+  },
+}
 
 describe('KttvScenarioFormDialog', () => {
   beforeEach(() => {
@@ -84,6 +90,11 @@ describe('KttvScenarioFormDialog', () => {
     expect(screen.getByText('Tên kịch bản là bắt buộc')).toBeInTheDocument()
   })
 
+  it('respects defaultType when opening in create mode', () => {
+    renderDialog({ defaultType: 'cai_tao' })
+    expect(screen.getByRole('combobox', { name: 'Phân loại kịch bản' })).toHaveTextContent('Cải tạo thoát nước')
+  })
+
   it('rejects non-numeric minimum rainfall', async () => {
     renderDialog()
     fireEvent.change(screen.getByLabelText('Mã kịch bản *'), { target: { value: 'scenario_1' } })
@@ -93,34 +104,70 @@ describe('KttvScenarioFormDialog', () => {
     expect(await screen.findByText('Phải là số hợp lệ')).toBeInTheDocument()
   })
 
-  it('submits exact Server-aligned create payload with numeric/null values', async () => {
+  it('submits exact Server-aligned create payload with numeric/null values and defaulted layer', async () => {
     renderDialog()
     fireEvent.change(screen.getByLabelText('Tên kịch bản *'), { target: { value: 'Kịch bản Mưa Lớn' } })
     fireEvent.change(screen.getByLabelText('Lượng mưa tối thiểu (mm)'), { target: { value: '25.5' } })
     fireEvent.change(screen.getByLabelText('Lượng mưa tối đa (mm)'), { target: { value: '100' } })
     fireEvent.change(screen.getByLabelText('Triều tối thiểu (m)'), { target: { value: '' } })
     fireEvent.change(screen.getByLabelText('Mô tả'), { target: { value: '  Mô tả thử  ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Chọn lớp bản đồ' }))
-    fireEvent.click(await screen.findByRole('button', { name: /flood_layer/ }))
+    // Lớp bản đồ đã được tự động điền default từ layersResponse
+    expect(screen.getByRole('button', { name: /flood_layer/ })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
     await waitFor(() => expect(createMutate).toHaveBeenCalledWith({
       code: 'kich_ban_mua_lon', nameVi: 'Kịch bản Mưa Lớn', layerCode: 'flood_layer',
       description: 'Mô tả thử', isActive: true, minRainfall: 25.5, maxRainfall: 100,
       minTide: null, maxTide: null,
+      type: 'hien_trang', rcp: null,
     }))
   })
 
-  it('prefills edit data and submits the update mutation', async () => {
+  it('prefills edit data and linked map layer properly', async () => {
     queryMock.mockImplementation((key: unknown) => String(key).includes('detail') ? {
       data: editResponse,
       error: null, isLoading: false,
     } : { data: layersResponse, error: null, isLoading: false })
     renderDialog({ scenarioId: 3 })
     expect(screen.getByLabelText('Tên kịch bản *')).toHaveValue('Kịch bản cũ')
+    expect(screen.getByRole('button', { name: /flood_layer/ })).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Tên kịch bản *'), { target: { value: 'Kịch bản mới' } })
     fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
     await waitFor(() => expect(updateMutate).toHaveBeenCalledWith(expect.objectContaining({ code: 'scenario_1', nameVi: 'Kịch bản mới', layerCode: 'flood_layer', minRainfall: 10 })))
     expect(createMutate).not.toHaveBeenCalled()
+  })
+
+  it('auto-fills default scenario classification on edit with cai_tao type', () => {
+    queryMock.mockImplementation((key: unknown) =>
+      String(key).includes('detail')
+        ? {
+            data: caiTaoResponse,
+            error: null,
+            isLoading: false,
+          }
+        : { data: layersResponse, error: null, isLoading: false }
+    )
+    renderDialog({ scenarioId: 3 })
+    expect(screen.getByRole('combobox', { name: 'Phân loại kịch bản' })).toHaveTextContent('Cải tạo thoát nước')
+  })
+
+  it('auto-fills default scenario classification from initialScenario immediately', () => {
+    const initial = {
+      id: 5,
+      code: 'scenario_5',
+      name_vi: 'Kịch bản quy hoạch',
+      type: 'quy_hoach' as const,
+      rcp: 'rcp85' as const,
+      min_rainfall: '50',
+      max_rainfall: null,
+      min_tide: null,
+      max_tide: null,
+      layer_code: 'flood_layer',
+      description: '',
+      is_active: true,
+    }
+    renderDialog({ scenarioId: 5, initialScenario: initial })
+    expect(screen.getByRole('combobox', { name: 'Phân loại kịch bản' })).toHaveTextContent('Quy hoạch 2050')
+    expect(screen.getByRole('combobox', { name: 'Nhánh kịch bản biến đổi khí hậu' })).toHaveTextContent('RCP 8.5')
   })
 
   it('shows loading and error states for edit detail', () => {
@@ -128,5 +175,65 @@ describe('KttvScenarioFormDialog', () => {
     renderDialog({ scenarioId: 3 })
     expect(screen.getByText('Đang tải dữ liệu...')).toBeInTheDocument()
     expect(screen.getByText('Không tải được chi tiết kịch bản')).toBeInTheDocument()
+  })
+
+  it('preserves newly selected layer and edited fields when layer search changes and submits correct payload', async () => {
+    const searchLayers = {
+      data: {
+        items: [
+          { id: 290, code: 'kich_ban_ngap_nhe_rcp8_5_2050', name_vi: 'Kịch bản ngập nhẹ - RCP8.5 - 2050' },
+        ],
+      },
+    }
+
+    let searchParam = ''
+    queryMock.mockImplementation((key: unknown) => {
+      const keyStr = String(key)
+      if (keyStr.includes('detail')) {
+        return { data: editResponse, error: null, isLoading: false }
+      }
+      if (keyStr.includes('map-layers-dropdown')) {
+        if (keyStr.includes('nhẹ') || searchParam === 'nhẹ') {
+          return { data: searchLayers, error: null, isLoading: false }
+        }
+        return { data: layersResponse, error: null, isLoading: false }
+      }
+      return { data: undefined, error: null, isLoading: false }
+    })
+
+    renderDialog({ scenarioId: 3 })
+
+    expect(screen.getByLabelText('Tên kịch bản *')).toHaveValue('Kịch bản cũ')
+
+    fireEvent.change(screen.getByLabelText('Tên kịch bản *'), { target: { value: 'Kịch bản ngập nhẹ cập nhật' } })
+
+    const comboboxTrigger = screen.getByRole('button', { name: /flood_layer/ })
+    fireEvent.click(comboboxTrigger)
+
+    searchParam = 'nhẹ'
+    const searchInput = screen.getByPlaceholderText('Tìm lớp bản đồ...')
+    fireEvent.change(searchInput, { target: { value: 'nhẹ' } })
+
+    const newLayerOption = await screen.findByRole('button', { name: /kich_ban_ngap_nhe_rcp8_5_2050/ })
+    expect(newLayerOption).toBeInTheDocument()
+
+    fireEvent.click(newLayerOption)
+
+    searchParam = ''
+
+    expect(await screen.findByRole('button', { name: /kich_ban_ngap_nhe_rcp8_5_2050/ })).toBeInTheDocument()
+    expect(screen.getByText(/Kịch bản ngập nhẹ - RCP8.5 - 2050/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    await waitFor(() => {
+      expect(updateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'scenario_1',
+          nameVi: 'Kịch bản ngập nhẹ cập nhật',
+          layerCode: 'kich_ban_ngap_nhe_rcp8_5_2050',
+        })
+      )
+    })
   })
 })

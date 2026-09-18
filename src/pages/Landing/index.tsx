@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { navConfig } from '@/constant/common'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import { checkPermission, ROLE_LABELS, getUserRole, ROLES, hasPerm } from '@/lib/permissions'
+import { formatModelStatus } from '@/lib/uiTerminology'
 import type { AdminDashboardOverview, ApiResponse } from '@/types/api'
 import type { NavItem } from '@/types/common'
 import {
@@ -309,7 +310,7 @@ export default function LandingPage() {
                       : 'Chưa có kỳ'
                 }
                 statusBadge={
-                  flood?.status === 'SUCCEEDED' ? 'Mô hình SUCCEEDED' : flood?.status
+                  formatModelStatus(flood?.status)
                 }
                 meta={
                   flood

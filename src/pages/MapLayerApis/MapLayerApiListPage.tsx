@@ -378,7 +378,7 @@ export default function MapLayerApiListPage(): JSX.Element {
                       {canUpdate && (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon-xs"
                           onClick={(event) => {
                             event.stopPropagation()
                             openRegenerateDialog(api)
@@ -391,7 +391,7 @@ export default function MapLayerApiListPage(): JSX.Element {
                       {canUpdate && (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon-xs"
                           onClick={(event) => {
                             event.stopPropagation()
                             openEditDialog(api)
@@ -404,7 +404,7 @@ export default function MapLayerApiListPage(): JSX.Element {
                       {canDelete && (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon-xs"
                           onClick={(event) => {
                             event.stopPropagation()
                             openDeleteDialog(api)

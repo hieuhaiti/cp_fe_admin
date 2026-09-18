@@ -2,6 +2,9 @@ import apiClient from './common/apiClient'
 import { serviceAdminFloodPath, serviceFloodPath } from '@/constant/serviceConstant'
 import type { Pagination } from '@/types/api'
 
+export type ScenarioTypeId = 'hien_trang' | 'cai_tao' | 'quy_hoach'
+export type RcpOptionId = 'rcp45' | 'rcp85'
+
 export interface FloodScenarioLayer {
   id: string
   code: string
@@ -17,6 +20,8 @@ export interface FloodScenario {
   id: number | string
   code: string
   name_vi: string
+  type: ScenarioTypeId
+  rcp: RcpOptionId | null
   min_rainfall: string | null
   max_rainfall: string | null
   min_tide: string | null
@@ -33,6 +38,9 @@ export interface FloodScenarioListParams {
   page?: number
   limit?: number
   activeOnly?: boolean
+  search?: string
+  type?: ScenarioTypeId
+  rcp?: RcpOptionId
 }
 
 export interface FloodScenarioListData {
@@ -71,6 +79,8 @@ export interface FloodSimulationResult {
 export interface FloodScenarioWriteBody {
   code?: string
   nameVi?: string
+  type?: ScenarioTypeId
+  rcp?: RcpOptionId | null
   minRainfall?: number | null
   maxRainfall?: number | null
   minTide?: number | null
@@ -78,6 +88,23 @@ export interface FloodScenarioWriteBody {
   layerCode?: string
   description?: string | null
   isActive?: boolean
+}
+
+export interface ConvertLayersToScenariosBody {
+  layerCodes: string[]
+  type: ScenarioTypeId
+  rcp?: RcpOptionId | null
+  minRainfall?: number
+  maxRainfall?: number | null
+  minTide?: number | null
+  maxTide?: number | null
+  isActive?: boolean
+}
+
+export interface ConvertLayersToScenariosResult {
+  created: FloodScenario[]
+  skipped: FloodScenario[]
+  missingLayerCodes: string[]
 }
 
 const publicBase = `${serviceFloodPath}/scenarios`
@@ -110,6 +137,10 @@ export default {
 
   /** DELETE /api/v1/admin/flood/scenarios/:floodScenarioId */
   delete: (id: number | string) => apiClient.del<FloodScenario>(`${adminBase}/${id}`),
+
+  /** POST /api/v1/admin/flood/scenarios/from-layers */
+  convertFromLayers: (data: ConvertLayersToScenariosBody) =>
+    apiClient.post<ConvertLayersToScenariosResult>(`${adminBase}/from-layers`, data),
 
   /** POST /flood/simulation — match scenario by rainfall + tide */
   simulate: (data: { rainfall: number; tide?: number | null }) =>

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -158,6 +158,9 @@ export function NotificationMenu() {
     false
   )
 
+  const openRef = useRef(open)
+  openRef.current = open
+
   const refreshNotifications = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['notifications'] })
   }, [queryClient])
@@ -165,13 +168,13 @@ export function NotificationMenu() {
   const handleWsMessage = useCallback(
     (message: { data?: { id?: number | string; title?: string | null; body?: string | null } }) => {
       refreshNotifications()
-      if (!open) {
+      if (!openRef.current) {
         toast.info(message.data?.title || message.data?.body || 'Bạn có thông báo mới', {
           toastId: `notification-${message.data?.id ?? 'new'}`,
         })
       }
     },
-    [open, refreshNotifications]
+    [refreshNotifications]
   )
 
   useNotificationWebSocket({

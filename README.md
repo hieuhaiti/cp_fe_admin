@@ -1,4 +1,4 @@
-# 🔧 WebGIS An Ninh Biên Giới Đắk Lắk - Admin
+# Quản trị WebGIS Cẩm Phả
 
 <p align="center">
   <strong>Hệ thống quản trị dữ liệu GIS và nội dung</strong>
@@ -210,4 +210,4 @@ const PERMISSIONS = {
 
 ## 📝 License
 
-Copyright © 2026 UBND Tỉnh Đắk Lắk. All rights reserved.
+Copyright © 2026 UBND Thành phố Cẩm Phả. All rights reserved.

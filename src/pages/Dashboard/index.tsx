@@ -19,6 +19,7 @@ import {
 } from '@/service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { Button } from '@/components/ui/button'
 import {
   MessageSquareWarning,
@@ -56,12 +57,19 @@ const FEEDBACK_STATUS_LABEL: Record<string, string> = {
   rejected: 'Từ chối',
   resolved: 'Đã xử lý',
 }
-const FEEDBACK_STATUS_TONE: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-900 border-amber-200',
-  under_review: 'bg-sky-100 text-sky-900 border-sky-200',
-  approved: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-  rejected: 'bg-red-100 text-red-900 border-red-200',
-  resolved: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+const FEEDBACK_STATUS_TONE: Record<string, { badge: string; dot: string }> = {
+  pending: { badge: 'border-warning/30 bg-warning/10 text-warning', dot: 'bg-warning' },
+  under_review: { badge: 'border-info/30 bg-info/10 text-info', dot: 'bg-info' },
+  approved: { badge: 'border-success/30 bg-success/10 text-success', dot: 'bg-success' },
+  rejected: {
+    badge: 'border-destructive/30 bg-destructive/10 text-destructive',
+    dot: 'bg-destructive',
+  },
+  resolved: { badge: 'border-success/30 bg-success/10 text-success', dot: 'bg-success' },
+}
+const DEFAULT_STATUS_TONE = {
+  badge: 'border-border bg-muted text-muted-foreground',
+  dot: 'bg-muted-foreground',
 }
 
 const formatHa = (v: number | null | undefined) =>
@@ -510,7 +518,10 @@ function ForestVsMineCard({
             Rừng & Mỏ tại Cẩm Phả
           </CardTitle>
           {snapshotStatus && (
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+            <Badge
+              variant="outline"
+              className="border-success/30 bg-success/10 text-success text-xs"
+            >
               {snapshotStatus === 'published' ? 'Đã xuất bản' : snapshotStatus}
             </Badge>
           )}
@@ -599,16 +610,14 @@ function RecentFeedbackCard({
             {Object.entries(FEEDBACK_STATUS_LABEL).map(([statusKey, label]) => {
               const cnt = byStatus[statusKey] ?? 0
               if (cnt === 0) return null
+              const tone = FEEDBACK_STATUS_TONE[statusKey] || DEFAULT_STATUS_TONE
               return (
-                <span
+                <StatusDotBadge
                   key={statusKey}
-                  className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium border ${
-                    FEEDBACK_STATUS_TONE[statusKey] || 'border-slate-200'
-                  }`}
-                >
-                  <span>{label}:</span>
-                  <span className="font-semibold">{cnt}</span>
-                </span>
+                  label={`${label}: ${cnt}`}
+                  badgeClass={tone.badge}
+                  dotClass={tone.dot}
+                />
               )
             })}
           </div>
@@ -632,12 +641,11 @@ function RecentFeedbackCard({
                     <span className="min-w-0 flex-1 truncate font-medium" title={title}>
                       {title}
                     </span>
-                    <Badge
-                      variant="outline"
-                      className={FEEDBACK_STATUS_TONE[status] || 'border-slate-200'}
-                    >
-                      {FEEDBACK_STATUS_LABEL[status] || status}
-                    </Badge>
+                    <StatusDotBadge
+                      label={FEEDBACK_STATUS_LABEL[status] || status}
+                      badgeClass={(FEEDBACK_STATUS_TONE[status] || DEFAULT_STATUS_TONE).badge}
+                      dotClass={(FEEDBACK_STATUS_TONE[status] || DEFAULT_STATUS_TONE).dot}
+                    />
                   </div>
                   {iso ? (
                     <p className="text-muted-foreground mt-1 text-xs">{formatDateTime(iso)}</p>

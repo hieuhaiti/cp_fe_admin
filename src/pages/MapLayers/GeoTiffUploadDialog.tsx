@@ -29,6 +29,7 @@ interface GeoTiffUploadDialogProps {
 }
 
 const toLayerCode = (value: string) => {
+  if (!value || !value.trim()) return ''
   const normalized = value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -38,10 +39,11 @@ const toLayerCode = (value: string) => {
     .replace(/[^a-z0-9_]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 63)
-  return /^[a-z]/.test(normalized) ? normalized : `raster_${normalized || Date.now()}`
+  return normalized
 }
 
 const toCoverageKey = (value: string) => {
+  if (!value || !value.trim()) return ''
   const normalized = value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -50,7 +52,7 @@ const toCoverageKey = (value: string) => {
     .replace(/[^a-z0-9_-]+/g, '_')
     .replace(/^[_-]+|[_-]+$/g, '')
     .slice(0, 80)
-  return normalized || 'chuoi_thoi_gian'
+  return normalized
 }
 
 const MAX_GEOTIFF_SIZE = 500 * 1024 * 1024 // 500MB
@@ -180,8 +182,9 @@ export default function GeoTiffUploadDialog({
       return
     }
 
-    const layerCode = toLayerCode(code || title)
-    const activeCoverageKey = toCoverageKey(coverageKey) || layerCode
+    const rawLayerCode = code.trim() || toLayerCode(title)
+    const layerCode = toLayerCode(rawLayerCode) || `raster_${Date.now()}`
+    const activeCoverageKey = coverageKey.trim() ? toCoverageKey(coverageKey) : layerCode
     const epsg = Number(srid)
     if (!Number.isInteger(epsg) || epsg < 1) return toast.error('Hệ tọa độ không hợp lệ.')
 
@@ -242,11 +245,16 @@ export default function GeoTiffUploadDialog({
       onPublished()
       onOpenChange(false)
     } catch (error: any) {
-      const errCode = error?.response?.data?.errors?.[0]
+      const errErrors = error?.response?.data?.errors as string[] | undefined
+      const errCode = errErrors?.[0]
       const errMsg = error?.response?.data?.message
-      if (errCode === 'RASTER_LAYER_CONFLICT' || errCode === 'LAYER_CODE_IN_USE_BY_OTHER_IMAGE') {
+      if (errErrors?.includes('LAYER_CODE_RETIRED')) {
         toast.error(
-          `Mã lớp độc lập "${layerCode}" đã tồn tại. Nếu bạn muốn gom nhiều mốc thời gian, hãy chọn mục "Thêm vào chuỗi thời gian" với cùng Khóa nhóm.`
+          `Mã lớp "${layerCode}" đã từng được sử dụng trong lịch sử hệ thống và đã bị hủy. Vui lòng đổi sang một mã lớp mới (ví dụ: ${layerCode}_1).`
+        )
+      } else if (errCode === 'RASTER_LAYER_CONFLICT' || errCode === 'LAYER_CODE_IN_USE_BY_OTHER_IMAGE') {
+        toast.error(
+          `Mã lớp độc lập "${layerCode}" đã tồn tại. Nếu bạn muốn gom nhiều mốc thời gian, hãy chọn mục "Thêm vào chuỗi thời gian" với cùng nhóm chuỗi thời gian.`
         )
       } else {
         toast.error(errMsg || error?.message || 'Không thể xử lý tệp ảnh.')
@@ -366,7 +374,7 @@ export default function GeoTiffUploadDialog({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="geotiff-coverage-key">
-                  Khóa nhóm Time Series (coverage_key) <span className="text-destructive">*</span>
+                  Nhóm chuỗi thời gian <span className="text-destructive">*</span>
                 </Label>
                 {existingCoverageOptions.length > 0 && (
                   <span className="text-xs text-muted-foreground">
@@ -393,7 +401,7 @@ export default function GeoTiffUploadDialog({
               {existingCoverageOptions.length > 0 && (
                 <div className="space-y-1.5 pt-0.5">
                   <span className="text-xs text-muted-foreground block">
-                    Gợi ý chuỗi đã có (bấm để tự điền khóa và danh mục):
+                    Gợi ý chuỗi đã có (bấm để tự điền nhóm và danh mục):
                   </span>
                   <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                     {existingCoverageOptions.map((opt) => (
@@ -421,7 +429,7 @@ export default function GeoTiffUploadDialog({
               )}
 
               <p className="text-xs text-muted-foreground">
-                Tất cả các ảnh thuộc cùng một chuỗi thời gian phải dùng chung khóa này và có ngày thu nhận riêng biệt.
+                Tất cả các ảnh thuộc cùng một chuỗi thời gian phải dùng chung mã nhóm này và có ngày thu nhận riêng biệt.
               </p>
             </div>
           ) : (
@@ -457,7 +465,7 @@ export default function GeoTiffUploadDialog({
               <div className="space-y-2 rounded-lg border border-dashed p-3 bg-muted/20">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="geotiff-standalone-coverage-key" className="text-xs font-medium">
-                    Khóa chuỗi thời gian (coverage_key) — Tùy chọn gộp nhóm sau này
+                    Nhóm chuỗi thời gian — Tùy chọn gộp nhóm sau này
                   </Label>
                 </div>
                 <Input
@@ -470,7 +478,7 @@ export default function GeoTiffUploadDialog({
                   className="h-8 text-xs font-mono"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Nếu ảnh này là một mốc trong chuỗi thời gian, chọn hoặc nhập khóa chuỗi tại đây. Lớp vẫn xuất bản độc lập bình thường nhưng sẵn sàng gộp vào chuỗi sau này.
+                  Nếu ảnh này là một mốc trong chuỗi thời gian, chọn hoặc nhập tên nhóm tại đây. Lớp vẫn xuất bản độc lập bình thường nhưng sẵn sàng gộp vào chuỗi sau này.
                 </p>
                 {existingCoverageOptions.length > 0 && (
                   <div className="flex flex-wrap gap-1 pt-1 max-h-20 overflow-y-auto">

@@ -1,6 +1,9 @@
-﻿import '@testing-library/jest-dom/vitest'
+import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
+vi.mock('@radix-ui/react-compose-refs', async () => {
+  return await import('@/lib/compose-refs')
+})
 
 afterEach(() => cleanup())
 

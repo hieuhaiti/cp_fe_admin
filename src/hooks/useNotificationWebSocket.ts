@@ -37,11 +37,15 @@ function buildNotificationSocketUrl(token?: string) {
         url.searchParams.set('token', token)
     }
 
+
     return url.toString()
 }
 
 export function useNotificationWebSocket(options: UseNotificationWebSocketOptions) {
     const { enabled = true, roleCode, onMessage } = options
+    const onMessageRef = useRef(onMessage)
+    onMessageRef.current = onMessage
+
     const reconnectTimeoutRef = useRef<number | null>(null)
     const reconnectAttemptRef = useRef(0)
     const socketRef = useRef<WebSocket | null>(null)
@@ -63,8 +67,12 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
             if (disposed) return
             clearReconnectTimer()
 
-            const delay = Math.min(30000, 1000 * 2 ** reconnectAttemptRef.current)
+            // Backoff: 3s, 6s, 12s, 24s, capped at 60s. After 5 failures, wait 60s
+            const attempt = reconnectAttemptRef.current
+            const delay = attempt > 5 ? 60000 : Math.min(60000, 3000 * 2 ** attempt)
+
             reconnectTimeoutRef.current = window.setTimeout(() => {
+                if (disposed) return
                 reconnectAttemptRef.current += 1
                 connect()
             }, delay)
@@ -74,44 +82,52 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
             const now = Date.now()
             if (now - lastRefetchAtRef.current < 500) return
             lastRefetchAtRef.current = now
-            onMessage(message)
+            onMessageRef.current(message)
         }
 
         const connect = () => {
             if (disposed) return
 
-            const socketUrl = buildNotificationSocketUrl(
-                tokenManager.getAccessToken() || undefined
-            )
+            const token = tokenManager.getAccessToken()
+            if (!token) return
+
+            const socketUrl = buildNotificationSocketUrl(token)
             if (!socketUrl) return
 
-            const socket = new WebSocket(socketUrl)
-            socketRef.current = socket
+            try {
+                const socket = new WebSocket(socketUrl)
+                socketRef.current = socket
 
-            socket.onopen = () => {
-                reconnectAttemptRef.current = 0
-                if (roleCode) {
-                    socket.send(JSON.stringify({
-                        action: 'subscribe',
-                        channels: [`role:${roleCode}`],
-                    }))
+                socket.onopen = () => {
+                    reconnectAttemptRef.current = 0
+                    if (roleCode) {
+                        socket.send(JSON.stringify({
+                            action: 'subscribe',
+                            channels: [`role:${roleCode}`],
+                        }))
+                    }
                 }
-            }
 
-            socket.onmessage = (event) => {
-                try {
-                    const message = JSON.parse(event.data) as NotificationSocketMessage
-                    if (message.event === 'notification') handleMessage(message)
-                } catch {
-                    // Bỏ qua payload không thuộc giao thức notification.
+                socket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data) as NotificationSocketMessage
+                        if (message.event === 'notification') handleMessage(message)
+                    } catch {
+                        // Bỏ qua payload không thuộc giao thức notification.
+                    }
                 }
-            }
 
-            socket.onerror = () => {
-                socket.close()
-            }
+                socket.onerror = () => {
+                    // onerror triggers onclose automatically in standard browser WebSocket
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.close()
+                    }
+                }
 
-            socket.onclose = () => {
+                socket.onclose = () => {
+                    if (!disposed) scheduleReconnect()
+                }
+            } catch {
                 if (!disposed) scheduleReconnect()
             }
         }
@@ -124,9 +140,10 @@ export function useNotificationWebSocket(options: UseNotificationWebSocketOption
 
             if (socketRef.current) {
                 socketRef.current.onclose = null
+                socketRef.current.onerror = null
                 socketRef.current.close()
                 socketRef.current = null
             }
         }
-    }, [enabled, onMessage, roleCode])
+    }, [enabled, roleCode])
 }

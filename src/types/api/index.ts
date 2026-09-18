@@ -31,6 +31,7 @@ export type * from './document'
 export type * from './mapImage'
 export type * from './mapLayer'
 export type * from './mapLayerApi'
+export type * from './layerCategory'
 
 // GEE / satellite / weather / flood / mobile
 export type * from './weather'

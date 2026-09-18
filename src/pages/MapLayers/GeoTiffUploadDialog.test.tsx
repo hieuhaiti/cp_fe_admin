@@ -89,7 +89,7 @@ describe('GeoTiffUploadDialog', () => {
     fireEvent.change(screen.getByLabelText(/Tên lớp/i), {
       target: { value: 'Lớp phủ 2018' },
     })
-    fireEvent.change(screen.getByLabelText(/Khóa nhóm Time Series/i), {
+    fireEvent.change(screen.getByLabelText(/Nhóm chuỗi thời gian/i), {
       target: { value: 'cam-pha-do-thi' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Lưu vào chuỗi thời gian' }))
@@ -202,7 +202,7 @@ describe('GeoTiffUploadDialog', () => {
     fireEvent.change(screen.getByLabelText(/Mã lớp độc lập/i), {
       target: { value: 'lop_phu_2018' },
     })
-    fireEvent.change(screen.getByLabelText(/Khóa chuỗi thời gian/i), {
+    fireEvent.change(screen.getByLabelText(/Nhóm chuỗi thời gian/i), {
       target: { value: 'cam-pha-lop-phu-do-thi' },
     })
 

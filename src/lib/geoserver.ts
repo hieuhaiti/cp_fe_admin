@@ -150,7 +150,7 @@ export function buildGeoserverPreviewUrl(layerFqn?: string | null): string | nul
     request: 'GetMap',
     layers: `${service.workspace}:${service.layerName}`,
     // Cẩm Phả TP bounding box (WGS84). Kéo rộng hơn ranh giới hành chính một chút
-    // để OpenLayers preview có chỗ zoom-out. Trước đây bị nhầm sang Kon Tum
+    // để OpenLayers preview có chỗ zoom-out. Bounding box cũ
     // (107.35,13.83,108.87,15.55) khiến preview mở ra vùng trống.
     bbox: '107.00,20.80,107.60,21.25',
     width: '768',

@@ -395,7 +395,7 @@ export default function FeedbackPage(): JSX.Element {
                           <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-xs"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 openUpdateDialog(item)

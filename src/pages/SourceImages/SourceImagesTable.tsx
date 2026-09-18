@@ -149,7 +149,7 @@ export function SourceImagesTable({
           <TableRow className="bg-muted/40 hover:bg-muted/40">
             <TableHead className="w-[28%] min-w-[14rem]">Thông tin ảnh & Tệp</TableHead>
             <TableHead className="w-[18%] min-w-[10rem]">Mốc thu nhận & Nền tảng</TableHead>
-            <TableHead className="w-[16%] min-w-[9rem]">Khóa nhóm chuỗi (coverage_key)</TableHead>
+            <TableHead className="w-[16%] min-w-[9rem]">Nhóm chuỗi thời gian</TableHead>
             <TableHead className="w-[14%] min-w-[8rem]">Lớp độc lập</TableHead>
             <TableHead className="w-[14%] min-w-[8rem]">Lớp chuỗi thời gian</TableHead>
             <TableHead className="w-[10%] min-w-[7rem] text-right">Thao tác</TableHead>
@@ -236,9 +236,9 @@ export function SourceImagesTable({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="size-7 text-primary hover:text-primary hover:bg-primary/10"
-                        title="Công bố thành lớp bản đồ độc lập mới"
+                        size="icon-xs"
+                        className="text-primary hover:bg-primary/10 hover:text-primary"
+                        tooltip="Công bố thành lớp bản đồ độc lập mới"
                         aria-label={`Công bố lại ảnh #${image.id}`}
                         onClick={() => onRepublish(image)}
                       >
@@ -250,9 +250,9 @@ export function SourceImagesTable({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="size-7 text-muted-foreground hover:text-foreground"
-                        title="Đổi nhóm chuỗi thời gian"
+                        size="icon-xs"
+                        className="text-muted-foreground hover:text-foreground"
+                        tooltip="Đổi nhóm chuỗi thời gian"
                         aria-label={`Đổi nhóm ảnh #${image.id}`}
                         onClick={() => onChangeGroup(image)}
                       >
@@ -264,9 +264,9 @@ export function SourceImagesTable({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="size-7 text-destructive hover:bg-destructive/10"
-                        title="Xem chi tiết sự cố dọn dẹp lớp"
+                        size="icon-xs"
+                        className="text-destructive hover:bg-destructive/10"
+                        tooltip="Xem chi tiết sự cố dọn dẹp lớp"
                         aria-label={`Xem dọn dẹp ảnh #${image.id}`}
                         onClick={() => {
                           const layerId =
@@ -284,9 +284,9 @@ export function SourceImagesTable({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="size-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        title="Xóa ảnh nguồn"
+                        size="icon-xs"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        tooltip="Xóa ảnh nguồn"
                         aria-label={`Xóa ảnh #${image.id}`}
                         onClick={() => onDelete(image)}
                       >

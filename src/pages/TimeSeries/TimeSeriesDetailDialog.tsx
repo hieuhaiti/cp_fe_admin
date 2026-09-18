@@ -60,7 +60,7 @@ export default function TimeSeriesDetailDialog({
                 <span className="font-mono font-semibold">{layer.code}</span>
               </div>
               <div>
-                <span className="text-muted-foreground block text-xs">Khóa chuỗi (coverage_key):</span>
+                <span className="text-muted-foreground block text-xs">Mã nhóm chuỗi:</span>
                 {layer.timeSeries?.coverageKey ? (
                   <div className="flex items-center gap-1.5 pt-0.5">
                     <span className="font-mono text-xs font-semibold text-primary">
@@ -71,11 +71,11 @@ export default function TimeSeriesDetailDialog({
                       variant="ghost"
                       size="icon"
                       className="size-5 text-muted-foreground hover:text-foreground"
-                      title="Sao chép khóa chuỗi"
-                      aria-label={`Sao chép khóa chuỗi ${layer.timeSeries.coverageKey}`}
+                      title="Sao chép mã nhóm"
+                      aria-label={`Sao chép mã nhóm ${layer.timeSeries.coverageKey}`}
                       onClick={() => {
                         navigator.clipboard.writeText(layer.timeSeries.coverageKey || '')
-                        toast.success(`Đã sao chép: ${layer.timeSeries.coverageKey}`)
+                        toast.success(`Đã sao chép mã nhóm: ${layer.timeSeries.coverageKey}`)
                       }}
                     >
                       <Copy className="size-3" />

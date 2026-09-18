@@ -43,7 +43,6 @@
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.555.0",
     "maplibre-gl": "^5.19.0",
-    "phosphor-react": "^1.4.1",
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",

@@ -821,33 +821,7 @@ export default function MapLayerFormDialog({
             onCategoryNameChange={setCategoryName}
             label="Nhóm lớp"
             required
-            disabled={isEdit}
           />
-
-          <div className="space-y-2">
-            <Label>Loại lớp *</Label>
-            {isEdit ? (
-              <Input
-                value={layerKind === 'basemap' ? 'Lớp nền' : 'Lớp chuyên đề'}
-                readOnly
-                disabled
-                className="bg-muted text-muted-foreground"
-              />
-            ) : (
-              <Select
-                value={layerKind}
-                onValueChange={(v) => setLayerKind(v as 'basemap' | 'overlay')}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="overlay">Lớp chuyên đề</SelectItem>
-                  <SelectItem value="basemap">Lớp nền</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="map-layer-name">Tên lớp dữ liệu *</Label>
@@ -860,33 +834,7 @@ export default function MapLayerFormDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Kiểu hình học *</Label>
-            {isEdit ? (
-              <Input
-                value={geometryType.toUpperCase()}
-                readOnly
-                disabled
-                className="bg-muted text-muted-foreground"
-              />
-            ) : (
-              <Select
-                value={geometryType}
-                onValueChange={(v) => setGeometryType(v as FormGeometryKind)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="point">Dữ liệu điểm</SelectItem>
-                  <SelectItem value="line">Dữ liệu đường</SelectItem>
-                  <SelectItem value="polygon">Dữ liệu vùng</SelectItem>
-                  <SelectItem value="raster">Ảnh bản đồ</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
+       
           <div className="space-y-2">
             <Label>Phạm vi hiển thị</Label>
             <Select value={isPublic} onValueChange={(v) => setIsPublic(v as 'true' | 'false')}>

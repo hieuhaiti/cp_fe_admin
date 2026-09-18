@@ -107,7 +107,7 @@ describe('LandingPage', () => {
     expect(screen.getByText('38 đã xuất bản')).toBeInTheDocument()
     expect(screen.getByText('Giám sát ngập lụt')).toBeInTheDocument()
     expect(screen.getByText('1.250,5 ha')).toBeInTheDocument()
-    expect(screen.getByText('Mô hình SUCCEEDED')).toBeInTheDocument()
+    expect(screen.getByText('Mô hình hoàn tất')).toBeInTheDocument()
   })
 
   it('renders loading state without throwing error', () => {

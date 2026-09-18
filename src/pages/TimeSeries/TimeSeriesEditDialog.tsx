@@ -128,7 +128,7 @@ export default function TimeSeriesEditDialog({
             <p className="font-semibold text-foreground">Ghi chú chỉnh sửa:</p>
             <p>• Mã lớp (<code>{layer?.code}</code>) được giữ nguyên.</p>
             <p>• Việc đổi nhóm chỉ thay đổi cách phân loại hiển thị, không di chuyển ảnh sang chuỗi khác.</p>
-            <p>• Bạn có thể đổi tên hiển thị, mức zoom và quyền công khai.</p>
+            <p>• Bạn có thể đổi tên hiển thị, mức thu phóng và quyền công khai.</p>
           </div>
         </div>
 

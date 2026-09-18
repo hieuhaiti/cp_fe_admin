@@ -20,6 +20,7 @@ export { default as mapImageService } from './mapImageService'
 // Alias matching Postman naming
 export { default as pdfMapService } from './mapImageService'
 export { default as mapLayerService } from './mapLayerService'
+export { default as layerCategoryService } from './layerCategoryService'
 export { default as mapLayerApiService } from './mapLayerApiService'
 // Alias matching Postman naming
 export { default as mapApiService } from './mapLayerApiService'
@@ -33,6 +34,7 @@ export { default as satelliteService } from './satelliteService'
 export { default as forestClassificationService } from './forestClassificationService'
 export { default as fieldMeasurementService } from './fieldMeasurementService'
 export { default as kttvScenarioService } from './kttvScenarioService'
+export { default as weatherForecastService } from './weatherForecastService'
 
 // Statistics
 export { default as statisticsService } from './statisticsService'

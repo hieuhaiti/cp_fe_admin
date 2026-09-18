@@ -3,15 +3,15 @@ import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import {
   Eye,
-  EyeSlash,
+  EyeOff,
   User,
   Lock,
   ShieldCheck,
-  MapTrifold,
-  GlobeHemisphereWest,
+  Map,
+  Globe2,
   MapPin,
-  Lightning,
-} from 'phosphor-react'
+  Zap,
+} from 'lucide-react'
 import { authService } from '@/service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -150,7 +150,7 @@ export default function Login() {
             <CardContent className="p-6 sm:p-10">
               <div className="mb-6 text-center sm:text-left">
                 <span className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold tracking-wide uppercase">
-                  <ShieldCheck className="h-4 w-4" weight="bold" />
+                  <ShieldCheck className="h-4 w-4" />
                   Cổng Không Gian
                 </span>
                 <h2 className="text-foreground mt-4 text-3xl font-bold tracking-tight">
@@ -207,7 +207,7 @@ export default function Login() {
                       onClick={() => setShowPassword((prev) => !prev)}
                     >
                       {showPassword ? (
-                        <EyeSlash className="h-5 w-5" />
+                        <EyeOff className="h-5 w-5" />
                       ) : (
                         <Eye className="h-5 w-5" />
                       )}
@@ -234,7 +234,7 @@ export default function Login() {
 
               <div className="mt-6 border-t pt-5">
                 <p className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider">
-                  <Lightning className="h-3.5 w-3.5" weight="fill" />
+                  <Zap className="h-3.5 w-3.5" />
                   Tài khoản demo (mật khẩu: {DEMO_PASSWORD})
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -270,31 +270,31 @@ export default function Login() {
           <div className="relative mx-auto aspect-square w-full max-w-md">
             <div className="bg-primary/20 absolute inset-0 animate-pulse rounded-full blur-[100px]" />
             <div className="border-primary/30 from-primary/10 relative flex h-full w-full items-center justify-center rounded-full border bg-linear-to-br to-transparent p-8 backdrop-blur-sm">
-              <GlobeHemisphereWest
+              <Globe2
                 className="text-primary/40 h-full w-full drop-shadow-[0_0_30px_hsl(var(--primary)/0.45)]"
-                weight="thin"
+                strokeWidth={0.75}
               />
               <div className="absolute top-[20%] left-[25%] animate-bounce">
-                <MapPin className="text-primary h-8 w-8 drop-shadow-md" weight="fill" />
+                <MapPin className="text-primary h-8 w-8 drop-shadow-md" fill="currentColor" />
               </div>
               <div
                 className="absolute top-[45%] right-[20%] animate-bounce"
                 style={{ animationDelay: '0.5s' }}
               >
-                <MapPin className="text-primary h-6 w-6 drop-shadow-md" weight="fill" />
+                <MapPin className="text-primary h-6 w-6 drop-shadow-md" fill="currentColor" />
               </div>
               <div
                 className="absolute bottom-[30%] left-[40%] animate-bounce"
                 style={{ animationDelay: '1s' }}
               >
-                <MapPin className="text-primary h-10 w-10 drop-shadow-md" weight="fill" />
+                <MapPin className="text-primary h-10 w-10 drop-shadow-md" fill="currentColor" />
               </div>
             </div>
           </div>
 
           <div className="mt-8 space-y-2 text-center">
             <h3 className="text-foreground flex items-center justify-center gap-2 text-2xl font-bold tracking-tight">
-              <MapTrifold className="text-primary h-6 w-6" />
+              <Map className="text-primary h-6 w-6" />
               Nền Tảng Quản Trị Không Gian
             </h3>
             <p className="text-muted-foreground mx-auto max-w-sm">

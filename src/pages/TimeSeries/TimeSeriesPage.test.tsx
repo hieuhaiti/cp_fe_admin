@@ -244,7 +244,7 @@ describe('TimeSeriesPage', () => {
     expect(screen.getByText('Quản lý lớp dữ liệu theo thời gian')).toBeInTheDocument()
     expect(screen.getByText(/tổng hợp các ảnh cùng nhóm thành lớp dữ liệu theo thời gian/)).toBeInTheDocument()
     expect(screen.getAllByText('lop_phu_do_thi_ts').length).toBeGreaterThan(0)
-    expect(screen.getByText('Khóa chuỗi')).toBeInTheDocument()
+    expect(screen.getByText('Mã nhóm')).toBeInTheDocument()
     expect(screen.getByText('lop_phu_do_thi')).toBeInTheDocument()
     expect(screen.getByText('3 mốc')).toBeInTheDocument()
     expect(screen.getByText('Tổng hợp lớp chuỗi thời gian')).toBeInTheDocument()
@@ -257,7 +257,7 @@ describe('TimeSeriesPage', () => {
     )
 
     expect(screen.getByText('Tạo lớp dữ liệu chuỗi thời gian')).toBeInTheDocument()
-    expect(screen.getByText(/gom toàn bộ ảnh cùng khóa nhóm/)).toBeInTheDocument()
+    expect(screen.getByText(/gom toàn bộ ảnh cùng nhóm/)).toBeInTheDocument()
     expect(screen.getByText(/Mốc mặc định là ảnh có ngày thu nhận mới nhất/)).toBeInTheDocument()
     expect(screen.queryByText(/Tải lên tệp GeoTIFF mới/)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Tên hiển thị lớp/)).not.toBeInTheDocument()
@@ -266,7 +266,7 @@ describe('TimeSeriesPage', () => {
 
     expect(screen.getByLabelText(/Tên lớp hiển thị/)).toHaveValue('Lớp phủ mặt đất (2001-2024)')
     expect(screen.getByLabelText(/Mã lớp chuỗi thời gian/)).toHaveValue('lop_phu_do_thi_ts')
-    expect(screen.getByText('Ảnh cùng khóa nhóm')).toBeInTheDocument()
+    expect(screen.getByText('Ảnh cùng nhóm')).toBeInTheDocument()
     expect(screen.getByText('Mốc thời gian duy nhất')).toBeInTheDocument()
     expect(screen.getByText('Các mốc sẽ được tổng hợp')).toBeInTheDocument()
     expect(screen.getAllByText(/2024/).length).toBeGreaterThan(0)
@@ -327,7 +327,7 @@ describe('TimeSeriesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Gộp vào nhóm khác…/ }))
 
     expect(screen.getByText(/Gộp tất cả 1 ảnh của nhóm này vào nhóm chuỗi khác/)).toBeInTheDocument()
-    fireEvent.change(screen.getByPlaceholderText(/Chọn hoặc nhập khóa nhóm đích/), {
+    fireEvent.change(screen.getByPlaceholderText(/Chọn hoặc nhập mã nhóm đích/), {
       target: { value: 'lop_phu_do_thi' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận gộp' }))
@@ -343,7 +343,7 @@ describe('TimeSeriesPage', () => {
     )
 
     expect(screen.getByText('Chi tiết lớp dữ liệu chuỗi thời gian')).toBeInTheDocument()
-    expect(screen.getByText('Khóa chuỗi (coverage_key):')).toBeInTheDocument()
+    expect(screen.getByText('Mã nhóm chuỗi:')).toBeInTheDocument()
     expect(screen.getByText('lop_phu_do_thi')).toBeInTheDocument()
     expect(screen.getByText('CP-DO-THI-2001')).toBeInTheDocument()
     expect(screen.getByText(/Mặc định \(mốc thu nhận mới nhất\)/)).toBeInTheDocument()

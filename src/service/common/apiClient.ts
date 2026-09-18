@@ -1,6 +1,7 @@
 import type { ApiResponse } from '@/types/api'
 import { tokenManager } from '@/lib/tokenManager'
 import { emitSessionExpired } from '@/lib/sessionEvents'
+import { neutralizeUiMessage } from '@/lib/uiTerminology'
 import { toast } from 'react-toastify'
 
 const API_BASE = (
@@ -37,30 +38,16 @@ function getAnonymousId() {
   }
 }
 
-function toNeutralUiMessage(value: unknown): unknown {
-  if (typeof value !== 'string') return value
-  return value
-    .replace(/Google\s+Earth\s+Engine/gi, 'hệ thống xử lý')
-    .replace(/\bGeoServer\b/gi, 'dịch vụ bản đồ')
-    .replace(/\bMinIO\b/gi, 'kho dữ liệu')
-    .replace(/\bGeoTIFF\b/gi, 'dữ liệu bản đồ')
-    .replace(/\bCOG\b/gi, 'dữ liệu bản đồ')
-    .replace(/\bWMS\b/gi, 'dịch vụ bản đồ')
-    .replace(/\bWCS\b/gi, 'dịch vụ tải bản đồ')
-    .replace(/\braster\b/gi, 'dữ liệu bản đồ')
-    .replace(/\bGEE\b/gi, 'hệ thống xử lý')
-}
-
 function neutralizeApiMessages(body: any) {
   if (!body || typeof body !== 'object') return body
   if (typeof body.message === 'string') {
-    body.message = toNeutralUiMessage(body.message)
+    body.message = neutralizeUiMessage(body.message)
   }
   if (Array.isArray(body.errors)) {
     body.errors = body.errors.map((error: any) => {
-      if (typeof error === 'string') return toNeutralUiMessage(error)
+      if (typeof error === 'string') return neutralizeUiMessage(error)
       if (error && typeof error === 'object' && typeof error.message === 'string') {
-        return { ...error, message: toNeutralUiMessage(error.message) }
+        return { ...error, message: neutralizeUiMessage(error.message) }
       }
       return error
     })

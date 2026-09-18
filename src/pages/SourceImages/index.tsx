@@ -24,7 +24,6 @@ import GeoTiffUploadDialog from '@/pages/MapLayers/GeoTiffUploadDialog'
 import type { SatelliteImageMember } from '@/types/api'
 import type { ListSatelliteImagesParams } from '@/service/remoteSensingService'
 import { ShieldAlert, Upload } from 'lucide-react'
-import './sourceImages.css'
 
 export default function SourceImagesPage(): JSX.Element {
   const user = useAuthStore((s) => s.user)

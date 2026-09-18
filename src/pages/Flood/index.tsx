@@ -964,8 +964,8 @@ export default function FloodPage() {
 
       {/* Submit Dialog */}
       <Dialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden">
+          <DialogHeader className="shrink-0 pr-8">
             <DialogTitle className="flex items-center gap-2">
               <Play className="size-4 text-sky-600" />
               Tạo lượt phân tích ngập
@@ -973,7 +973,7 @@ export default function FloodPage() {
             <DialogDescription>Chọn khoảng thời gian giám sát</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5">
+          <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain pr-1">
             <div className="grid max-w-xl gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="monitorStart">
@@ -1044,7 +1044,7 @@ export default function FloodPage() {
           if (!open) setEditingLegend(null)
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className="font-mono text-base">{editingLegend?.code}</span>
@@ -1059,7 +1059,7 @@ export default function FloodPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5">
+          <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain pr-1">
             <div className="space-y-1.5">
               <Label>Nhãn hiển thị (tiếng Việt)</Label>
               <Input

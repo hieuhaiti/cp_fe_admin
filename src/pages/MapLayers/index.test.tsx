@@ -49,7 +49,34 @@ import { renderWithProviders } from '@/test/renderWithProviders'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import type { User } from '@/types/api'
 const queryMock = vi.hoisted(() => vi.fn()); const mutationMock = vi.hoisted(() => vi.fn())
-vi.mock('@/service', () => ({ mapLayerService: { getAll: vi.fn(), update: vi.fn(), delete: vi.fn(), publish: vi.fn() }, useApiQuery: queryMock, useApiMutation: mutationMock }))
+vi.mock('@/service', () => ({
+  mapLayerService: { getAll: vi.fn(), update: vi.fn(), delete: vi.fn(), publish: vi.fn() },
+  layerCategoryService: { getAll: vi.fn().mockResolvedValue({ data: [] }), create: vi.fn() },
+  useApiQuery: queryMock,
+  useApiMutation: mutationMock,
+}))
 vi.mock('./MapLayerDetailDialog', () => ({ default: () => null })); vi.mock('./MapLayerFormDialog', () => ({ default: () => null })); vi.mock('./GeoTiffUploadDialog', () => ({ default: () => null }))
 const admin = { id: 1, email: 'a@a.com', roleCode: 'so_tnmt', isActive: true, role: { code: 'so_tnmt', permissions: { layers: { create: true, update: true, delete: true }, raster: { create: true } } } } as User
-describe('MapLayers index', () => { beforeEach(() => { vi.clearAllMocks(); useAuthStore.setState({ user: admin }); queryMock.mockReturnValue({ data: { data: { items: [] }, metadata: { total: 0 } }, refetch: vi.fn() }); mutationMock.mockReturnValue({ mutate: vi.fn(), isPending: false }) }); it('renders empty list and permission-gated image layer upload', () => { renderWithProviders(<MapLayerPage />); expect(screen.getByRole('heading', { name: 'Quản lý lớp dữ liệu' })).toBeInTheDocument(); expect(screen.getByText('Không có dữ liệu')).toBeInTheDocument(); expect(screen.getByRole('button', { name: /Thêm lớp ảnh bản đồ/ })).toBeInTheDocument() }) })
+describe('MapLayers index', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useAuthStore.setState({ user: admin })
+    queryMock.mockReturnValue({
+      data: { data: { items: [] }, metadata: { total: 0 } },
+      refetch: vi.fn(),
+    })
+    mutationMock.mockReturnValue({ mutate: vi.fn(), isPending: false })
+  })
+
+  it('renders empty list and permission-gated image layer upload', () => {
+    renderWithProviders(<MapLayerPage />)
+    expect(screen.getByRole('heading', { name: 'Quản lý lớp dữ liệu' })).toBeInTheDocument()
+    expect(screen.getByText('Không có dữ liệu')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Thêm lớp ảnh bản đồ/ })).toBeInTheDocument()
+  })
+
+  it('renders category filter dropdown with default "Tất cả nhóm lớp"', () => {
+    renderWithProviders(<MapLayerPage />)
+    expect(screen.getByText('Tất cả nhóm lớp')).toBeInTheDocument()
+  })
+})

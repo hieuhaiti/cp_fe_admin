@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, type SubmitHandler, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -24,11 +24,42 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { kttvScenarioService, mapLayerService, useApiMutation, useApiQuery } from '@/service'
 import type { ApiResponse, MapLayer, MapLayerListData } from '@/types/api'
 import type { FloodScenario, FloodScenarioWriteBody } from '@/service/kttvScenarioService'
 import { useDebounce } from '@/hooks/useDebounce'
 import { getMappedErrorMessage } from '@/validators/mapLayerApiValidators'
+import {
+  SCENARIO_TYPE_LIST,
+  RCP_OPTION_LIST,
+  type ScenarioTypeId,
+  type RcpOptionId,
+  type RcpOption,
+} from './constants'
+import { inferScenarioType } from './helpers'
+
+export function findDefaultLayerCode(items: MapLayer[], type: ScenarioTypeId): string {
+  if (!items || items.length === 0) return ''
+
+  const keywordsByType: Record<ScenarioTypeId, string[]> = {
+    hien_trang: ['hien_trang', 'hientrang', 'ngap_lut', 'ngap', 'flood'],
+    cai_tao: ['cai_tao', 'caitao', 'sau_cai_tao', 'thoat_nuoc', 'thoatnuoc'],
+    quy_hoach: ['quy_hoach', 'quyhoach', '2050', 'rcp'],
+  }
+
+  const keywords = keywordsByType[type] || []
+  for (const kw of keywords) {
+    const found = items.find((l) => {
+      const c = (l.code || '').toLowerCase()
+      const n = (l.name_vi || '').toLowerCase()
+      return c.includes(kw) || n.includes(kw)
+    })
+    if (found) return found.code
+  }
+
+  return items[0]?.code ?? ''
+}
 
 interface LayerComboboxProps {
   value: string
@@ -39,6 +70,7 @@ interface LayerComboboxProps {
   onSearchChange: (v: string) => void
   open: boolean
   onOpenChange: (v: boolean) => void
+  fallbackLabel?: string
 }
 
 function LayerCombobox({
@@ -50,21 +82,25 @@ function LayerCombobox({
   onSearchChange,
   open,
   onOpenChange,
+  fallbackLabel,
 }: LayerComboboxProps) {
   const selected = items.find((l) => l.code === value)
+  const displayCode = selected?.code || value
+  const displayName = selected?.name_vi ?? fallbackLabel ?? value
+
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={onOpenChange} modal={true}>
       <PopoverTrigger asChild>
         <button
           type="button"
           className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {selected ? (
+          {value ? (
             <span>
               <span className="text-muted-foreground mr-2 font-mono text-xs">
-                [{selected.code}]
+                [{displayCode}]
               </span>
-              {selected.name_vi ?? selected.code}
+              {displayName}
             </span>
           ) : (
             <span className="text-muted-foreground">Chọn lớp bản đồ</span>
@@ -83,33 +119,35 @@ function LayerCombobox({
             autoFocus
           />
         </div>
-        <div className="max-h-52 overflow-y-auto p-1">
-          {isLoading ? (
-            <div className="text-muted-foreground flex items-center justify-center py-4 text-sm">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tải...
-            </div>
-          ) : items.length === 0 ? (
-            <div className="text-muted-foreground py-4 text-center text-sm">
-              Không tìm thấy lớp nào.
-            </div>
-          ) : (
-            items.map((layer) => (
-              <button
-                key={layer.code}
-                type="button"
-                onClick={() => {
-                  onChange(layer.code)
-                  onOpenChange(false)
-                  onSearchChange('')
-                }}
-                className={`hover:bg-accent flex w-full items-center rounded-sm px-2 py-1.5 text-sm ${value === layer.code ? 'bg-accent' : ''}`}
-              >
-                <span className="text-muted-foreground mr-2 font-mono text-xs">[{layer.code}]</span>
-                {layer.name_vi ?? layer.code}
-              </button>
-            ))
-          )}
-        </div>
+        <ScrollArea className="h-52">
+          <div className="p-1">
+            {isLoading ? (
+              <div className="text-muted-foreground flex items-center justify-center py-4 text-sm">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tải...
+              </div>
+            ) : items.length === 0 ? (
+              <div className="text-muted-foreground py-4 text-center text-sm">
+                Không tìm thấy lớp nào.
+              </div>
+            ) : (
+              items.map((layer) => (
+                <button
+                  key={layer.code}
+                  type="button"
+                  onClick={() => {
+                    onChange(layer.code)
+                    onOpenChange(false)
+                    onSearchChange('')
+                  }}
+                  className={`hover:bg-accent flex w-full items-center rounded-sm px-2 py-1.5 text-sm ${value === layer.code ? 'bg-accent' : ''}`}
+                >
+                  <span className="text-muted-foreground mr-2 font-mono text-xs">[{layer.code}]</span>
+                  {layer.name_vi ?? layer.code}
+                </button>
+              ))
+            )}
+          </div>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   )
@@ -154,7 +192,10 @@ type ScenarioFormValues = z.output<typeof scenarioSchema>
 interface KttvScenarioFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  scenarioId: number | string | null
+  scenarioId?: number | string | null
+  initialScenario?: FloodScenario | null
+  defaultType?: ScenarioTypeId
+  defaultLayerCode?: string
   onSaved?: () => void
 }
 
@@ -180,6 +221,9 @@ export default function KttvScenarioFormDialog({
   open,
   onOpenChange,
   scenarioId,
+  initialScenario,
+  defaultType = 'hien_trang',
+  defaultLayerCode,
   onSaved,
 }: KttvScenarioFormDialogProps) {
   const isEdit = scenarioId !== null && scenarioId !== undefined
@@ -192,7 +236,12 @@ export default function KttvScenarioFormDialog({
     false
   )
 
-  const scenario = scenarioFromResponse(detailQuery.data as ApiResponse<any> | undefined)
+  const scenario =
+    scenarioFromResponse(detailQuery.data as ApiResponse<any> | undefined) ?? initialScenario ?? null
+
+  const [scenarioType, setScenarioType] = useState<ScenarioTypeId>(defaultType)
+  const [rcpOption, setRcpOption] = useState<RcpOptionId>('rcp45')
+  const [isLayerManuallySelected, setIsLayerManuallySelected] = useState(false)
 
   const [layerSearch, setLayerSearch] = useState('')
   const [layerPopoverOpen, setLayerPopoverOpen] = useState(false)
@@ -203,7 +252,7 @@ export default function KttvScenarioFormDialog({
     () =>
       mapLayerService.getAll({
         page: 1,
-        limit: 10,
+        limit: 100,
         sortBy: 'created_at',
         sortOrder: 'DESC',
         q: layerSearchDebounced || undefined,
@@ -212,12 +261,13 @@ export default function KttvScenarioFormDialog({
     false,
     false
   )
-  const layerItems: MapLayer[] = (() => {
+
+  const rawLayerItems: MapLayer[] = useMemo(() => {
     const d = (layersQuery.data as ApiResponse<MapLayerListData> | undefined)?.data
     if (!d) return []
     if (Array.isArray(d)) return d
     return d?.items ?? d?.mapLayers ?? []
-  })()
+  }, [layersQuery.data])
 
   const {
     register,
@@ -232,27 +282,115 @@ export default function KttvScenarioFormDialog({
     defaultValues: DEFAULT_VALUES,
   })
 
+  const initializedScenarioIdRef = useRef<number | string | null | undefined>(undefined)
+  const hasInitializedCreateRef = useRef(false)
+  const [knownLayers, setKnownLayers] = useState<Record<string, MapLayer>>({})
+
+  useEffect(() => {
+    if (rawLayerItems.length > 0) {
+      setKnownLayers((prev) => {
+        let changed = false
+        const next = { ...prev }
+        for (const item of rawLayerItems) {
+          if (item.code && (!next[item.code] || next[item.code].name_vi !== item.name_vi)) {
+            next[item.code] = item
+            changed = true
+          }
+        }
+        return changed ? next : prev
+      })
+    }
+  }, [rawLayerItems])
+
+  const watchLayerCode = watch('layer_code')
+
+  const layerItems: MapLayer[] = useMemo(() => {
+    const list = [...rawLayerItems]
+    const activeCode = watchLayerCode || scenario?.layer_code
+    if (activeCode && !list.some((l) => l.code === activeCode)) {
+      const known = knownLayers[activeCode]
+      const isScenarioLayer =
+        scenario?.layer_code === activeCode || scenario?.layer?.code === activeCode
+      const resolvedName =
+        known?.name_vi ||
+        (isScenarioLayer ? scenario?.layer?.nameVi || scenario?.name_vi : undefined) ||
+        activeCode
+
+      list.unshift({
+        id: (known?.id ?? scenario?.layer?.id ?? 0) as any,
+        code: activeCode,
+        name_vi: resolvedName,
+      } as unknown as MapLayer)
+    }
+    return list
+  }, [rawLayerItems, watchLayerCode, scenario, knownLayers])
+
+  const activeFallbackLabel = useMemo(() => {
+    const activeCode = watchLayerCode || scenario?.layer_code
+    if (!activeCode) return undefined
+    if (knownLayers[activeCode]?.name_vi) {
+      return knownLayers[activeCode].name_vi
+    }
+    if (scenario?.layer_code === activeCode || scenario?.layer?.code === activeCode) {
+      return scenario?.layer?.nameVi || scenario?.name_vi
+    }
+    return undefined
+  }, [watchLayerCode, scenario, knownLayers])
+
   useEffect(() => {
     if (!open) {
       reset(DEFAULT_VALUES)
+      setIsLayerManuallySelected(false)
+      setLayerSearch('')
+      initializedScenarioIdRef.current = undefined
+      hasInitializedCreateRef.current = false
       return
     }
-    if (scenario) {
-      reset({
-        code: scenario.code ?? '',
-        name_vi: scenario.name_vi ?? '',
-        min_rainfall: scenario.min_rainfall == null ? '' : String(scenario.min_rainfall),
-        max_rainfall: scenario.max_rainfall == null ? '' : String(scenario.max_rainfall),
-        min_tide: scenario.min_tide == null ? '' : String(scenario.min_tide),
-        max_tide: scenario.max_tide == null ? '' : String(scenario.max_tide),
-        layer_code: scenario.layer_code ?? '',
-        description: scenario.description ?? '',
-        is_active: scenario.is_active !== false,
-      })
-    } else if (!isEdit) {
-      reset(DEFAULT_VALUES)
+
+    if (isEdit) {
+      if (scenario && initializedScenarioIdRef.current !== scenario.id) {
+        const resolvedType = scenario.type ?? inferScenarioType(scenario).type ?? defaultType
+        const resolvedRcp = scenario.rcp ?? inferScenarioType(scenario).rcp ?? 'rcp45'
+        setScenarioType(resolvedType)
+        setRcpOption(resolvedRcp)
+        const existingLayer =
+          scenario.layer_code || defaultLayerCode || findDefaultLayerCode(rawLayerItems, resolvedType) || ''
+        reset({
+          code: scenario.code ?? '',
+          name_vi: scenario.name_vi ?? '',
+          min_rainfall: scenario.min_rainfall == null ? '' : String(scenario.min_rainfall),
+          max_rainfall: scenario.max_rainfall == null ? '' : String(scenario.max_rainfall),
+          min_tide: scenario.min_tide == null ? '' : String(scenario.min_tide),
+          max_tide: scenario.max_tide == null ? '' : String(scenario.max_tide),
+          layer_code: existingLayer,
+          description: scenario.description ?? '',
+          is_active: scenario.is_active !== false,
+        })
+        initializedScenarioIdRef.current = scenario.id
+      }
+    } else {
+      if (!hasInitializedCreateRef.current) {
+        setScenarioType(defaultType)
+        setRcpOption('rcp45')
+        const initialLayer = defaultLayerCode || findDefaultLayerCode(rawLayerItems, defaultType)
+        reset({
+          ...DEFAULT_VALUES,
+          layer_code: initialLayer,
+        })
+        hasInitializedCreateRef.current = true
+      }
     }
-  }, [isEdit, open, reset, scenario])
+  }, [defaultType, defaultLayerCode, isEdit, open, reset, scenario, rawLayerItems])
+
+  // Khi danh sách layer tải về sau khi mở form ở Create mode, tự điền layer mặc định nếu chưa có
+  useEffect(() => {
+    if (!isEdit && open && !watchLayerCode && !isLayerManuallySelected && rawLayerItems.length > 0) {
+      const autoLayer = defaultLayerCode || findDefaultLayerCode(rawLayerItems, scenarioType)
+      if (autoLayer) {
+        setValue('layer_code', autoLayer, { shouldValidate: true })
+      }
+    }
+  }, [isEdit, open, watchLayerCode, isLayerManuallySelected, rawLayerItems, defaultLayerCode, scenarioType, setValue])
 
   const nameViValue = useWatch({ control, name: 'name_vi' })
   useEffect(() => {
@@ -299,6 +437,8 @@ export default function KttvScenarioFormDialog({
     const payload: FloodScenarioWriteBody = {
       code: values.code.trim(),
       nameVi: values.name_vi.trim(),
+      type: scenarioType,
+      rcp: scenarioType === 'quy_hoach' ? rcpOption : null,
       layerCode: values.layer_code.trim(),
       description: values.description?.trim() || null,
       isActive: values.is_active,
@@ -354,6 +494,66 @@ export default function KttvScenarioFormDialog({
 
         {(!isEdit || scenario) && (
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+            {/* Phân loại 3 kịch bản thủy văn */}
+            <div
+              className={`grid grid-cols-1 gap-4 rounded-lg border bg-muted/20 p-3 ${
+                scenarioType === 'quy_hoach' ? 'sm:grid-cols-2' : ''
+              }`}
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="scenario_type" className="text-xs font-semibold">
+                  Phân loại kịch bản
+                </Label>
+                <Select
+                  value={scenarioType}
+                  onValueChange={(val) => {
+                    const nextType = val as ScenarioTypeId
+                    setScenarioType(nextType)
+                    if (!isEdit && !isLayerManuallySelected && rawLayerItems.length > 0) {
+                      const matchedLayer = findDefaultLayerCode(rawLayerItems, nextType)
+                      if (matchedLayer) {
+                        setValue('layer_code', matchedLayer, { shouldValidate: true })
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger id="scenario_type" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SCENARIO_TYPE_LIST.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {scenarioType === 'quy_hoach' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="rcp_option" className="text-xs font-semibold">
+                    Nhánh kịch bản biến đổi khí hậu
+                  </Label>
+                  <Select
+                    value={rcpOption}
+                    onValueChange={(val) => setRcpOption(val as RcpOptionId)}
+                  >
+                    <SelectTrigger id="rcp_option" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RCP_OPTION_LIST.map((r: RcpOption) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.label} ({r.description})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="code">
@@ -460,13 +660,17 @@ export default function KttvScenarioFormDialog({
               </Label>
               <LayerCombobox
                 value={watch('layer_code')}
-                onChange={(v) => setValue('layer_code', v, { shouldValidate: true })}
+                onChange={(v) => {
+                  setIsLayerManuallySelected(true)
+                  setValue('layer_code', v, { shouldValidate: true })
+                }}
                 items={layerItems}
                 isLoading={layersQuery.isLoading}
                 search={layerSearch}
                 onSearchChange={setLayerSearch}
                 open={layerPopoverOpen}
                 onOpenChange={setLayerPopoverOpen}
+                fallbackLabel={activeFallbackLabel}
               />
               {errors.layer_code && (
                 <p className="text-destructive text-sm">{errors.layer_code.message}</p>

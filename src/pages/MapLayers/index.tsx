@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { mapLayerService, useApiMutation, useApiQuery } from '@/service'
 import type {
   ApiResponse,
@@ -23,8 +23,10 @@ import {
   PUBLISHED_LABEL,
   PUBLISHED_CLASS,
   PUBLISHED_DOT,
+  MAP_LAYER_CATEGORY_OPTIONS,
   getMapLayerCategoryLabel,
 } from '@/constant/mapLayerConstant'
+import { useLayerCategories } from '@/hooks/useLayerCategories'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import {
   Table,
@@ -76,11 +78,28 @@ export default function MapLayerPage(): JSX.Element {
   const canDelete = hasPerm(user, 'layers', 'delete')
   const canPublish = hasPerm(user, 'layers', 'update')
   const showActions = canUpdate || canDelete || canPublish
+  const { categories } = useLayerCategories()
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [limit, setLimit] = useState<number>(10)
   const [searchValue, setSearchValue] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [geometryFilter, setGeometryFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+
+  const categoryOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    MAP_LAYER_CATEGORY_OPTIONS.filter((item) => item.value !== 'other').forEach((opt) => {
+      map.set(opt.value, opt.label)
+    })
+    if (categories && categories.length > 0) {
+      categories.forEach((cat) => {
+        if (cat.key && cat.name) {
+          map.set(cat.key, cat.name)
+        }
+      })
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }))
+  }, [categories])
 
   const queryParams: MapLayerListParams = {
     page: currentPage,
@@ -90,6 +109,7 @@ export default function MapLayerPage(): JSX.Element {
     ...(searchValue && { q: searchValue }),
     ...(statusFilter === 'published' ? { isPublic: true } : statusFilter === 'draft' ? { isPublic: false } : {}),
     ...(geometryFilter !== 'all' ? { geometryType: geometryFilter } : {}),
+    ...(categoryFilter !== 'all' ? { category: categoryFilter } : {}),
   }
 
   const dbQuery = useApiQuery(
@@ -207,7 +227,27 @@ export default function MapLayerPage(): JSX.Element {
           setCurrentPage(1)
         }}
         filter={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={categoryFilter}
+              onValueChange={(v) => {
+                setCategoryFilter(v)
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Tất cả nhóm lớp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả nhóm lớp</SelectItem>
+                {categoryOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select
               value={statusFilter}
               onValueChange={(v) => {
@@ -324,7 +364,10 @@ export default function MapLayerPage(): JSX.Element {
                         {layer.is_public ? 'Công khai' : 'Nội bộ'}
                       </Badge>
                       {layer.is_enable_default && (
-                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                        <Badge
+                          variant="outline"
+                          className="border-warning/30 bg-warning/10 text-warning"
+                        >
                           Bật mặc định
                         </Badge>
                       )}
@@ -337,7 +380,7 @@ export default function MapLayerPage(): JSX.Element {
                         {canUpdate && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openEditDialog(layer)
@@ -350,7 +393,7 @@ export default function MapLayerPage(): JSX.Element {
                         {!layer.geoserver_layer && canPublish && (
                           <Button
                             variant="default"
-                            size="sm"
+                            size="icon-xs"
                             disabled={publishMutation.isPending}
                             onClick={(e) => {
                               e.stopPropagation()
@@ -364,7 +407,7 @@ export default function MapLayerPage(): JSX.Element {
                         {canDelete && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openDeleteDialog(layer)
@@ -409,7 +452,7 @@ export default function MapLayerPage(): JSX.Element {
             <AlertDialogDescription className="space-y-2 text-xs">
               <span>
                 Bạn có chắc chắn muốn xóa lớp &quot;
-                {layerToDelete?.name_vi || layerToDelete?.name || layerToDelete?.code}&quot;? Lớp sẽ được gỡ khỏi bản đồ và tiến trình giải phóng tài nguyên GeoServer sẽ được kích hoạt.
+                {layerToDelete?.name_vi || layerToDelete?.name || layerToDelete?.code}&quot;? Lớp sẽ được gỡ khỏi bản đồ và tiến trình giải phóng tài nguyên hệ thống sẽ được kích hoạt.
               </span>
               {layerToDelete?.storage_kind === 'geotiff_minio' && (
                 <span className="block rounded border border-primary/20 bg-primary/5 p-2 text-foreground font-medium">

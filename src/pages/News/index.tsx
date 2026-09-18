@@ -291,7 +291,7 @@ export default function News(): JSX.Element {
                         {canUpdate && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openEditDialog(n)
@@ -304,7 +304,7 @@ export default function News(): JSX.Element {
                         {canDelete && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               openDeleteDialog(n)
