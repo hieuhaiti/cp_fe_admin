@@ -11,12 +11,12 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Clock,
   RotateCw,
   Layers,
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -35,7 +35,7 @@ import type {
   FloodSimulationResult,
 } from '@/service/kttvScenarioService'
 import ScenarioResultCards from './ScenarioResultCards'
-import { DURATION_OPTIONS, SCENARIO_TYPES, type ScenarioTypeId } from './constants'
+import { SCENARIO_TYPES, type ScenarioTypeId } from './constants'
 import {
   inferScenarioType,
   scenarioFromDb,
@@ -95,6 +95,29 @@ export default function KttvInputForm(): JSX.Element {
 
   const currentHourStr = `${String(new Date().getHours()).padStart(2, '0')}:00`
   const activeHour = selectedHour || currentHourStr
+
+  // Tải trạng thái lịch trình 24 giờ (để hiển thị khung giờ nào đang bị khóa thủ công)
+  const { data: scheduleData } = useQuery({
+    queryKey: ['admin-flood-forecast-schedule'],
+    queryFn: async () => {
+      const res = await kttvScenarioService.getForecastSchedule()
+      return res?.data ?? []
+    },
+    staleTime: 60 * 1000,
+  })
+
+  const activeSlot = (scheduleData ?? []).find((s) => s.hour_str === activeHour)
+  const isManualHour = Boolean(activeSlot?.is_manual_override || activeSlot?.status === 'MANUAL')
+
+  async function handleResetToAuto() {
+    try {
+      await kttvScenarioService.resetToAuto({ hour: activeHour })
+      toast.success(`Đã khôi phục mốc giờ ${activeHour} về chế độ tự động hóa (Cron)`)
+      queryClient.invalidateQueries({ queryKey: ['admin-flood-forecast-schedule'] })
+    } catch (err: unknown) {
+      toast.error(getMappedErrorMessage(err, 'Lỗi khi khôi phục chế độ tự động'))
+    }
+  }
 
   const {
     register,
@@ -254,6 +277,21 @@ export default function KttvInputForm(): JSX.Element {
         ...toActivate.map((m) => kttvScenarioService.update(m.scenarioId, { isActive: true })),
       ])
 
+      // Nếu có kịch bản hiện trạng, khóa thủ công khung giờ này kể cả khi lượng mưa bằng 0
+      // để cron không ghi đè ý chí vận hành của người dùng.
+      const rainVal = Number(watch('rainfall'))
+      const tideVal = watch('tide') ? Number(watch('tide')) : null
+      const hienTrangMatch = matchedScenarios.find((m) => m.type === 'hien_trang')
+      if (hienTrangMatch && Number.isFinite(rainVal) && rainVal >= 0) {
+        await kttvScenarioService.setManualOverride({
+          hour: activeHour,
+          rainfall: rainVal,
+          tide: tideVal,
+          scenarioId: hienTrangMatch.scenarioId,
+        })
+        queryClient.invalidateQueries({ queryKey: ['admin-flood-forecast-schedule'] })
+      }
+
       if (matchedScenarios.length > 1) {
         const details = matchedScenarios
           .map((m) => `[${m.typeLabel}] "${m.scenarioName}" — lớp "${m.layerCode || m.layerName}"`)
@@ -298,6 +336,18 @@ export default function KttvInputForm(): JSX.Element {
         kttvScenarioService.update(match.scenario.id, { isActive: true }),
       ])
 
+      const rainVal = Number(watch('rainfall'))
+      const tideVal = watch('tide') ? Number(watch('tide')) : null
+      if (match.type === 'hien_trang' && Number.isFinite(rainVal) && rainVal >= 0) {
+        await kttvScenarioService.setManualOverride({
+          hour: activeHour,
+          rainfall: rainVal,
+          tide: tideVal,
+          scenarioId: match.scenario.id,
+        })
+        queryClient.invalidateQueries({ queryKey: ['admin-flood-forecast-schedule'] })
+      }
+
       toast.success(
         `Đã kích hoạt kịch bản [${match.typeLabel}] "${match.scenario.nameVi}" — lớp "${match.layerCode || match.scenario.layerCode || match.scenario.nameVi}"`
       )
@@ -323,11 +373,16 @@ export default function KttvInputForm(): JSX.Element {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
               <CloudRain className="size-4 text-primary" />
-              <span>Dự báo thời tiết 24h ({forecastData?.location?.name ?? 'Cẩm Phả'})</span>
+              <span>Dự báo thời tiết 24h Cẩm Phả</span>
               {forecastData?.forecastDate && (
-                <span className="text-muted-foreground text-[11px] font-normal">
-                  — Ngày {forecastData.forecastDate}
-                </span>
+                <div>
+                  <span className="text-muted-foreground text-[11px] font-normal">
+                    — Ngày {forecastData.forecastDate}
+                  </span>
+                  <span className="text-muted-foreground text-[11px] font-normal">
+                    — Nguồn cung cấp: WeatherAPI
+                  </span>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -369,40 +424,69 @@ export default function KttvInputForm(): JSX.Element {
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
-              <div className="flex-1">
-                <Select
-                  value={activeHour}
-                  onValueChange={setSelectedHour}
+            <div className="flex flex-col gap-2 pt-0.5">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex-1">
+                  <Select
+                    value={activeHour}
+                    onValueChange={setSelectedHour}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-background w-full">
+                      <SelectValue placeholder="Chọn mốc giờ dự báo (24h)" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {(forecastData?.hours ?? []).map((h) => (
+                        <SelectItem key={h.time} value={h.hour}>
+                          {h.hour} — {h.precipMm > 0 ? `${h.precipMm} mm/h` : 'Không mưa'} (Xác suất: {h.chanceOfRain}%) — {h.tempC}°C {h.condition?.text ? `(${h.condition.text})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => handleApplyForecast(activeHour)}
+                  className="h-8 px-2.5 text-xs font-medium flex items-center justify-center gap-1 shrink-0"
                 >
-                  <SelectTrigger className="h-8 text-xs bg-background w-full">
-                    <SelectValue placeholder="Chọn mốc giờ dự báo (24h)" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {(forecastData?.hours ?? []).map((h) => (
-                      <SelectItem key={h.time} value={h.hour}>
-                        {h.hour} — {h.precipMm > 0 ? `${h.precipMm} mm/h` : 'Không mưa'} (Xác suất: {h.chanceOfRain}%) — {h.tempC}°C {h.condition?.text ? `(${h.condition.text})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Zap className="size-3 text-amber-500" />
+                  Dùng dự báo mốc này ({selectedItem?.precipMm ?? 0} mm/h)
+                </Button>
               </div>
 
-              <Button
-                type="button"
-                variant="secondary"
-                size="xs"
-                onClick={() => handleApplyForecast(activeHour)}
-                className="h-8 px-2.5 text-xs font-medium flex items-center justify-center gap-1 shrink-0"
-              >
-                <Zap className="size-3 text-amber-500" />
-                Dùng dự báo mốc này ({selectedItem?.precipMm ?? 0} mm/h)
-              </Button>
+              <div className="flex items-center justify-between text-xs px-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-[11px]">Chế độ mốc {activeHour}:</span>
+                  {isManualHour ? (
+                    <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[11px] font-medium">
+                      Thủ công (Manual — Cron không chỉnh lại)
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50 text-[11px] font-medium">
+                      Tự động (Automation — Cron quản lý)
+                    </Badge>
+                  )}
+                </div>
+                {isManualHour && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={handleResetToAuto}
+                    className="h-5 px-1.5 text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <RotateCw className="size-3" />
+                    Khôi phục Tự động
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Rainfall */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -435,29 +519,6 @@ export default function KttvInputForm(): JSX.Element {
             {errors.rainfall && (
               <p className="text-destructive text-xs">{errors.rainfall.message as string}</p>
             )}
-          </div>
-
-          {/* Duration */}
-          <div className="space-y-2">
-            <Label htmlFor="duration" className="flex items-center gap-1.5 text-xs font-semibold">
-              <Clock className="size-4 text-muted-foreground" />
-              Thời đoạn mưa
-            </Label>
-            <Select
-              value={watch('duration') || '1h'}
-              onValueChange={(val) => setValue('duration', val)}
-            >
-              <SelectTrigger id="duration" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DURATION_OPTIONS.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Tide */}

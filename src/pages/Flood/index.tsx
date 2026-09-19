@@ -168,8 +168,8 @@ export default function FloodPage() {
   const [paletteRows, setPaletteRows] = useState<string[]>([])
   const [legendForm, setLegendForm] = useState<{
     label: { vi: string; en: string }
-    min: number
-    max: number
+    min: number | string
+    max: number | string
   }>({
     label: { vi: '', en: '' },
     min: 0,
@@ -1078,14 +1078,24 @@ export default function FloodPage() {
                   type="number"
                   className="w-24"
                   value={legendForm.min}
-                  onChange={(e) => setLegendForm((f) => ({ ...f, min: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setLegendForm((f) => ({
+                      ...f,
+                      min: e.target.value === '' ? '' : Number(e.target.value),
+                    }))
+                  }
                 />
                 <span className="text-muted-foreground">–</span>
                 <Input
                   type="number"
                   className="w-24"
                   value={legendForm.max}
-                  onChange={(e) => setLegendForm((f) => ({ ...f, max: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setLegendForm((f) => ({
+                      ...f,
+                      max: e.target.value === '' ? '' : Number(e.target.value),
+                    }))
+                  }
                 />
               </div>
               {paletteRows.length >= 2 && editingLegend?.kind === 'continuous' && (
@@ -1093,7 +1103,12 @@ export default function FloodPage() {
                   Dải liên tục · bước nhảy ={' '}
                   <code>
                     ({legendForm.max} − {legendForm.min}) / ({paletteRows.length} − 1) ={' '}
-                    {((legendForm.max - legendForm.min) / (paletteRows.length - 1)).toFixed(3)}
+                    {legendForm.min !== '' && legendForm.max !== ''
+                      ? (
+                          (Number(legendForm.max) - Number(legendForm.min)) /
+                          (paletteRows.length - 1)
+                        ).toFixed(3)
+                      : '—'}
                   </code>{' '}
                   · mỗi màu ứng với 1 mốc tick trên bản đồ.
                 </p>
@@ -1101,7 +1116,10 @@ export default function FloodPage() {
               {editingLegend?.kind === 'class' && (
                 <p className="text-muted-foreground text-xs">
                   Phân lớp · mỗi màu = 1 cấp giá trị nguyên từ {legendForm.min} đến{' '}
-                  {legendForm.min + paletteRows.length - 1}. Thay đổi số màu sẽ thay đổi số cấp.
+                  {legendForm.min !== ''
+                    ? Number(legendForm.min) + paletteRows.length - 1
+                    : '—'}
+                  . Thay đổi số màu sẽ thay đổi số cấp.
                 </p>
               )}
               {editingLegend?.kind === 'binary' && (
@@ -1138,16 +1156,19 @@ export default function FloodPage() {
                     {paletteRows.map((hex, idx) => {
                       const n = paletteRows.length
                       let tickValue: string
+                      const minNum = Number(legendForm.min)
+                      const maxNum = Number(legendForm.max)
+                      const hasValidRange = legendForm.min !== '' && legendForm.max !== '' && !isNaN(minNum) && !isNaN(maxNum)
+
                       if (editingLegend?.kind === 'binary') {
                         tickValue = '—'
                       } else if (editingLegend?.kind === 'class') {
-                        tickValue = String(legendForm.min + idx)
+                        tickValue = legendForm.min !== '' && !isNaN(minNum) ? String(minNum + idx) : '—'
                       } else {
                         const t = n <= 1 ? 0 : idx / (n - 1)
-                        tickValue = (
-                          legendForm.min +
-                          (legendForm.max - legendForm.min) * t
-                        ).toFixed(2)
+                        tickValue = hasValidRange
+                          ? (minNum + (maxNum - minNum) * t).toFixed(2)
+                          : '—'
                       }
                       return (
                         <tr key={idx} className="border-b last:border-0">
@@ -1215,13 +1236,45 @@ export default function FloodPage() {
               Hủy
             </Button>
             <Button
-              disabled={updateLegendMutation.isPending || paletteRows.filter(Boolean).length === 0}
-              onClick={() =>
+              disabled={updateLegendMutation.isPending}
+              onClick={() => {
+                if (!legendForm.label.vi.trim()) {
+                  toast.error('Vui lòng nhập nhãn hiển thị tiếng Việt')
+                  return
+                }
+                const minVal = Number(legendForm.min)
+                const maxVal = Number(legendForm.max)
+                if (legendForm.min === '' || isNaN(minVal)) {
+                  toast.error('Vui lòng nhập giá trị Min hợp lệ')
+                  return
+                }
+                if (legendForm.max === '' || isNaN(maxVal)) {
+                  toast.error('Vui lòng nhập giá trị Max hợp lệ')
+                  return
+                }
+                if (editingLegend?.kind === 'continuous' && minVal >= maxVal) {
+                  toast.error('Giá trị Min phải nhỏ hơn Max')
+                  return
+                }
+                if (!paletteRows.length) {
+                  toast.error('Bảng màu cần có ít nhất 1 màu')
+                  return
+                }
+                const hasInvalidColor = paletteRows.some((row) => !row.trim() || row.trim().length !== 6)
+                if (hasInvalidColor) {
+                  toast.error('Mỗi màu trong bảng màu cần đủ 6 ký tự hex (ví dụ: ff0000)')
+                  return
+                }
                 updateLegendMutation.mutate({
                   code: editingLegend!.code,
-                  body: { ...legendForm, palette: paletteRows.filter(Boolean) },
+                  body: {
+                    label: legendForm.label,
+                    min: minVal,
+                    max: maxVal,
+                    palette: paletteRows.map((r) => r.trim()),
+                  },
                 })
-              }
+              }}
             >
               {updateLegendMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>

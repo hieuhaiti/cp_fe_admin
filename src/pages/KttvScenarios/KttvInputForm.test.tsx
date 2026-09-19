@@ -29,9 +29,19 @@ const getForecast = vi.hoisted(() => vi.fn())
 const refreshForecast = vi.hoisted(() => vi.fn())
 const getAllScenarios = vi.hoisted(() => vi.fn())
 const updateScenario = vi.hoisted(() => vi.fn())
+const getForecastSchedule = vi.hoisted(() => vi.fn())
+const setManualOverride = vi.hoisted(() => vi.fn())
+const resetToAuto = vi.hoisted(() => vi.fn())
 
 vi.mock('@/service', () => ({
-  kttvScenarioService: { simulate, getAll: getAllScenarios, update: updateScenario },
+  kttvScenarioService: {
+    simulate,
+    getAll: getAllScenarios,
+    update: updateScenario,
+    getForecastSchedule,
+    setManualOverride,
+    resetToAuto,
+  },
   weatherForecastService: { getForecast, refreshForecast },
 }))
 vi.mock('react-toastify', () => ({
@@ -83,6 +93,9 @@ describe('KttvInputForm', () => {
     refreshForecast.mockResolvedValue(mockForecastPayload)
     getAllScenarios.mockResolvedValue({ data: { items: [] } })
     updateScenario.mockResolvedValue({ data: {} })
+    getForecastSchedule.mockResolvedValue({ data: [] })
+    setManualOverride.mockResolvedValue({ data: { success: true } })
+    resetToAuto.mockResolvedValue({ data: { success: true } })
   })
 
   it('rejects missing and negative rainfall', async () => {
@@ -148,6 +161,37 @@ describe('KttvInputForm', () => {
     await waitFor(() => {
       expect(updateScenario).toHaveBeenCalledWith(1, { isActive: true })
       expect(updateScenario).toHaveBeenCalledWith(2, { isActive: true })
+    })
+  })
+  it('locks the selected hour as manual when activating a current-state scenario with 0 mm rainfall', async () => {
+    const currentStateScenario = {
+      id: 1,
+      code: 'scenario_dry',
+      name_vi: 'Kịch bản không mưa',
+      type: 'hien_trang',
+      layer_code: 'kich_ban_khong_mua',
+      min_rainfall: '0',
+      max_rainfall: '0',
+      is_active: false,
+    }
+    getAllScenarios.mockResolvedValue({ data: { items: [currentStateScenario] } })
+
+    const { queryClient } = renderWithProviders(<KttvInputForm />)
+    await waitFor(() => expect(queryClient.getQueryData(['admin-scenarios-for-simulation'])).toBeDefined())
+
+    fireEvent.change(screen.getByLabelText(/Lượng mưa hiện tại/), { target: { value: '0' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tra cứu kịch bản' }))
+
+    const activateBtn = await screen.findByRole('button', { name: 'Kích hoạt kịch bản này' })
+    fireEvent.click(activateBtn)
+
+    await waitFor(() => {
+      expect(setManualOverride).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rainfall: 0,
+          scenarioId: 1,
+        })
+      )
     })
   })
 })

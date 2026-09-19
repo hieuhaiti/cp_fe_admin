@@ -421,7 +421,7 @@ function StyleEditor({
     else if (def?.type === 'dasharray') initialValue = [2, 4]
 
     current[key] = initialValue
-    onStyleChange(cleanStyleObject(current))
+    onStyleChange(current as MapLayerDefaultStyle)
     setSelectedKeyToAdd('')
   }
 
@@ -429,13 +429,13 @@ function StyleEditor({
     if (!style) return
     const current = { ...style }
     delete current[key]
-    onStyleChange(cleanStyleObject(current))
+    onStyleChange(Object.keys(current).length > 0 ? (current as MapLayerDefaultStyle) : null)
   }
 
   function handlePropertyChange(key: string, value: unknown) {
     const current = style ? { ...style } : {}
     current[key] = value
-    onStyleChange(cleanStyleObject(current))
+    onStyleChange(current as MapLayerDefaultStyle)
   }
 
   const currentKeys = Object.keys(style || {})
@@ -519,11 +519,11 @@ function StyleEditor({
                           min={def.min}
                           max={def.max}
                           step={def.step ?? 'any'}
-                          value={val !== undefined && val !== null ? Number(val) : ''}
+                          value={val !== undefined && val !== null ? String(val) : ''}
                           onChange={(e) =>
                             handlePropertyChange(
                               key,
-                              e.target.value === '' ? undefined : Number(e.target.value)
+                              e.target.value === '' ? '' : Number(e.target.value)
                             )
                           }
                           placeholder={def.placeholder || '0'}

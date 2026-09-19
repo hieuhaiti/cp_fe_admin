@@ -167,7 +167,9 @@ export function RepublishLayerDialog({
               <Input
                 id="republish-srid"
                 type="number"
-                {...form.register('srid', { valueAsNumber: true })}
+                {...form.register('srid', {
+                  setValueAs: (v) => (v === '' ? '' : Number(v)),
+                })}
                 className="h-9 text-xs"
               />
             </div>

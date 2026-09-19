@@ -145,4 +145,47 @@ export default {
   /** POST /flood/simulation — match scenario by rainfall + tide */
   simulate: (data: { rainfall: number; tide?: number | null }) =>
     apiClient.post<FloodSimulationResult>(`${publicFloodBase}/simulation`, data),
+
+  /** POST /api/v1/admin/flood/scenarios/manual-override */
+  setManualOverride: (data: ManualOverrideBody) =>
+    apiClient.post<{ success: boolean; slot: ForecastScheduleSlot; scenario: FloodScenario }>(
+      `${adminBase}/manual-override`,
+      data
+    ),
+
+  /** POST /api/v1/admin/flood/scenarios/reset-auto */
+  resetToAuto: (data: { hour: string; date?: string }) =>
+    apiClient.post<{ success: boolean; slot: ForecastScheduleSlot }>(
+      `${adminBase}/reset-auto`,
+      data
+    ),
+
+  /** GET /api/v1/admin/flood/forecast/schedule */
+  getForecastSchedule: (date?: string) =>
+    apiClient.get<ForecastScheduleSlot[]>(`${serviceAdminFloodPath}/forecast/schedule`, {
+      params: date ? { date } : undefined,
+    }),
+}
+
+export interface ForecastScheduleSlot {
+  id: number
+  snapshot_id: number
+  forecast_date: string
+  hour_str: string
+  scheduled_time: string
+  chance_of_rain: number
+  precip_mm: number
+  status: 'PENDING' | 'APPLIED' | 'SKIPPED' | 'FAILED' | 'MANUAL'
+  applied_scenario_id: number | null
+  is_manual_override: boolean
+  manual_rainfall: number | null
+  manual_updated_at: string | null
+}
+
+export interface ManualOverrideBody {
+  hour: string
+  date?: string
+  rainfall: number
+  tide?: number | null
+  scenarioId?: number | string
 }

@@ -139,4 +139,45 @@ describe('MapLayerFormDialog', () => {
       )
     })
   })
+
+  it('keeps property row visible when user clears the value in input (reproduce and prevent bug)', () => {
+    queryMock.mockReturnValue({
+      data: {
+        data: {
+          code: 'test_layer',
+          name: 'Lớp Test',
+          name_vi: 'Lớp Test',
+          geometry_type: 'POLYGON',
+          metadata: {
+            defaultStyle: {
+              fillColor: '#3388FF',
+              fillOpacity: 0.6,
+            },
+          },
+        },
+      },
+      isLoading: false,
+    })
+
+    renderDialog({ layerCode: 'test_layer' })
+
+    // Ban đầu có 2 thuộc tính: fillColor và fillOpacity
+    expect(screen.getByDisplayValue('#3388FF')).toBeInTheDocument()
+    const fillOpacityInput = screen.getByDisplayValue('0.6')
+    expect(fillOpacityInput).toBeInTheDocument()
+
+    // Người dùng xóa sạch giá trị của fillOpacity (trở về rỗng '')
+    fireEvent.change(fillOpacityInput, { target: { value: '' } })
+
+    // fillOpacity không được bị xóa khỏi StyleEditor! Nó phải vẫn là một input trên form
+    // Nếu bị cleanStyleObject xóa, fillOpacity sẽ biến mất khỏi danh sách đang sửa và quay lại danh sách "Chọn thuộc tính để thêm"
+    expect(screen.queryByPlaceholderText('0.6')).toBeInTheDocument()
+
+    // Tiếp tục xóa fillColor
+    const fillColorInput = screen.getByDisplayValue('#3388FF')
+    fireEvent.change(fillColorInput, { target: { value: '' } })
+
+    // fillColor input vẫn phải còn đó (được hiển thị với placeholder #3388FF)
+    expect(screen.queryByPlaceholderText('#3388FF')).toBeInTheDocument()
+  })
 })

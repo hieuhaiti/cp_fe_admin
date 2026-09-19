@@ -163,7 +163,9 @@ export default function TimeSeriesEditDialog({
                 type="number"
                 min={0}
                 max={24}
-                {...form.register('minZoom', { valueAsNumber: true })}
+                {...form.register('minZoom', {
+                  setValueAs: (value) => (value === '' ? undefined : Number(value)),
+                })}
               />
             </div>
             <div className="space-y-1.5">
@@ -173,7 +175,9 @@ export default function TimeSeriesEditDialog({
                 type="number"
                 min={0}
                 max={24}
-                {...form.register('maxZoom', { valueAsNumber: true })}
+                {...form.register('maxZoom', {
+                  setValueAs: (value) => (value === '' ? undefined : Number(value)),
+                })}
               />
             </div>
           </div>
