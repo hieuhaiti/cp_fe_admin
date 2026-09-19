@@ -3,7 +3,6 @@ import { Badge, type BadgeProps } from '@/components/ui/badge'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -49,14 +48,12 @@ export function TruncatedBadge({
   }
 
   return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>{badgeElement}</TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs break-words text-xs">
-          <p>{textContent}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>{badgeElement}</TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs break-words text-xs">
+        <p>{textContent}</p>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

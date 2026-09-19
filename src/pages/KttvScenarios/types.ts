@@ -43,7 +43,7 @@ export interface TypeSimulationMatch {
   typeLabel: string
   rcp?: RcpOptionId
   rcpLabel?: string
-  status: 'matched' | 'unconfigured'
+  status: 'matched' | 'unconfigured' | 'no_rain'
   scenario: ScenarioDraftItem | null
   layerCode?: string
   layerName?: string

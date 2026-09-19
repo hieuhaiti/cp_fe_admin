@@ -169,8 +169,12 @@ export function NotificationMenu() {
     (message: { data?: { id?: number | string; title?: string | null; body?: string | null } }) => {
       refreshNotifications()
       if (!openRef.current) {
-        toast.info(message.data?.title || message.data?.body || 'Bạn có thông báo mới', {
+        const title = message.data?.title
+        const body = message.data?.body
+        const text = title && body ? `${title}\n${body}` : title || body || 'Bạn có thông báo mới'
+        toast.info(text, {
           toastId: `notification-${message.data?.id ?? 'new'}`,
+          style: { whiteSpace: 'pre-line' },
         })
       }
     },
@@ -330,7 +334,11 @@ export function NotificationMenu() {
                       <Trash2 />
                     </Button>
                   </div>
-                  {secondary && <span className="text-muted-foreground text-xs">{secondary}</span>}
+                  {secondary && (
+                    <span className="text-muted-foreground text-xs whitespace-pre-line">
+                      {secondary}
+                    </span>
+                  )}
                   <span className="text-muted-foreground text-[11px]">
                     {formatDateTime(createdAtOf(n))}
                   </span>

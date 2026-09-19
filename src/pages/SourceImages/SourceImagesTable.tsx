@@ -7,6 +7,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { TruncatedBadge } from '@/components/common/TruncatedBadge'
 import { formatDateTime } from '@/lib/date'
@@ -66,29 +67,39 @@ function LayerStatusBadge({
 
   if (['queued', 'running'].includes(cleanup)) {
     return (
-      <button
-        type="button"
-        onClick={() => onViewCleanup?.(layer.id)}
-        className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
-        title={`Đang dọn (${layer.code})`}
-      >
-        <Clock className="size-2.5 shrink-0 animate-spin" />
-        <span className="truncate">Đang dọn ({layer.code})</span>
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={() => onViewCleanup?.(layer.id)}
+            className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+            aria-label={`Đang dọn (${layer.code})`}
+          >
+            <Clock className="size-2.5 shrink-0 animate-spin" />
+            <span className="truncate">Đang dọn ({layer.code})</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">{`Đang dọn (${layer.code})`}</TooltipContent>
+      </Tooltip>
     )
   }
 
   if (cleanup === 'failed') {
     return (
-      <button
-        type="button"
-        onClick={() => onViewCleanup?.(layer.id)}
-        className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-destructive/15 text-destructive px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-destructive/30 hover:bg-destructive/25 transition-colors"
-        title={`Dọn lỗi (${layer.code})`}
-      >
-        <AlertCircle className="size-2.5 shrink-0" />
-        <span className="truncate">Dọn lỗi ({layer.code})</span>
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={() => onViewCleanup?.(layer.id)}
+            className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-destructive/15 text-destructive px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-destructive/30 hover:bg-destructive/25 transition-colors"
+            aria-label={`Dọn lỗi (${layer.code})`}
+          >
+            <AlertCircle className="size-2.5 shrink-0" />
+            <span className="truncate">Dọn lỗi ({layer.code})</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">{`Dọn lỗi (${layer.code})`}</TooltipContent>
+      </Tooltip>
     )
   }
 
@@ -233,65 +244,81 @@ export function SourceImagesTable({
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
                     {canPublish && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-primary hover:bg-primary/10 hover:text-primary"
-                        tooltip="Công bố thành lớp bản đồ độc lập mới"
-                        aria-label={`Công bố lại ảnh #${image.id}`}
-                        onClick={() => onRepublish(image)}
-                      >
-                        <Layers className="size-3.5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-primary hover:bg-primary/10 hover:text-primary"
+                            aria-label={`Công bố lại ảnh #${image.id}`}
+                            onClick={() => onRepublish(image)}
+                          >
+                            <Layers className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Công bố thành lớp bản đồ độc lập mới</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {canCreate && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-muted-foreground hover:text-foreground"
-                        tooltip="Đổi nhóm chuỗi thời gian"
-                        aria-label={`Đổi nhóm ảnh #${image.id}`}
-                        onClick={() => onChangeGroup(image)}
-                      >
-                        <FolderInput className="size-3.5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={`Đổi nhóm ảnh #${image.id}`}
+                            onClick={() => onChangeGroup(image)}
+                          >
+                            <FolderInput className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Đổi nhóm chuỗi thời gian</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {hasCleanupIssue && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-destructive hover:bg-destructive/10"
-                        tooltip="Xem chi tiết sự cố dọn dẹp lớp"
-                        aria-label={`Xem dọn dẹp ảnh #${image.id}`}
-                        onClick={() => {
-                          const layerId =
-                            image.standaloneLayer?.cleanupStatus === 'failed'
-                              ? image.standaloneLayer.id
-                              : image.timeSeriesLayer?.id
-                          if (layerId) onViewCleanup(layerId)
-                        }}
-                      >
-                        <ShieldAlert className="size-3.5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-destructive hover:bg-destructive/10"
+                            aria-label={`Xem dọn dẹp ảnh #${image.id}`}
+                            onClick={() => {
+                              const layerId =
+                                image.standaloneLayer?.cleanupStatus === 'failed'
+                                  ? image.standaloneLayer.id
+                                  : image.timeSeriesLayer?.id
+                              if (layerId) onViewCleanup(layerId)
+                            }}
+                          >
+                            <ShieldAlert className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Xem chi tiết sự cố dọn dẹp lớp</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {canDelete && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        tooltip="Xóa ảnh nguồn"
-                        aria-label={`Xóa ảnh #${image.id}`}
-                        onClick={() => onDelete(image)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            aria-label={`Xóa ảnh #${image.id}`}
+                            onClick={() => onDelete(image)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Xóa ảnh nguồn</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 </TableCell>

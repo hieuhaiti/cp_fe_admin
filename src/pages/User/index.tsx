@@ -19,6 +19,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import {
   Table,
@@ -415,62 +416,84 @@ export default function User(): JSX.Element {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         {canChangeRole && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openChangeRoleDialog(u)
-                            }}
-                            tooltip="Đổi vai trò"
-                          >
-                            <ShieldCheck className="size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Đổi vai trò"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openChangeRoleDialog(u)
+                                }}
+                              >
+                                <ShieldCheck className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Đổi vai trò</TooltipContent>
+                          </Tooltip>
                         )}
                         {canResetPassword && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openResetPasswordDialog(u)
-                            }}
-                            tooltip="Đặt lại mật khẩu"
-                          >
-                            <KeyRound className="size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Đặt lại mật khẩu"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openResetPasswordDialog(u)
+                                }}
+                              >
+                                <KeyRound className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Đặt lại mật khẩu</TooltipContent>
+                          </Tooltip>
                         )}
                         {canChangeStatus && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openActiveDialog(u)
-                            }}
-                            tooltip={isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
-                          >
-                            <Power
-                              className={
-                                isActive
-                                  ? 'text-success size-4'
-                                  : 'text-muted-foreground size-4'
-                              }
-                            />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label={isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openActiveDialog(u)
+                                }}
+                              >
+                                <Power
+                                  className={
+                                    isActive
+                                      ? 'text-success size-4'
+                                      : 'text-muted-foreground size-4'
+                                  }
+                                />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                         {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openDeleteDialog(u)
-                            }}
-                            tooltip="Xóa"
-                          >
-                            <Trash2 className="text-destructive size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Xóa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openDeleteDialog(u)
+                                }}
+                              >
+                                <Trash2 className="text-destructive size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Xóa</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </TableCell>

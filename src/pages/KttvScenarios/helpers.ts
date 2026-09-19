@@ -165,6 +165,17 @@ export function simulateThreeTypesFromList(
       return true
     })
 
+    if (rainfall <= 0) {
+      return {
+        type,
+        typeLabel: typeOption.label,
+        rcp,
+        rcpLabel: rcp ? RCP_OPTIONS[rcp].label : undefined,
+        status: 'no_rain',
+        scenario: null,
+      }
+    }
+
     if (candidates.length === 0) {
       return {
         type,

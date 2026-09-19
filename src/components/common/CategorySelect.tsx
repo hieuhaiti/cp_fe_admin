@@ -1,35 +1,21 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
-import { Plus, Loader2, X, Settings2, Trash2, Search, ChevronDown, Check } from 'lucide-react'
+import { Plus, Loader2, X, Search, ChevronDown, Check, AlertCircle, RefreshCw } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import {
-  MAP_LAYER_CATEGORY_OPTIONS,
-  getMapLayerCategoryLabel,
-} from '@/constant/mapLayerConstant'
+import { getMapLayerCategoryLabel } from '@/constant/mapLayerConstant'
 import { useLayerCategories } from '@/hooks/useLayerCategories'
 import { toast } from 'react-toastify'
 
 const CREATE_NEW_OPTION_VALUE = '__create_new__'
-const MANAGE_CATEGORIES_OPTION_VALUE = '__manage_categories__'
-
-const FALLBACK_CATEGORY_OPTIONS = MAP_LAYER_CATEGORY_OPTIONS.filter(
-  (o) => o.value !== 'other'
-)
 
 function removeVietnameseTones(str: string): string {
   return str
@@ -81,10 +67,11 @@ export default function CategorySelect({
   const {
     categories,
     isLoading,
+    isError,
+    error: categoriesError,
+    refetch,
     createCategory,
     isCreating,
-    deleteCategory,
-    isDeleting,
   } = useLayerCategories(debouncedSearch ? { search: debouncedSearch } : undefined)
 
   const [isAddingNew, setIsAddingNew] = useState(() => category === 'other')
@@ -92,25 +79,11 @@ export default function CategorySelect({
     category === 'other' ? categoryName || '' : ''
   )
   const [localError, setLocalError] = useState<string | null>(null)
-  const [isManageOpen, setIsManageOpen] = useState(false)
-  const [deletingKey, setDeletingKey] = useState<string | null>(null)
 
-  const customCategories = useMemo(() => {
-    return (categories || []).filter(
-      (c) => !FALLBACK_CATEGORY_OPTIONS.some((f) => f.value === c.key)
-    )
-  }, [categories])
-
-  // Gộp danh mục từ server + fallback hằng số + danh mục hiện tại nếu là custom/legacy
+  // Lấy danh mục hoàn toàn động từ server + giữ lại danh mục hiện tại nếu layer đã lưu
   const options = useMemo(() => {
     const map = new Map<string, string>()
 
-    // 1. Luôn nạp các danh mục mặc định của hệ thống làm baseline
-    FALLBACK_CATEGORY_OPTIONS.forEach((opt) => {
-      map.set(opt.value, opt.label)
-    })
-
-    // 2. Bổ sung/ghi đè từ danh mục do server trả về
     if (categories && categories.length > 0) {
       categories.forEach((cat) => {
         if (cat.key && cat.name) {
@@ -167,10 +140,6 @@ export default function CategorySelect({
       setLocalError(null)
       return
     }
-    if (val === MANAGE_CATEGORIES_OPTION_VALUE) {
-      setIsManageOpen(true)
-      return
-    }
 
     setIsAddingNew(false)
     setLocalError(null)
@@ -187,32 +156,6 @@ export default function CategorySelect({
       setNewCategoryName(trimmed)
     }
     setSearchQuery('')
-  }
-
-  const handleDeleteCategory = async (key: string, name: string) => {
-    setDeletingKey(key)
-    try {
-      await deleteCategory(key)
-      if (category === key) {
-        onCategoryChange('')
-        onCategoryNameChange?.('')
-      }
-      toast.success(`Đã xóa danh mục "${name}".`)
-    } catch (err: unknown) {
-      const anyErr = err as {
-        body?: { message?: string }
-        response?: { data?: { message?: string } }
-        message?: string
-      }
-      const msg =
-        anyErr?.body?.message ||
-        anyErr?.response?.data?.message ||
-        anyErr?.message ||
-        'Không thể xóa danh mục'
-      toast.error(msg)
-    } finally {
-      setDeletingKey(null)
-    }
   }
 
   const handleSaveNewCategory = async () => {
@@ -281,19 +224,6 @@ export default function CategorySelect({
             {label} {required && <span className="text-destructive">*</span>}
           </Label>
         )}
-        {customCategories.length > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsManageOpen(true)}
-            className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-            title="Quản lý danh mục tùy chỉnh"
-          >
-            <Settings2 className="size-3" />
-            <span>Quản lý ({customCategories.length})</span>
-          </Button>
-        )}
       </div>
 
       <Popover open={isOpen} onOpenChange={setIsOpen} modal={true}>
@@ -306,11 +236,21 @@ export default function CategorySelect({
             disabled={disabled || isCreating}
             className={cn(
               'border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full items-center justify-between rounded-md border px-3 py-2 text-sm shadow-xs focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 text-left',
-              !category && 'text-muted-foreground'
+              isError && 'border-destructive text-destructive',
+              !category && !isError && 'text-muted-foreground'
             )}
           >
-            <span className="truncate">
-              {isLoading && !options.length ? 'Đang tải danh mục...' : displayLabel || 'Chọn nhóm lớp'}
+            <span className="truncate flex items-center gap-1.5">
+              {isError ? (
+                <>
+                  <AlertCircle className="size-3.5 shrink-0 text-destructive" />
+                  <span>Lỗi tải danh mục (nhấn để xem/thử lại)</span>
+                </>
+              ) : isLoading && !options.length ? (
+                'Đang tải danh mục...'
+              ) : (
+                displayLabel || 'Chọn nhóm lớp'
+              )}
             </span>
             <ChevronDown className="size-4 shrink-0 opacity-50" />
           </button>
@@ -330,20 +270,45 @@ export default function CategorySelect({
               autoFocus
             />
             {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="text-muted-foreground hover:text-foreground rounded p-0.5"
-                title="Xóa từ khóa tìm kiếm"
-              >
-                <X className="size-3.5" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-muted-foreground hover:text-foreground rounded p-0.5"
+                    aria-label="Xóa từ khóa tìm kiếm"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Xóa từ khóa tìm kiếm</TooltipContent>
+              </Tooltip>
             )}
           </div>
 
           <ScrollArea className="h-60">
             <div className="p-1 divide-y divide-border/20">
-              {isLoading && !filteredOptions.length ? (
+              {isError ? (
+                <div className="flex flex-col items-center justify-center p-4 text-center space-y-2">
+                  <div className="flex items-center text-destructive gap-1.5 text-xs font-semibold">
+                    <AlertCircle className="size-4 shrink-0" />
+                    <span>Không thể tải danh sách danh mục</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground break-words max-w-[240px]">
+                    {(categoriesError as Error)?.message || 'Đã xảy ra lỗi khi kết nối máy chủ.'}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1 cursor-pointer"
+                    onClick={() => refetch()}
+                  >
+                    <RefreshCw className="size-3" />
+                    <span>Thử lại</span>
+                  </Button>
+                </div>
+              ) : isLoading && !filteredOptions.length ? (
                 <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-1.5">
                   <Loader2 className="size-3.5 animate-spin" />
                   <span>Đang tìm kiếm...</span>
@@ -389,73 +354,9 @@ export default function CategorySelect({
               <Plus className="size-3.5" />
               <span>+ Thêm danh mục mới...</span>
             </button>
-            {customCategories.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false)
-                  setIsManageOpen(true)
-                }}
-                className="flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
-              >
-                <Settings2 className="size-3.5" />
-                <span>Quản lý / Xóa danh mục ({customCategories.length})...</span>
-              </button>
-            )}
           </div>
         </PopoverContent>
       </Popover>
-
-      <Dialog open={isManageOpen} onOpenChange={setIsManageOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Quản lý danh mục lớp dữ liệu</DialogTitle>
-            <DialogDescription>
-              Các danh mục tùy chỉnh không còn gắn với lớp bản đồ nào có thể được xóa khỏi hệ thống.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {customCategories.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic py-4 text-center">
-                Không có danh mục tùy chỉnh nào.
-              </p>
-            ) : (
-              <ScrollArea className="h-60 rounded-md border">
-                <div className="divide-y">
-                  {customCategories.map((c) => (
-                    <div
-                      key={c.key}
-                      className="flex items-center justify-between p-2.5 text-sm hover:bg-muted/40 transition-colors"
-                    >
-                      <div className="flex flex-col min-w-0 pr-2">
-                        <span className="font-medium text-foreground truncate">{c.name}</span>
-                        <span className="text-[11px] text-muted-foreground font-mono truncate">
-                          key: {c.key}
-                        </span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={isDeleting || deletingKey === c.key}
-                        onClick={() => handleDeleteCategory(c.key, c.name)}
-                        className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                        title="Xóa danh mục này"
-                      >
-                        {deletingKey === c.key ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-4" />
-                        )}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {isAddingNew && (
         <div className="bg-muted/40 border-border/80 space-y-2 rounded-md border p-2.5">
@@ -463,17 +364,22 @@ export default function CategorySelect({
             <Label htmlFor={`${id}-custom-name`} className="text-xs font-semibold text-foreground">
               Tên danh mục mới <span className="text-destructive">*</span>
             </Label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={handleCancelNew}
-              disabled={isCreating}
-              title="Đóng thêm mới"
-              className="text-muted-foreground hover:text-foreground h-5 w-5"
-            >
-              <X className="size-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={handleCancelNew}
+                  disabled={isCreating}
+                  aria-label="Đóng thêm mới"
+                  className="text-muted-foreground hover:text-foreground h-5 w-5"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Đóng thêm mới</TooltipContent>
+            </Tooltip>
           </div>
 
           <div className="flex gap-2">
@@ -519,7 +425,23 @@ export default function CategorySelect({
         </div>
       )}
 
-      {error && !isAddingNew && <p className="text-destructive text-xs">{error}</p>}
+      {isError && (
+        <div className="flex items-center justify-between text-destructive text-xs py-0.5">
+          <span className="flex items-center gap-1 truncate">
+            <AlertCircle className="size-3 shrink-0" />
+            <span className="truncate">Lỗi tải danh mục: {(categoriesError as Error)?.message || 'Không thể lấy dữ liệu'}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="underline text-[11px] font-medium hover:text-destructive/80 cursor-pointer ml-2 shrink-0"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {error && !isAddingNew && !isError && <p className="text-destructive text-xs">{error}</p>}
     </div>
   )
 }

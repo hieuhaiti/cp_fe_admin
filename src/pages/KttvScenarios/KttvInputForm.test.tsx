@@ -159,22 +159,68 @@ describe('KttvInputForm', () => {
 
     fireEvent.click(activateBtn)
     await waitFor(() => {
-      expect(updateScenario).toHaveBeenCalledWith(1, { isActive: true })
+      expect(updateScenario).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          isActive: true,
+          currentRainfall: 25.5,
+          rainfallSource: 'MANUAL',
+        })
+      )
       expect(updateScenario).toHaveBeenCalledWith(2, { isActive: true })
     })
   })
-  it('locks the selected hour as manual when activating a current-state scenario with 0 mm rainfall', async () => {
-    const currentStateScenario = {
-      id: 1,
-      code: 'scenario_dry',
-      name_vi: 'Kịch bản không mưa',
-      type: 'hien_trang',
-      layer_code: 'kich_ban_khong_mua',
-      min_rainfall: '0',
-      max_rainfall: '0',
-      is_active: false,
+
+  it('passes user-input rainfall (e.g. 33 mm/h) synchronously when activating single scenario', async () => {
+    const mockItems = [
+      {
+        id: 1,
+        code: 'scenario_light',
+        name_vi: 'Kịch bản ngập nhẹ',
+        type: 'hien_trang',
+        layer_code: 'testkb20_mongduong_rebuild',
+        min_rainfall: '29.1',
+        max_rainfall: '48.14',
+        is_active: false,
+      },
+    ]
+    getAllScenarios.mockResolvedValue({
+      data: { items: mockItems },
+    })
+
+    const { queryClient } = renderWithProviders(<KttvInputForm />)
+    await waitFor(() => expect(queryClient.getQueryData(['admin-scenarios-for-simulation'])).toBeDefined())
+
+    fireEvent.change(screen.getByLabelText(/Lượng mưa hiện tại/), { target: { value: '33' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tra cứu kịch bản' }))
+
+    const singleBtn = await screen.findByRole('button', { name: 'Kích hoạt riêng kịch bản này' })
+    fireEvent.click(singleBtn)
+
+    await waitFor(() => {
+      expect(updateScenario).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          isActive: true,
+          currentRainfall: 33,
+          rainfallSource: 'MANUAL',
+        })
+      )
+    })
+  })
+
+  it('displays deactivation card with button when rainfall is 0 and active scenarios exist', async () => {
+    const activeScenario = {
+      id: 13,
+      code: 'scenario_light_improved',
+      name_vi: 'Kịch bản ngập nhẹ - sau cải tạo',
+      type: 'cai_tao',
+      layer_code: 'kich_ban_ngap_nhe_sau_cai_tao',
+      min_rainfall: '29.1',
+      max_rainfall: '48.14',
+      is_active: true,
     }
-    getAllScenarios.mockResolvedValue({ data: { items: [currentStateScenario] } })
+    getAllScenarios.mockResolvedValue({ data: { items: [activeScenario] } })
 
     const { queryClient } = renderWithProviders(<KttvInputForm />)
     await waitFor(() => expect(queryClient.getQueryData(['admin-scenarios-for-simulation'])).toBeDefined())
@@ -182,16 +228,45 @@ describe('KttvInputForm', () => {
     fireEvent.change(screen.getByLabelText(/Lượng mưa hiện tại/), { target: { value: '0' } })
     fireEvent.click(screen.getByRole('button', { name: 'Tra cứu kịch bản' }))
 
-    const activateBtn = await screen.findByRole('button', { name: 'Kích hoạt kịch bản này' })
-    fireEvent.click(activateBtn)
+    // Phải KHÔNG hiển thị "Đã tìm thấy kịch bản phù hợp"
+    expect(screen.queryByText('Đã tìm thấy kịch bản phù hợp')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Kích hoạt kịch bản này' })).not.toBeInTheDocument()
 
+    // Phải hiển thị thông báo không mưa và nút tắt
+    expect(await screen.findByText(/Lượng mưa 0 mm\/h — Đang có kịch bản ngập kích hoạt/)).toBeInTheDocument()
+    const deactivateBtn = screen.getByRole('button', { name: /Tắt tất cả các kịch bản hiện tại \(1\)/ })
+    expect(deactivateBtn).toBeInTheDocument()
+
+    fireEvent.click(deactivateBtn)
     await waitFor(() => {
       expect(setManualOverride).toHaveBeenCalledWith(
         expect.objectContaining({
           rainfall: 0,
-          scenarioId: 1,
         })
       )
     })
+  })
+
+  it('displays safe message when rainfall is 0 and no scenarios are active', async () => {
+    const inactiveScenario = {
+      id: 13,
+      code: 'scenario_light_improved',
+      name_vi: 'Kịch bản ngập nhẹ - sau cải tạo',
+      type: 'cai_tao',
+      layer_code: 'kich_ban_ngap_nhe_sau_cai_tao',
+      min_rainfall: '29.1',
+      max_rainfall: '48.14',
+      is_active: false,
+    }
+    getAllScenarios.mockResolvedValue({ data: { items: [inactiveScenario] } })
+
+    const { queryClient } = renderWithProviders(<KttvInputForm />)
+    await waitFor(() => expect(queryClient.getQueryData(['admin-scenarios-for-simulation'])).toBeDefined())
+
+    fireEvent.change(screen.getByLabelText(/Lượng mưa hiện tại/), { target: { value: '0' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tra cứu kịch bản' }))
+
+    expect(await screen.findByText(/Lượng mưa 0 mm\/h — Không có kịch bản ngập nào đang bật/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Tắt tất cả/ })).not.toBeInTheDocument()
   })
 })

@@ -31,7 +31,19 @@ import MapLayerFormDialog from './MapLayerFormDialog'
 import { renderWithProviders } from '@/test/renderWithProviders'
 
 const queryMock = vi.hoisted(() => vi.fn())
-vi.mock('@/service', () => ({ mapLayerService: { getByCode: vi.fn() }, useApiQuery: queryMock }))
+vi.mock('@/service', () => ({
+  mapLayerService: { getByCode: vi.fn() },
+  layerCategoryService: {
+    getAll: vi.fn().mockResolvedValue({
+      status: 200,
+      message: 'Thành công',
+      data: [
+        { id: 4, key: 'forest_district', name: 'Phân loại đối tượng theo huyện' },
+      ],
+    }),
+  },
+  useApiQuery: queryMock,
+}))
 
 function renderDialog(props: Partial<React.ComponentProps<typeof MapLayerFormDialog>> = {}) {
   return renderWithProviders(<MapLayerFormDialog open layerCode={null} onOpenChange={vi.fn()} onSubmit={vi.fn()} {...props} />)

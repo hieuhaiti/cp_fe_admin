@@ -19,6 +19,7 @@ import {
 import { forestClassificationService, useApiMutation, useApiQuery } from '@/service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -661,41 +662,43 @@ function RecentSeasonsPicker({
         {seasons.map((s) => {
           const isSelected = s.year === value.year && s.month === value.month
           const isSelectable = validPeriod(s.year, s.month)
+          const content = isSelectable
+            ? `${getSeasonName(s.month)} ${s.year} · ${getSeasonMonthRange(s.month)}`
+            : `${getSeasonName(s.month)} ${s.year} chưa kết thúc (${getSeasonMonthRange(s.month)})`
           return (
-            <button
-              key={`${s.year}-${s.month}`}
-              type="button"
-              disabled={!isSelectable}
-              onClick={() => isSelectable && onPick({ year: s.year, month: s.month })}
-              title={
-                isSelectable
-                  ? `${getSeasonName(s.month)} ${s.year} · ${getSeasonMonthRange(s.month)}`
-                  : `${getSeasonName(s.month)} ${s.year} chưa kết thúc (${getSeasonMonthRange(s.month)})`
-              }
-              className={
-                'rounded-md border p-1.5 text-xs transition ' +
-                (isSelectable
-                  ? isSelected
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                    : 'border-slate-200 hover:border-slate-400'
-                  : 'cursor-not-allowed border-slate-100 opacity-40')
-              }
-            >
-              <div className="font-medium">
-                {getSeasonName(s.month)} {s.year}
-              </div>
-              <div className="text-muted-foreground mt-0.5">
-                {!isSelectable ? (
-                  <span className="text-slate-400">Chưa kết thúc</span>
-                ) : s.exists ? (
-                  <span className={STATUS_TONE[s.status || ''] || 'text-slate-500'}>
-                    {STATUS_LABEL[s.status || ''] || s.status}
-                  </span>
-                ) : (
-                  'Chưa có'
-                )}
-              </div>
-            </button>
+            <Tooltip key={`${s.year}-${s.month}`}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  disabled={!isSelectable}
+                  onClick={() => isSelectable && onPick({ year: s.year, month: s.month })}
+                  className={
+                    'rounded-md border p-1.5 text-xs transition ' +
+                    (isSelectable
+                      ? isSelected
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 hover:border-slate-400'
+                      : 'cursor-not-allowed border-slate-100 opacity-40')
+                  }
+                >
+                  <div className="font-medium">
+                    {getSeasonName(s.month)} {s.year}
+                  </div>
+                  <div className="text-muted-foreground mt-0.5">
+                    {!isSelectable ? (
+                      <span className="text-slate-400">Chưa kết thúc</span>
+                    ) : s.exists ? (
+                      <span className={STATUS_TONE[s.status || ''] || 'text-slate-500'}>
+                        {STATUS_LABEL[s.status || ''] || s.status}
+                      </span>
+                    ) : (
+                      'Chưa có'
+                    )}
+                  </div>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{content}</TooltipContent>
+            </Tooltip>
           )
         })}
       </div>
@@ -775,13 +778,16 @@ function SnapshotOverview({
               // GEE URL is bound to a token that expires ~1h after generation.
               // Only show it while there is no published GeoServer alternative.
               <a href={snapshot.geeDownloadUrl} target="_blank" rel="noreferrer">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  tooltip="Ảnh tạm từ vệ tinh, có hiệu lực khoảng 1 giờ. Sau khi hệ thống lưu trữ xong sẽ có ảnh ổn định."
-                >
-                  <Download /> Tải ảnh (tạm ~1 giờ)
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <Download /> Tải ảnh (tạm ~1 giờ)
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Ảnh tạm từ vệ tinh, có hiệu lực khoảng 1 giờ. Sau khi hệ thống lưu trữ xong sẽ có ảnh ổn định.
+                  </TooltipContent>
+                </Tooltip>
               </a>
             ) : null}
             {onPublish && ['completed', 'published'].includes(snapshot.status) && (
@@ -1050,33 +1056,49 @@ function HistoryCard({
                             <MapIcon /> {selected ? 'Đang xem' : 'Mở bản đồ'}
                           </Button>
                           {canManage && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={isLive || refreshing}
-                              onClick={() => onRerun(item)}
-                              tooltip={isLive ? 'Kỳ này đang được xử lý' : 'Chạy lại kỳ này'}
-                            >
-                              {refreshing ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={isLive || refreshing}
+                                  onClick={() => onRerun(item)}
+                                  aria-label={isLive ? 'Kỳ này đang được xử lý' : 'Chạy lại kỳ này'}
+                                >
+                                  {refreshing ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {isLive ? 'Kỳ này đang được xử lý' : 'Chạy lại kỳ này'}
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                           {canPublish && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={!canPublishItem || isPublished || isPublishing}
-                              onClick={() => onPublish(item)}
-                              tooltip={
-                                isPublished
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!canPublishItem || isPublished || isPublishing}
+                                  onClick={() => onPublish(item)}
+                                  aria-label={
+                                    isPublished
+                                      ? 'Kết quả đã công bố lên bản đồ'
+                                      : 'Công bố lại kết quả mới nhất của kỳ'
+                                  }
+                                >
+                                  {isPublishing ? <Loader2 className="animate-spin" /> : <Upload />}
+                                  {isPublished ? 'Đã công bố' : 'Công bố'}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {isPublished
                                   ? 'Kết quả đã công bố lên bản đồ'
-                                  : 'Công bố lại kết quả mới nhất của kỳ'
-                              }
-                            >
-                              {isPublishing ? <Loader2 className="animate-spin" /> : <Upload />}
-                              {isPublished ? 'Đã công bố' : 'Công bố'}
-                            </Button>
+                                  : 'Công bố lại kết quả mới nhất của kỳ'}
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                         </div>
                       </TableCell>
@@ -1185,13 +1207,14 @@ function HistoryDetails({
             </a>
           ) : item.gee_download_url ? (
             <a href={item.gee_download_url} target="_blank" rel="noreferrer">
-              <Button
-                size="sm"
-                variant="outline"
-                tooltip="Ảnh tạm từ vệ tinh, có hiệu lực khoảng 1 giờ."
-              >
-                <Download /> Tải ảnh (tạm ~1 giờ)
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <Download /> Tải ảnh (tạm ~1 giờ)
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Ảnh tạm từ vệ tinh, có hiệu lực khoảng 1 giờ.</TooltipContent>
+              </Tooltip>
             </a>
           ) : null}
         </div>

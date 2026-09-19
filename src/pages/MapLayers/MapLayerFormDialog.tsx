@@ -647,9 +647,7 @@ export default function MapLayerFormDialog({
   isLoading = false,
 }: MapLayerFormDialogProps) {
   const [category, setCategory] = useState<string>('forest_district')
-  const [categoryName, setCategoryName] = useState<string>(() =>
-    getMapLayerCategoryLabel('forest_district')
-  )
+  const [categoryName, setCategoryName] = useState<string>('Phân loại đối tượng theo huyện')
   const [layerKind, setLayerKind] = useState<'basemap' | 'overlay'>('overlay')
   const [name, setName] = useState<string>('')
   const [geometryType, setGeometryType] = useState<FormGeometryKind>('polygon')
@@ -682,7 +680,7 @@ export default function MapLayerFormDialog({
       // Reset local editor state when opening the create dialog.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategory('forest_district')
-      setCategoryName(getMapLayerCategoryLabel('forest_district'))
+      setCategoryName('Phân loại đối tượng theo huyện')
       setLayerKind('overlay')
       setName('')
       setGeometryType('polygon')
@@ -697,9 +695,9 @@ export default function MapLayerFormDialog({
     }
 
     if (layer) {
-      setCategory(layer.category || 'forest_district')
+      setCategory(layer.category || '')
       setCategoryName(
-        layer.category_name || getMapLayerCategoryLabel(layer.category || 'forest_district')
+        layer.category_name || getMapLayerCategoryLabel(layer.category)
       )
       setLayerKind(layer.layer_kind === 'basemap' ? 'basemap' : 'overlay')
       setName(layer.name_vi || layer.name || '')

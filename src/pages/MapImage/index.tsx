@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/date'
 import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -164,8 +165,43 @@ export default function MapImagePage() {
                 <TableCell>{createdAt ? formatDate(createdAt) : '-'}</TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    {canUpdate && <Button variant="ghost" size="icon-xs" tooltip="Chỉnh sửa" onClick={(event) => { event.stopPropagation(); setSelectedId(item.id); setFormOpen(true) }}><Pencil className="size-4" /></Button>}
-                    {canDelete && <Button variant="ghost" size="icon-xs" tooltip="Xóa" onClick={(event) => { event.stopPropagation(); setDeleteItem(item) }}><Trash2 className="size-4 text-destructive" /></Button>}
+                    {canUpdate && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label="Chỉnh sửa"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setSelectedId(item.id)
+                              setFormOpen(true)
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Chỉnh sửa</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {canDelete && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label="Xóa"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setDeleteItem(item)
+                            }}
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Xóa</TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

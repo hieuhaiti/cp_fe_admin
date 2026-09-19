@@ -158,13 +158,13 @@ describe('CategorySelect', () => {
 
     expect(screen.getByText('Tên danh mục mới')).toBeInTheDocument()
 
-    const closeBtn = screen.getByTitle('Đóng thêm mới')
+    const closeBtn = screen.getByRole('button', { name: 'Đóng thêm mới' })
     fireEvent.click(closeBtn)
 
     expect(screen.queryByText('Tên danh mục mới')).not.toBeInTheDocument()
   })
 
-  it('allows managing and deleting custom category not bound to any layer', async () => {
+  it('does not render inline manage dialog button anymore', async () => {
     vi.mocked(layerCategoryService.getAll).mockResolvedValueOnce({
       status: 200,
       message: 'Thành công',
@@ -173,44 +173,19 @@ describe('CategorySelect', () => {
         { id: 10, key: 'ngap_ven_bien', name: 'Ngập ven biển' },
       ],
     })
-    vi.mocked(layerCategoryService.delete).mockResolvedValueOnce({
-      status: 200,
-      message: 'Xóa thành công',
-      data: { key: 'ngap_ven_bien' },
-    })
-
-    const onCategoryChange = vi.fn()
-    const onCategoryNameChange = vi.fn()
 
     renderWithProviders(
       <CategorySelect
         category="ngap_ven_bien"
         categoryName="Ngập ven biển"
-        onCategoryChange={onCategoryChange}
-        onCategoryNameChange={onCategoryNameChange}
+        onCategoryChange={vi.fn()}
+        onCategoryNameChange={vi.fn()}
         label="Nhóm lớp bản đồ"
       />
     )
 
-    // Wait for custom category to load and show "Quản lý (1)" button
-    const manageBtn = await screen.findByRole('button', { name: /Quản lý \(1\)/i })
-    expect(manageBtn).toBeInTheDocument()
-
-    // Click to open management dialog
-    fireEvent.click(manageBtn)
-
-    expect(await screen.findByText('Quản lý danh mục lớp dữ liệu')).toBeInTheDocument()
-    expect(screen.getByText('key: ngap_ven_bien')).toBeInTheDocument()
-
-    // Click delete button
-    const deleteBtn = screen.getByTitle('Xóa danh mục này')
-    fireEvent.click(deleteBtn)
-
-    await waitFor(() => {
-      expect(layerCategoryService.delete).toHaveBeenCalledWith('ngap_ven_bien')
-      expect(onCategoryChange).toHaveBeenCalledWith('')
-      expect(onCategoryNameChange).toHaveBeenCalledWith('')
-    })
+    // Inline management button should not be present
+    expect(screen.queryByRole('button', { name: /Quản lý/i })).not.toBeInTheDocument()
   })
 
   it('filters categories in real time when typing in search input and selects item', async () => {
@@ -266,5 +241,36 @@ describe('CategorySelect', () => {
 
     const newNameInput = screen.getByPlaceholderText('Nhập tên danh mục (VD: Ngập ven biển)')
     expect(newNameInput).toHaveValue('Ven biển')
+  })
+
+  it('displays error state directly when category loading fails and does not fallback to hardcoded options', async () => {
+    vi.mocked(layerCategoryService.getAll).mockRejectedValue(new Error('Máy chủ gặp sự cố (500)'))
+
+    renderWithProviders(
+      <CategorySelect
+        category=""
+        onCategoryChange={vi.fn()}
+        onCategoryNameChange={vi.fn()}
+        label="Nhóm lớp bản đồ"
+      />
+    )
+
+    // Trigger shows error text
+    const trigger = await screen.findByRole('combobox')
+    await waitFor(() => {
+      expect(trigger).toHaveTextContent('Lỗi tải danh mục (nhấn để xem/thử lại)')
+    })
+
+    // Error banner below trigger shows error message
+    expect(screen.getByText(/Lỗi tải danh mục: Máy chủ gặp sự cố \(500\)/)).toBeInTheDocument()
+
+    // Clicking trigger opens popover with error UI
+    fireEvent.click(trigger)
+    expect(await screen.findByText('Không thể tải danh sách danh mục')).toBeInTheDocument()
+    expect(screen.getByText('Máy chủ gặp sự cố (500)')).toBeInTheDocument()
+
+    // No hardcoded categories are displayed
+    expect(screen.queryByText('Phân loại đối tượng theo huyện')).not.toBeInTheDocument()
+    expect(screen.queryByText('Lớp phủ mặt đất')).not.toBeInTheDocument()
   })
 })

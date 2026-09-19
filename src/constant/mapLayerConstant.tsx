@@ -50,47 +50,26 @@ export const PUBLIC_DOT: Record<string, string> = {
 }
 
 // ── Category (nhóm lớp) ───────────────────────────────────────────
-// Mapping toàn diện: gồm cả slug mới (English, khớp GEE modules) và slug cũ
-// (tiếng Việt không dấu) để hiển thị nhất quán ở mọi nơi.
+// Không dùng danh mục fix cứng. Toàn bộ danh mục lớp được lấy động từ
+// API GET /api/v1/admin/layers/categories thông qua hook useLayerCategories.
+/**
+ * @deprecated Không sử dụng danh mục fix cứng. Danh mục lấy động từ API.
+ */
 export const MAP_LAYER_CATEGORY_LABEL_VI: Record<string, string> = {
-  // Modules chuyên đề (English slug)
   land_cover: 'Lớp phủ mặt đất',
   remote_sensing: 'Ảnh viễn thám',
   flood: 'Ngập lụt và thủy văn',
-  flood_event: 'Hiện trạng ngập theo sự kiện',
-  flood_risk: 'Chỉ số nguy cơ ngập',
-  flood_impact: 'Tác động ngập lụt',
-  flood_trend: 'Xu thế ngập lụt',
   forest_district: 'Phân loại đối tượng theo huyện',
-  administrative: 'Ranh giới hành chính',
-  hydrology: 'Thủy văn',
-  transportation: 'Giao thông',
-  infrastructure: 'Hạ tầng',
-  environment: 'Môi trường',
-  agriculture: 'Nông nghiệp',
-  forestry: 'Lâm nghiệp',
-  // Legacy slug (dữ liệu cũ trong DB có thể còn)
-  forest: 'Rừng',
-  transport: 'Giao thông',
-  weather: 'Thời tiết',
   hanh_chinh: 'Hành chính',
   thuy_van: 'Thủy văn',
   giao_thong: 'Giao thông',
   other: 'Khác',
 }
 
-// Danh sách chọn trong form Tạo/Sửa/Import — giữ nguyên value hiện hành để
-// không phá dữ liệu đã tạo. Chỉ hiển thị label tiếng Việt.
-export const MAP_LAYER_CATEGORY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'land_cover', label: MAP_LAYER_CATEGORY_LABEL_VI.land_cover },
-  { value: 'flood', label: MAP_LAYER_CATEGORY_LABEL_VI.flood },
-  { value: 'remote_sensing', label: MAP_LAYER_CATEGORY_LABEL_VI.remote_sensing },
-  { value: 'forest_district', label: MAP_LAYER_CATEGORY_LABEL_VI.forest_district },
-  { value: 'hanh_chinh', label: MAP_LAYER_CATEGORY_LABEL_VI.hanh_chinh },
-  { value: 'thuy_van', label: MAP_LAYER_CATEGORY_LABEL_VI.thuy_van },
-  { value: 'giao_thong', label: MAP_LAYER_CATEGORY_LABEL_VI.giao_thong },
-  { value: 'other', label: MAP_LAYER_CATEGORY_LABEL_VI.other },
-]
+/**
+ * @deprecated Không sử dụng danh mục fix cứng. Danh mục lấy động từ API.
+ */
+export const MAP_LAYER_CATEGORY_OPTIONS: { value: string; label: string }[] = []
 
 export function getMapLayerCategoryLabel(key?: string | null): string {
   if (!key) return '-'

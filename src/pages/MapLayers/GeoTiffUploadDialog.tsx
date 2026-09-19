@@ -17,7 +17,7 @@ import {
   FileUploadTrigger,
 } from '@/components/ui/file-upload'
 import CategorySelect from '@/components/common/CategorySelect'
-import { MAP_LAYER_CATEGORY_LABEL_VI, toCategorySlug } from '@/constant/mapLayerConstant'
+import { toCategorySlug } from '@/constant/mapLayerConstant'
 import { cn } from '@/lib/utils'
 import { mapLayerService, remoteSensingService, useApiQuery } from '@/service'
 import storageService from '@/service/storageService'
@@ -68,7 +68,7 @@ export default function GeoTiffUploadDialog({
   const [code, setCode] = useState('')
   const [coverageKey, setCoverageKey] = useState('')
   const [category, setCategory] = useState('remote_sensing')
-  const [categoryName, setCategoryName] = useState(() => MAP_LAYER_CATEGORY_LABEL_VI.remote_sensing || 'Ảnh viễn thám')
+  const [categoryName, setCategoryName] = useState('Ảnh viễn thám')
   const [platform, setPlatform] = useState('sentinel-2')
   const [acquiredAt, setAcquiredAt] = useState(() => new Date().toISOString().slice(0, 10))
   const [srid, setSrid] = useState('4326')
@@ -109,7 +109,7 @@ export default function GeoTiffUploadDialog({
     setCode('')
     setCoverageKey('')
     setCategory('remote_sensing')
-    setCategoryName(MAP_LAYER_CATEGORY_LABEL_VI.remote_sensing || 'Ảnh viễn thám')
+    setCategoryName('Ảnh viễn thám')
     setPlatform('sentinel-2')
     setAcquiredAt(new Date().toISOString().slice(0, 10))
     setSrid('4326')

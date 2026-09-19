@@ -15,7 +15,7 @@ import {
     Wind,
     AlertTriangle,
 } from 'lucide-react';
-import * as Tooltip from '@radix-ui/react-tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import icFaceGreen from '@/assets/icons/aqi-icon/ic-face-green.svg';
 import icFaceOrange from '@/assets/icons/aqi-icon/ic-face-orange.svg';
@@ -183,15 +183,12 @@ export function getWeatherIcon(
     const icon = <IconComponent className={mergedClass} />;
 
     return (
-        <Tooltip.Root>
-            <Tooltip.Trigger asChild>{icon}</Tooltip.Trigger>
-            <Tooltip.Content
-                side="top"
-                className="rounded bg-black/80 text-white px-2 py-1 text-xs"
-            >
+        <Tooltip>
+            <TooltipTrigger asChild>{icon}</TooltipTrigger>
+            <TooltipContent side="top">
                 {conditionText || 'Unknown'}
-            </Tooltip.Content>
-        </Tooltip.Root>
+            </TooltipContent>
+        </Tooltip>
     );
 }
 

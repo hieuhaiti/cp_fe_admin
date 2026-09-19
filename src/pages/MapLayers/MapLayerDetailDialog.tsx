@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { mapLayerService, useApiQuery } from '@/service'
 import type { ApiResponse, MapLayer } from '@/types/api'
@@ -206,24 +207,35 @@ export default function MapLayerDetailDialog({
                     falseLabel="Tắt mặc định"
                     tone="warning"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!canDownload || downloading}
-                    onClick={handleDownload}
-                    tooltip={
-                      canDownload
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!canDownload || downloading}
+                        onClick={handleDownload}
+                        aria-label={
+                          canDownload
+                            ? preferTiff
+                              ? 'Tải ảnh bản đồ'
+                              : 'Tải dữ liệu đường nét'
+                            : 'Lớp dữ liệu chưa được công bố'
+                        }
+                      >
+                        <Download className="size-4" aria-hidden="true" />
+                        {downloading
+                          ? `Đang tải ${downloadFormatLabel}…`
+                          : `Tải ${downloadFormatLabel}`}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {canDownload
                         ? preferTiff
                           ? 'Tải ảnh bản đồ'
                           : 'Tải dữ liệu đường nét'
-                        : 'Lớp dữ liệu chưa được công bố'
-                    }
-                  >
-                    <Download className="size-4" aria-hidden="true" />
-                    {downloading
-                      ? `Đang tải ${downloadFormatLabel}…`
-                      : `Tải ${downloadFormatLabel}`}
-                  </Button>
+                        : 'Lớp dữ liệu chưa được công bố'}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
               {layer.description_vi && (

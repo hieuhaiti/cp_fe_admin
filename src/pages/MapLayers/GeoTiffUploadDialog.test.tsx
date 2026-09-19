@@ -43,6 +43,15 @@ vi.mock('@/service', () => ({
     getById: vi.fn().mockResolvedValue({ data: { updatedAt: '2026-01-01' } }),
     patch: vi.fn().mockResolvedValue({ data: {} }),
   },
+  layerCategoryService: {
+    getAll: vi.fn().mockResolvedValue({
+      status: 200,
+      message: 'Thành công',
+      data: [
+        { id: 3, key: 'remote_sensing', name: 'Ảnh viễn thám' },
+      ],
+    }),
+  },
   useApiQuery: () => ({ data: { data: [] }, isLoading: false }),
 }))
 vi.mock('@/service/storageService', () => ({ default: { upload: mocks.upload } }))

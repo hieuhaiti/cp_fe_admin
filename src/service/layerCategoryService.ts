@@ -19,11 +19,13 @@ const layerCategoryService = {
       : apiClient.get<unknown>(`${serviceMapLayerPath}/categories`))
     const parsed = layerCategoryListSchema.safeParse(response.data)
     if (!parsed.success) {
-      console.warn('Dữ liệu danh mục không khớp schema:', parsed.error.issues)
+      const errorMsg = 'Dữ liệu danh mục từ máy chủ không đúng định dạng.'
+      console.error(errorMsg, parsed.error.issues)
+      throw new Error(errorMsg)
     }
     return {
       ...response,
-      data: parsed.success ? parsed.data : [],
+      data: parsed.data,
     }
   },
 
@@ -58,6 +60,25 @@ const layerCategoryService = {
     return {
       ...response,
       data: { key },
+    }
+  },
+
+  /**
+   * PATCH /admin/layers/categories/:key/visibility
+   * Cập nhật trạng thái ẩn/hiện trên WebGIS của danh mục.
+   */
+  updateVisibility: async (key: string, isVisible: boolean): Promise<ApiResponse<LayerCategory>> => {
+    const response = await apiClient.patch<unknown>(
+      `${serviceMapLayerPath}/categories/${encodeURIComponent(key)}/visibility`,
+      { isVisible }
+    )
+    const parsed = layerCategoryItemSchema.safeParse(response.data)
+    if (!parsed.success) {
+      throw new Error('Dữ liệu danh mục trả về từ máy chủ không hợp lệ.')
+    }
+    return {
+      ...response,
+      data: parsed.data,
     }
   },
 }

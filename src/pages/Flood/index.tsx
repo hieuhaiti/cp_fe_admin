@@ -717,44 +717,64 @@ export default function FloodPage() {
                           className="flex justify-end gap-1"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          <Button
-                            size="icon-xs"
-                            variant="outline"
-                            tooltip="Tải lên bản đồ"
-                            onClick={() => openRunOnMap(run.id)}
-                          >
-                            <MapIcon />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon-xs"
+                                variant="outline"
+                                aria-label="Tải lên bản đồ"
+                                onClick={() => openRunOnMap(run.id)}
+                              >
+                                <MapIcon />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Tải lên bản đồ</TooltipContent>
+                          </Tooltip>
                           {canRun && LIVE_STATUSES.has(run.status) ? (
-                            <Button
-                              size="icon-xs"
-                              variant="destructive"
-                              tooltip="Hủy"
-                              onClick={() => setCancelingRunId(run.id)}
-                            >
-                              <Ban />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon-xs"
+                                  variant="destructive"
+                                  aria-label="Hủy"
+                                  onClick={() => setCancelingRunId(run.id)}
+                                >
+                                  <Ban />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Hủy</TooltipContent>
+                            </Tooltip>
                           ) : null}
                           {canRun && !LIVE_STATUSES.has(run.status) ? (
-                            <Button
-                              size="icon-xs"
-                              variant="outline"
-                              tooltip="Chạy lại"
-                              onClick={() => rerunMutation.mutate(run.id)}
-                            >
-                              <RotateCcw />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon-xs"
+                                  variant="outline"
+                                  aria-label="Chạy lại"
+                                  onClick={() => rerunMutation.mutate(run.id)}
+                                >
+                                  <RotateCcw />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Chạy lại</TooltipContent>
+                            </Tooltip>
                           ) : null}
                           {canRun && !LIVE_STATUSES.has(run.status) ? (
-                            <Button
-                              size="icon-xs"
-                              variant="destructive"
-                              tooltip="Xóa lượt phân tích"
-                              disabled={deleteRunMutation.isPending}
-                              onClick={() => setDeletingRunId(run.id)}
-                            >
-                              <Trash2 />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon-xs"
+                                  variant="destructive"
+                                  aria-label="Xóa lượt phân tích"
+                                  disabled={deleteRunMutation.isPending}
+                                  onClick={() => setDeletingRunId(run.id)}
+                                >
+                                  <Trash2 />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Xóa lượt phân tích</TooltipContent>
+                            </Tooltip>
                           ) : null}
                         </div>
                       </TableCell>
@@ -862,23 +882,33 @@ export default function FloodPage() {
                     {canPublish ? (
                       <TableCell>
                         <div className="flex justify-end gap-1">
-                          <Button
-                            size="icon-xs"
-                            variant="outline"
-                            tooltip="Chỉnh sửa màu / nhãn"
-                            onClick={() => openLegendEditor(legend)}
-                          >
-                            <Settings2 />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon-xs"
+                                variant="outline"
+                                aria-label="Chỉnh sửa màu / nhãn"
+                                onClick={() => openLegendEditor(legend)}
+                              >
+                                <Settings2 />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Chỉnh sửa màu / nhãn</TooltipContent>
+                          </Tooltip>
                           {legend.hasOverride ? (
-                            <Button
-                              size="icon-xs"
-                              variant="outline"
-                              tooltip="Khôi phục mặc định"
-                              onClick={() => setResettingLegendCode(legend.code)}
-                            >
-                              <RotateCcw />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon-xs"
+                                  variant="outline"
+                                  aria-label="Khôi phục mặc định"
+                                  onClick={() => setResettingLegendCode(legend.code)}
+                                >
+                                  <RotateCcw />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Khôi phục mặc định</TooltipContent>
+                            </Tooltip>
                           ) : null}
                         </div>
                       </TableCell>

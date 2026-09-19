@@ -4,6 +4,8 @@ export const layerCategoryItemSchema = z.object({
   id: z.number().optional(),
   key: z.string().min(1),
   name: z.string().min(1),
+  isVisible: z.boolean().optional(),
+  layerCount: z.number().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 })

@@ -131,6 +131,46 @@ describe('KTTV Scenario Helpers', () => {
     expect(result.quyHoachRcp85.status).toBe('unconfigured')
   })
 
+  it('returns no_rain status for all types when rainfall is 0 or negative', () => {
+    const sampleItems: ScenarioDraftItem[] = [
+      {
+        id: 13,
+        code: 'scenario_light_improved',
+        nameVi: 'Kịch bản ngập nhẹ - sau cải tạo',
+        type: 'cai_tao',
+        minRainfall: 29.1,
+        maxRainfall: 48.14,
+        minTide: 0.0,
+        maxTide: 0.84,
+        layerCode: 'kich_ban_ngap_nhe_sau_cai_tao',
+        isActive: true,
+      },
+      {
+        id: 1,
+        code: 'scenario_light',
+        nameVi: 'Kịch bản ngập nhẹ',
+        type: 'hien_trang',
+        minRainfall: 0,
+        maxRainfall: 50,
+        minTide: null,
+        maxTide: null,
+        layerCode: 'ly_ht_01',
+        isActive: true,
+      },
+    ]
+
+    const result = simulateThreeTypesFromList(sampleItems, 0, 0.837, '1h')
+    expect(result.inputRainfall).toBe(0)
+    expect(result.hienTrang.status).toBe('no_rain')
+    expect(result.hienTrang.scenario).toBeNull()
+
+    expect(result.caiTao.status).toBe('no_rain')
+    expect(result.caiTao.scenario).toBeNull()
+
+    expect(result.quyHoachRcp45.status).toBe('no_rain')
+    expect(result.quyHoachRcp85.status).toBe('no_rain')
+  })
+
   it('formats rainfall ranges properly', () => {
     expect(formatRainfallRange(50, 100)).toBe('50 – 100 mm')
     expect(formatRainfallRange(150, null)).toBe('≥ 150 mm')

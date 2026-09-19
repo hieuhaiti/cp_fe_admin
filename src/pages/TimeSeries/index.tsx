@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { TruncatedBadge } from '@/components/common/TruncatedBadge'
 import {
@@ -136,15 +137,20 @@ export default function TimeSeriesPage() {
               </SelectContent>
             </Select>
 
-            <Button
-              variant="outline"
-              size="icon"
-              tooltip="Làm mới dữ liệu"
-              onClick={refetchData}
-              disabled={catalogQuery.isFetching}
-            >
-              <RefreshCw className={`size-4 ${catalogQuery.isFetching ? 'animate-spin' : ''}`} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Làm mới dữ liệu"
+                  onClick={refetchData}
+                  disabled={catalogQuery.isFetching}
+                >
+                  <RefreshCw className={`size-4 ${catalogQuery.isFetching ? 'animate-spin' : ''}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Làm mới dữ liệu</TooltipContent>
+            </Tooltip>
 
             {canPublish && (
               <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
@@ -223,21 +229,25 @@ export default function TimeSeriesPage() {
                           >
                             {coverageKey}
                           </TruncatedBadge>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-6 text-muted-foreground hover:text-foreground"
-                            title="Sao chép mã nhóm"
-                            aria-label={`Sao chép mã nhóm ${coverageKey}`}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              navigator.clipboard.writeText(coverageKey)
-                              toast.success(`Đã sao chép mã nhóm: ${coverageKey}`)
-                            }}
-                          >
-                            <Copy className="size-3" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-6 text-muted-foreground hover:text-foreground"
+                                aria-label={`Sao chép mã nhóm ${coverageKey}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  navigator.clipboard.writeText(coverageKey)
+                                  toast.success(`Đã sao chép mã nhóm: ${coverageKey}`)
+                                }}
+                              >
+                                <Copy className="size-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Sao chép mã nhóm</TooltipContent>
+                          </Tooltip>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-xs">-</span>
@@ -265,44 +275,59 @@ export default function TimeSeriesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          tooltip="Xem chi tiết"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            setDetailLayer(item)
-                          }}
-                        >
-                          <Eye className="size-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label="Xem chi tiết"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setDetailLayer(item)
+                              }}
+                            >
+                              <Eye className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Xem chi tiết</TooltipContent>
+                        </Tooltip>
 
                         {canUpdate && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            tooltip="Chỉnh sửa"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setEditItem(item)
-                            }}
-                          >
-                            <Pen className="size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Chỉnh sửa"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setEditItem(item)
+                                }}
+                              >
+                                <Pen className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Chỉnh sửa</TooltipContent>
+                          </Tooltip>
                         )}
 
                         {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            tooltip="Xóa"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setDeleteItem(item)
-                            }}
-                          >
-                            <Trash2 className="text-destructive size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Xóa"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setDeleteItem(item)
+                                }}
+                              >
+                                <Trash2 className="text-destructive size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Xóa</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </TableCell>

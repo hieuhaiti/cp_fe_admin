@@ -5,6 +5,7 @@ import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import GeoJsonMapPreview from '@/components/features/GeoJsonMapPreview'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -343,12 +344,22 @@ export default function FieldMeasurementsPage() {
                 <SelectItem value="50">50</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={exportGeoJson} tooltip="Xuất dữ liệu đường nét đã xác minh">
-              <Download className="size-4" /> Dữ liệu đường nét
-            </Button>
-            <Button variant="outline" onClick={exportXlsx} tooltip="Xuất Excel đã xác minh">
-              <Download className="size-4" /> Excel
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" onClick={exportGeoJson}>
+                  <Download className="size-4" /> Dữ liệu đường nét
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Xuất dữ liệu đường nét đã xác minh</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" onClick={exportXlsx}>
+                  <Download className="size-4" /> Excel
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Xuất Excel đã xác minh</TooltipContent>
+            </Tooltip>
           </div>
         }
       >

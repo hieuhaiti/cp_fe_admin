@@ -69,6 +69,27 @@ export function useLayerCategories(options?: UseLayerCategoriesOptions | string)
     },
   })
 
+  const updateVisibilityMutation = useMutation({
+    mutationFn: async ({ key, isVisible }: { key: string; isVisible: boolean }) => {
+      const res = await layerCategoryService.updateVisibility(key, isVisible)
+      if (!res.data) {
+        throw new Error('Không nhận được dữ liệu cập nhật danh mục.')
+      }
+      return res.data
+    },
+    onSuccess: (updatedCategory: LayerCategory) => {
+      queryClient.setQueryData<LayerCategory[]>(LAYER_CATEGORIES_QUERY_KEY, (prev) => {
+        const existing = prev ?? []
+        return existing.map((item) =>
+          item.key === updatedCategory.key
+            ? { ...item, isVisible: updatedCategory.isVisible }
+            : item
+        )
+      })
+      queryClient.invalidateQueries({ queryKey: LAYER_CATEGORIES_QUERY_KEY })
+    },
+  })
+
   return {
     categories: categoriesQuery.data ?? [],
     isLoading: categoriesQuery.isLoading,
@@ -82,6 +103,9 @@ export function useLayerCategories(options?: UseLayerCategoriesOptions | string)
     deleteCategory: deleteCategoryMutation.mutateAsync,
     isDeleting: deleteCategoryMutation.isPending,
     deleteError: deleteCategoryMutation.error,
+    updateVisibility: updateVisibilityMutation.mutateAsync,
+    isUpdatingVisibility: updateVisibilityMutation.isPending,
+    updateVisibilityError: updateVisibilityMutation.error,
   }
 }
 

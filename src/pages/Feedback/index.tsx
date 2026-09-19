@@ -43,6 +43,7 @@ import { ClipboardEdit, List, Map, MapPin } from 'lucide-react'
 import PageLayout from '@/layout/pageLayout'
 import FeedbackDetailDialog from './FeedbackDetailDialog'
 import FeedbackUpdateDialog from './FeedbackUpdateDialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { formatDate } from '@/lib/date'
 import { getUserRole, hasPerm, ROLES } from '@/lib/permissions'
@@ -393,23 +394,28 @@ export default function FeedbackPage(): JSX.Element {
                       {showActions && (
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openUpdateDialog(item)
-                              }}
-                              tooltip="Cập nhật xử lý"
-                              disabled={
-                                !canOverrideTransitions &&
-                                item.status !== 'pending' &&
-                                item.status !== 'under_review' &&
-                                item.status !== 'approved'
-                              }
-                            >
-                              <ClipboardEdit className="size-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    openUpdateDialog(item)
+                                  }}
+                                  aria-label="Cập nhật xử lý"
+                                  disabled={
+                                    !canOverrideTransitions &&
+                                    item.status !== 'pending' &&
+                                    item.status !== 'under_review' &&
+                                    item.status !== 'approved'
+                                  }
+                                >
+                                  <ClipboardEdit className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cập nhật xử lý</TooltipContent>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       )}

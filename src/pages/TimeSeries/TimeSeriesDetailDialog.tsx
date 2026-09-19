@@ -1,6 +1,7 @@
 import { formatDateTime } from '@/lib/date'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Dialog,
   DialogContent,
@@ -66,20 +67,24 @@ export default function TimeSeriesDetailDialog({
                     <span className="font-mono text-xs font-semibold text-primary">
                       {layer.timeSeries.coverageKey}
                     </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-5 text-muted-foreground hover:text-foreground"
-                      title="Sao chép mã nhóm"
-                      aria-label={`Sao chép mã nhóm ${layer.timeSeries.coverageKey}`}
-                      onClick={() => {
-                        navigator.clipboard.writeText(layer.timeSeries.coverageKey || '')
-                        toast.success(`Đã sao chép mã nhóm: ${layer.timeSeries.coverageKey}`)
-                      }}
-                    >
-                      <Copy className="size-3" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-5 text-muted-foreground hover:text-foreground"
+                          aria-label={`Sao chép mã nhóm ${layer.timeSeries.coverageKey}`}
+                          onClick={() => {
+                            navigator.clipboard.writeText(layer.timeSeries.coverageKey || '')
+                            toast.success(`Đã sao chép mã nhóm: ${layer.timeSeries.coverageKey}`)
+                          }}
+                        >
+                          <Copy className="size-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Sao chép mã nhóm</TooltipContent>
+                    </Tooltip>
                   </div>
                 ) : (
                   <span className="text-muted-foreground text-xs">-</span>

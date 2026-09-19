@@ -13,6 +13,8 @@ import {
   Loader2,
   RotateCw,
   Layers,
+  AlertTriangle,
+  PowerOff,
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { Button } from '@/components/ui/button'
@@ -64,8 +66,10 @@ export default function KttvInputForm(): JSX.Element {
   const [threeTypeOutcome, setThreeTypeOutcome] = useState<ThreeTypeSimulationOutcome | null>(null)
   const [simLoading, setSimLoading] = useState(false)
   const [activating, setActivating] = useState(false)
+  const [deactivating, setDeactivating] = useState(false)
   const [refreshingForecast, setRefreshingForecast] = useState(false)
   const [selectedHour, setSelectedHour] = useState<string>('')
+  const [submittedRainfall, setSubmittedRainfall] = useState<number | null>(null)
 
   // Tải dữ liệu dự báo 24 giờ từ backend
   const {
@@ -143,7 +147,7 @@ export default function KttvInputForm(): JSX.Element {
     setValue('rainfall', String(rain))
     setValue('duration', '1h')
     toast.info(
-      `Đã nhập lượng mưa dự báo lúc ${matched.hour}: ${rain} mm/h (xác suất mưa ${matched.chanceOfRain}%)`
+      `Đã nhập lượng mưa dự báo lúc ${matched.hour}: ${rain} mm/h`
     )
   }
 
@@ -173,6 +177,7 @@ export default function KttvInputForm(): JSX.Element {
     const rainVal = Number(values.rainfall)
     const tideVal = values.tide ? Number(values.tide) : null
     const durationVal = values.duration || '1h'
+    setSubmittedRainfall(rainVal)
 
     // 1. Tính toán kết quả cho cả 3 loại kịch bản từ dữ liệu thực tế
     const realItems = (scenarioListData ?? []).map(scenarioFromDb)
@@ -181,21 +186,30 @@ export default function KttvInputForm(): JSX.Element {
       setThreeTypeOutcome(outcome)
     }
 
-    // 2. Tra cứu API backend hiện hữu để duy trì tính tương thích
-    try {
-      const res = await kttvScenarioService.simulate({
-        rainfall: rainVal,
-        tide: tideVal,
-      })
-      setSimResult(res?.data ?? null)
-    } catch (err: unknown) {
-      toast.error(getMappedErrorMessage(err, 'Lỗi khi tra cứu kịch bản từ máy chủ'))
-    } finally {
+    // 2. Tra cứu API backend hiện hữu (chỉ gọi khi lượng mưa > 0)
+    if (rainVal > 0) {
+      try {
+        const res = await kttvScenarioService.simulate({
+          rainfall: rainVal,
+          tide: tideVal,
+        })
+        setSimResult(res?.data ?? null)
+      } catch (err: unknown) {
+        toast.error(getMappedErrorMessage(err, 'Lỗi khi tra cứu kịch bản từ máy chủ'))
+      } finally {
+        setSimLoading(false)
+      }
+    } else {
+      setSimResult(null)
       setSimLoading(false)
     }
   }
 
   const matchedScenarios = useMemo(() => {
+    if (submittedRainfall !== null && submittedRainfall <= 0) {
+      return []
+    }
+
     const list: Array<{
       type: ScenarioTypeId
       typeLabel: string
@@ -232,7 +246,12 @@ export default function KttvInputForm(): JSX.Element {
       })
     }
 
-    if (list.length === 0 && simResult) {
+    if (
+      list.length === 0 &&
+      simResult &&
+      simResult.status !== 'no_rain' &&
+      simResult.simulationParams?.scenarioCode !== 'no_rain'
+    ) {
       list.push({
         type: 'hien_trang',
         typeLabel: 'Hiện trạng ngập lụt',
@@ -245,12 +264,41 @@ export default function KttvInputForm(): JSX.Element {
     }
 
     return list
-  }, [threeTypeOutcome, simResult])
+  }, [threeTypeOutcome, simResult, submittedRainfall])
+
+  async function handleDeactivateAllScenarios() {
+    setDeactivating(true)
+    try {
+      const tideVal = watch('tide') ? Number(watch('tide')) : null
+      const res = await kttvScenarioService.setManualOverride({
+        hour: activeHour,
+        rainfall: 0,
+        tide: tideVal,
+      })
+
+      const count = res?.data?.deactivatedCount ?? (scenarioListData ?? []).filter((s) => s.is_active).length
+      toast.success(
+        `Đã tắt toàn bộ ${count} kịch bản ngập đang bật và khóa mốc ${activeHour} ở chế độ thủ công (0 mm/h)`
+      )
+
+      queryClient.invalidateQueries({ queryKey: ['kttv-scenarios'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-scenarios-for-simulation'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-flood-forecast-schedule'] })
+    } catch (err: unknown) {
+      toast.error(getMappedErrorMessage(err, 'Lỗi khi tắt các kịch bản ngập'))
+    } finally {
+      setDeactivating(false)
+    }
+  }
 
   async function handleActivateLayer() {
     if (matchedScenarios.length === 0) return
     setActivating(true)
     try {
+      const watchedRain = Number(watch('rainfall'))
+      const rainVal = Number.isFinite(watchedRain) ? watchedRain : (submittedRainfall ?? 0)
+      const tideVal = watch('tide') ? Number(watch('tide')) : null
+
       const allRes = await kttvScenarioService.getAll({ page: 1, limit: 100 })
       const items: FloodScenario[] =
         (allRes as ApiResponse<FloodScenarioListData>)?.data?.items ?? []
@@ -266,7 +314,7 @@ export default function KttvInputForm(): JSX.Element {
         return targetTypes.includes(sType)
       })
 
-      // 2. Activate các kịch bản khớp mà chưa active
+      // 2. Activate các kịch bản khớp mà chưa active (đồng bộ ngay lượng mưa & triều tại thời điểm kích hoạt)
       const toActivate = matchedScenarios.filter((m) => {
         const existing = items.find((s) => String(s.id) === String(m.scenarioId))
         return existing ? !existing.is_active : true
@@ -274,13 +322,23 @@ export default function KttvInputForm(): JSX.Element {
 
       await Promise.all([
         ...toDeactivate.map((s) => kttvScenarioService.update(s.id, { isActive: false })),
-        ...toActivate.map((m) => kttvScenarioService.update(m.scenarioId, { isActive: true })),
+        ...toActivate.map((m) =>
+          kttvScenarioService.update(m.scenarioId, {
+            isActive: true,
+            ...(m.type === 'hien_trang' && Number.isFinite(rainVal) && rainVal >= 0
+              ? {
+                  currentRainfall: rainVal,
+                  rainfallSource: 'MANUAL',
+                  currentTide: tideVal,
+                  tideSource: 'MANUAL',
+                }
+              : {}),
+          })
+        ),
       ])
 
       // Nếu có kịch bản hiện trạng, khóa thủ công khung giờ này kể cả khi lượng mưa bằng 0
       // để cron không ghi đè ý chí vận hành của người dùng.
-      const rainVal = Number(watch('rainfall'))
-      const tideVal = watch('tide') ? Number(watch('tide')) : null
       const hienTrangMatch = matchedScenarios.find((m) => m.type === 'hien_trang')
       if (hienTrangMatch && Number.isFinite(rainVal) && rainVal >= 0) {
         await kttvScenarioService.setManualOverride({
@@ -319,6 +377,10 @@ export default function KttvInputForm(): JSX.Element {
     const targetType = match.type
     setActivating(true)
     try {
+      const watchedRain = Number(watch('rainfall'))
+      const rainVal = Number.isFinite(watchedRain) ? watchedRain : (submittedRainfall ?? 0)
+      const tideVal = watch('tide') ? Number(watch('tide')) : null
+
       const allRes = await kttvScenarioService.getAll({ page: 1, limit: 100 })
       const items: FloodScenario[] =
         (allRes as ApiResponse<FloodScenarioListData>)?.data?.items ?? []
@@ -333,11 +395,19 @@ export default function KttvInputForm(): JSX.Element {
 
       await Promise.all([
         ...toDeactivate.map((s) => kttvScenarioService.update(s.id, { isActive: false })),
-        kttvScenarioService.update(match.scenario.id, { isActive: true }),
+        kttvScenarioService.update(match.scenario.id, {
+          isActive: true,
+          ...(match.type === 'hien_trang' && Number.isFinite(rainVal) && rainVal >= 0
+            ? {
+                currentRainfall: rainVal,
+                rainfallSource: 'MANUAL',
+                currentTide: tideVal,
+                tideSource: 'MANUAL',
+              }
+            : {}),
+        }),
       ])
 
-      const rainVal = Number(watch('rainfall'))
-      const tideVal = watch('tide') ? Number(watch('tide')) : null
       if (match.type === 'hien_trang' && Number.isFinite(rainVal) && rainVal >= 0) {
         await kttvScenarioService.setManualOverride({
           hour: activeHour,
@@ -361,8 +431,14 @@ export default function KttvInputForm(): JSX.Element {
     }
   }
 
-  const hasMatch = matchedScenarios.length > 0 || !!simResult
-  const isSimulated = !!threeTypeOutcome || !!simResult
+  const isZeroRainfall = submittedRainfall !== null && submittedRainfall <= 0
+  const activeScenariosInSystem = (scenarioListData ?? []).filter((s) => s.is_active)
+  const hasMatch =
+    matchedScenarios.length > 0 ||
+    (!!simResult &&
+      simResult.status !== 'no_rain' &&
+      simResult.simulationParams?.scenarioCode !== 'no_rain')
+  const isSimulated = submittedRainfall !== null || !!threeTypeOutcome || !!simResult
   const selectedItem = (forecastData?.hours ?? []).find((h) => h.hour === activeHour)
 
   return (
@@ -437,7 +513,7 @@ export default function KttvInputForm(): JSX.Element {
                     <SelectContent className="max-h-60">
                       {(forecastData?.hours ?? []).map((h) => (
                         <SelectItem key={h.time} value={h.hour}>
-                          {h.hour} — {h.precipMm > 0 ? `${h.precipMm} mm/h` : 'Không mưa'} (Xác suất: {h.chanceOfRain}%) — {h.tempC}°C {h.condition?.text ? `(${h.condition.text})` : ''}
+                          {h.hour} — {h.precipMm > 0 ? `${h.precipMm} mm/h` : 'Không mưa'} — {h.tempC}°C {h.condition?.text ? `(${h.condition.text})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -461,11 +537,11 @@ export default function KttvInputForm(): JSX.Element {
                   <span className="text-muted-foreground text-[11px]">Chế độ mốc {activeHour}:</span>
                   {isManualHour ? (
                     <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[11px] font-medium">
-                      Thủ công (Manual — Cron không chỉnh lại)
+                      Thủ công 
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50 text-[11px] font-medium">
-                      Tự động (Automation — Cron quản lý)
+                      Tự động 
                     </Badge>
                   )}
                 </div>
@@ -489,7 +565,7 @@ export default function KttvInputForm(): JSX.Element {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Rainfall */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="kttv-form-field-header justify-between">
               <Label htmlFor="rainfall" className="flex items-center gap-1.5 text-xs font-semibold">
                 <CloudRain className="size-4 text-primary" />
                 Lượng mưa hiện tại (mm/h) <span className="text-destructive">*</span>
@@ -523,10 +599,12 @@ export default function KttvInputForm(): JSX.Element {
 
           {/* Tide */}
           <div className="space-y-2">
-            <Label htmlFor="tide" className="flex items-center gap-1.5 text-xs font-semibold">
-              <Waves className="size-4 text-muted-foreground" />
-              Mực triều (m) <span className="text-muted-foreground text-xs">(tùy chọn)</span>
-            </Label>
+            <div className="kttv-form-field-header">
+              <Label htmlFor="tide" className="flex items-center gap-1.5 text-xs font-semibold">
+                <Waves className="size-4 text-muted-foreground" />
+                Mực triều (m) <span className="text-muted-foreground text-xs">(tùy chọn)</span>
+              </Label>
+            </div>
             <Input
               id="tide"
               {...register('tide')}
@@ -560,8 +638,104 @@ export default function KttvInputForm(): JSX.Element {
         />
       )}
 
-      {/* Kết quả tra cứu kịch bản phù hợp */}
-      {isSimulated && (
+      {/* Kết quả khi lượng mưa bằng 0 (Không mưa) */}
+      {isSimulated && isZeroRainfall && (
+        <div
+          className={`rounded-lg border p-4 space-y-3.5 ${
+            activeScenariosInSystem.length > 0
+              ? 'border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/30'
+              : 'border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/30'
+          }`}
+        >
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 font-medium text-foreground">
+              {activeScenariosInSystem.length > 0 ? (
+                <AlertTriangle className="size-5 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
+              )}
+              <span>
+                {activeScenariosInSystem.length > 0
+                  ? 'Lượng mưa 0 mm/h — Đang có kịch bản ngập kích hoạt trong hệ thống'
+                  : 'Lượng mưa 0 mm/h — Không có kịch bản ngập nào đang bật'}
+              </span>
+            </div>
+            <Badge
+              variant="outline"
+              className={
+                activeScenariosInSystem.length > 0
+                  ? 'text-amber-800 border-amber-300 bg-amber-100 dark:bg-amber-900/50 dark:text-amber-300 text-xs font-semibold'
+                  : 'text-emerald-800 border-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold'
+              }
+            >
+              {activeScenariosInSystem.length > 0
+                ? `${activeScenariosInSystem.length} kịch bản đang bật`
+                : 'Tất cả đang tắt'}
+            </Badge>
+          </div>
+
+          {activeScenariosInSystem.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Hệ thống xác định hiện tại <strong>không mưa</strong>. Để tránh hiển thị ngập giả lập trên bản đồ WebGIS, bạn hãy tắt các kịch bản đang bật:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {activeScenariosInSystem.map((s) => (
+                  <div
+                    key={s.id}
+                    className="rounded-md border border-amber-200/80 bg-card/90 p-3 space-y-1 text-xs shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`scenario-type-badge ${s.type || 'hien_trang'}`}>
+                        {SCENARIO_TYPES[s.type as ScenarioTypeId]?.shortLabel ?? 'Hiện trạng'}
+                      </span>
+                      <span className="font-mono text-muted-foreground text-[11px] truncate max-w-[120px]">
+                        {s.code}
+                      </span>
+                    </div>
+                    <div className="font-semibold text-foreground text-sm truncate" title={s.name_vi}>
+                      {s.name_vi}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      Lớp: <code className="font-mono">{s.layer_code}</code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-1">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeactivateAllScenarios}
+                  disabled={deactivating}
+                  className="flex items-center gap-1.5"
+                >
+                  {deactivating ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin mr-1.5" />
+                      Đang tắt các kịch bản...
+                    </>
+                  ) : (
+                    <>
+                      <PowerOff className="size-4" />
+                      Tắt tất cả các kịch bản hiện tại ({activeScenariosInSystem.length})
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Toàn bộ các kịch bản ngập lụt hiện đang ở trạng thái tắt. Bản đồ WebGIS hiển thị lớp nền thông thường, an toàn.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Kết quả tra cứu kịch bản phù hợp khi mưa > 0 */}
+      {isSimulated && !isZeroRainfall && (
         <div
           className={`rounded-lg border p-4 space-y-3.5 ${
             hasMatch
@@ -600,9 +774,6 @@ export default function KttvInputForm(): JSX.Element {
                       <span className={`scenario-type-badge ${item.type}`}>
                         {SCENARIO_TYPES[item.type]?.shortLabel ?? item.typeLabel}
                         {item.rcpLabel ? ` (${item.rcpLabel})` : ''}
-                      </span>
-                      <span className="font-mono text-muted-foreground text-[11px] truncate max-w-[120px]">
-                        {item.scenarioCode}
                       </span>
                     </div>
                     <div className="font-semibold text-foreground text-sm truncate" title={item.scenarioName}>

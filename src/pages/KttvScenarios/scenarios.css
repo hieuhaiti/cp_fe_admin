@@ -57,3 +57,9 @@
   gap: 1.25rem;
   margin-top: 1.5rem;
 }
+
+.kttv-form-field-header {
+  display: flex;
+  align-items: center;
+  min-height: 1.5rem;
+}

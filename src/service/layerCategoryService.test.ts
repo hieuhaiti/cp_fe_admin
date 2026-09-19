@@ -6,6 +6,8 @@ vi.mock('./common/apiClient', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
+    del: vi.fn(),
+    patch: vi.fn(),
   },
 }))
 
@@ -47,15 +49,16 @@ describe('layerCategoryService', () => {
       })
     })
 
-    it('returns empty array when response data does not match category schema', async () => {
+    it('throws error when response data does not match category schema', async () => {
       vi.mocked(apiClient.get).mockResolvedValueOnce({
         status: 200,
         message: 'Thành công',
         data: 'not an array',
       })
 
-      const res = await layerCategoryService.getAll()
-      expect(res.data).toEqual([])
+      await expect(layerCategoryService.getAll()).rejects.toThrow(
+        'Dữ liệu danh mục từ máy chủ không đúng định dạng.'
+      )
     })
   })
 
@@ -97,6 +100,35 @@ describe('layerCategoryService', () => {
 
       await expect(layerCategoryService.create('Quy hoạch mới')).rejects.toThrow(
         'Dữ liệu danh mục trả về từ máy chủ không hợp lệ'
+      )
+    })
+  })
+
+  describe('updateVisibility', () => {
+    it('sends patch request with isVisible payload and returns updated category', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValueOnce({
+        status: 200,
+        message: 'Cập nhật thành công',
+        data: {
+          id: 7,
+          key: 'giao_thong',
+          name: 'Giao thông',
+          isVisible: false,
+          layerCount: 5,
+        },
+      })
+
+      const res = await layerCategoryService.updateVisibility('giao_thong', false)
+      expect(res.data).toEqual({
+        id: 7,
+        key: 'giao_thong',
+        name: 'Giao thông',
+        isVisible: false,
+        layerCount: 5,
+      })
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        '/admin/layers/categories/giao_thong/visibility',
+        { isVisible: false }
       )
     })
   })

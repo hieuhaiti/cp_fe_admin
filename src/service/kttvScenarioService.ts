@@ -62,6 +62,7 @@ export interface FloodSimulationResult {
   id: string
   code: string
   nameVi: string
+  status?: 'no_rain'
   category: string
   categoryName: string
   geometryType: string
@@ -88,6 +89,10 @@ export interface FloodScenarioWriteBody {
   layerCode?: string
   description?: string | null
   isActive?: boolean
+  currentRainfall?: number | null
+  rainfallSource?: 'MANUAL' | 'AUTO'
+  currentTide?: number | null
+  tideSource?: 'MANUAL' | 'AUTO'
 }
 
 export interface ConvertLayersToScenariosBody {
@@ -148,10 +153,14 @@ export default {
 
   /** POST /api/v1/admin/flood/scenarios/manual-override */
   setManualOverride: (data: ManualOverrideBody) =>
-    apiClient.post<{ success: boolean; slot: ForecastScheduleSlot; scenario: FloodScenario }>(
-      `${adminBase}/manual-override`,
-      data
-    ),
+    apiClient.post<{
+      success: boolean
+      action?: 'deactivated' | 'applied'
+      deactivatedCount?: number
+      deactivatedIds?: Array<number | string>
+      slot?: ForecastScheduleSlot | null
+      scenario?: FloodScenario | null
+    }>(`${adminBase}/manual-override`, data),
 
   /** POST /api/v1/admin/flood/scenarios/reset-auto */
   resetToAuto: (data: { hour: string; date?: string }) =>

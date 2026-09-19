@@ -6,6 +6,7 @@ import { KeyRound, Pen, RotateCcw, Trash2 } from 'lucide-react'
 import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -376,43 +377,58 @@ export default function MapLayerApiListPage(): JSX.Element {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       {canUpdate && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            openRegenerateDialog(api)
-                          }}
-                          tooltip="Xoay key"
-                        >
-                          <RotateCcw className="size-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label="Xoay key"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                openRegenerateDialog(api)
+                              }}
+                            >
+                              <RotateCcw className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Xoay key</TooltipContent>
+                        </Tooltip>
                       )}
                       {canUpdate && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            openEditDialog(api)
-                          }}
-                          tooltip="Chỉnh sửa"
-                        >
-                          <Pen className="size-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label="Chỉnh sửa"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                openEditDialog(api)
+                              }}
+                            >
+                              <Pen className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Chỉnh sửa</TooltipContent>
+                        </Tooltip>
                       )}
                       {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            openDeleteDialog(api)
-                          }}
-                          tooltip="Xóa"
-                        >
-                          <Trash2 className="text-destructive size-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label="Xóa"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                openDeleteDialog(api)
+                              }}
+                            >
+                              <Trash2 className="text-destructive size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Xóa</TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                   </TableCell>

@@ -11,6 +11,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import {
@@ -289,30 +290,40 @@ export default function News(): JSX.Element {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         {canUpdate && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openEditDialog(n)
-                            }}
-                            tooltip="Chỉnh sửa"
-                          >
-                            <Pen className="size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Chỉnh sửa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openEditDialog(n)
+                                }}
+                              >
+                                <Pen className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Chỉnh sửa</TooltipContent>
+                          </Tooltip>
                         )}
                         {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openDeleteDialog(n)
-                            }}
-                            tooltip="Xóa"
-                          >
-                            <Trash2 className="text-destructive size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Xóa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openDeleteDialog(n)
+                                }}
+                              >
+                                <Trash2 className="text-destructive size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Xóa</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </TableCell>

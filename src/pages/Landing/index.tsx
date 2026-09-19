@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { adminDashboardService, useApiQuery } from '@/service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { navConfig } from '@/constant/common'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import { checkPermission, ROLE_LABELS, getUserRole, ROLES, hasPerm } from '@/lib/permissions'
@@ -229,16 +230,21 @@ export default function LandingPage() {
                 </Link>
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => overviewQuery.refetch()}
-              disabled={isLoading}
-              title="Làm mới chỉ số"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Cập nhật</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => overviewQuery.refetch()}
+                  disabled={isLoading}
+                  aria-label="Làm mới chỉ số"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Cập nhật</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Làm mới chỉ số</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </section>

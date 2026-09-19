@@ -17,13 +17,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import {
   PUBLISHED_LABEL,
   PUBLISHED_CLASS,
   PUBLISHED_DOT,
-  MAP_LAYER_CATEGORY_OPTIONS,
   getMapLayerCategoryLabel,
 } from '@/constant/mapLayerConstant'
 import { useLayerCategories } from '@/hooks/useLayerCategories'
@@ -46,11 +46,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { CloudUpload, Pen, Trash2 } from 'lucide-react'
+import { CloudUpload, FolderTree, Layers, Pen, Trash2 } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import PageLayout from '@/layout/pageLayout'
 import MapLayerDetailDialog from './MapLayerDetailDialog'
 import MapLayerFormDialog from './MapLayerFormDialog'
 import GeoTiffUploadDialog from './GeoTiffUploadDialog'
+import CategoryManagementTab from './CategoryManagementTab'
 import { formatDate } from '@/lib/date'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
@@ -78,7 +80,12 @@ export default function MapLayerPage(): JSX.Element {
   const canDelete = hasPerm(user, 'layers', 'delete')
   const canPublish = hasPerm(user, 'layers', 'update')
   const showActions = canUpdate || canDelete || canPublish
-  const { categories } = useLayerCategories()
+  const {
+    categories,
+    isLoading: isCategoriesLoading,
+    isError: isCategoriesError,
+    error: categoriesError,
+  } = useLayerCategories()
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [limit, setLimit] = useState<number>(10)
   const [searchValue, setSearchValue] = useState<string>('')
@@ -87,18 +94,11 @@ export default function MapLayerPage(): JSX.Element {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const categoryOptions = useMemo(() => {
-    const map = new Map<string, string>()
-    MAP_LAYER_CATEGORY_OPTIONS.filter((item) => item.value !== 'other').forEach((opt) => {
-      map.set(opt.value, opt.label)
-    })
-    if (categories && categories.length > 0) {
-      categories.forEach((cat) => {
-        if (cat.key && cat.name) {
-          map.set(cat.key, cat.name)
-        }
-      })
-    }
-    return Array.from(map.entries()).map(([value, label]) => ({ value, label }))
+    if (!categories || categories.length === 0) return []
+    return categories.map((cat) => ({
+      value: cat.key,
+      label: cat.name || cat.key,
+    }))
   }, [categories])
 
   const queryParams: MapLayerListParams = {
@@ -219,8 +219,21 @@ export default function MapLayerPage(): JSX.Element {
   }
 
   return (
-    <PageLayout title="Quản lý lớp dữ liệu" description="Quản lý lớp dữ liệu bản đồ">
-      <ToolTableCustom
+    <PageLayout title="Quản lý lớp dữ liệu" description="Quản lý lớp dữ liệu và danh mục bản đồ">
+      <Tabs defaultValue="layers" className="w-full space-y-4">
+        <TabsList>
+          <TabsTrigger value="layers" className="gap-2">
+            <Layers className="size-4" />
+            <span>Lớp dữ liệu ({total})</span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="gap-2">
+            <FolderTree className="size-4" />
+            <span>Quản lý danh mục ({categories?.length ?? 0})</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="layers" className="space-y-4 m-0">
+          <ToolTableCustom
         searchValue={searchValue}
         setSearchValue={(value) => {
           setSearchValue(value)
@@ -240,11 +253,21 @@ export default function MapLayerPage(): JSX.Element {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả nhóm lớp</SelectItem>
-                {categoryOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
+                {isCategoriesError ? (
+                  <div className="px-2 py-1.5 text-xs text-destructive">
+                    Lỗi tải danh mục: {(categoriesError as Error)?.message || 'Không thể lấy dữ liệu'}
+                  </div>
+                ) : isCategoriesLoading ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    Đang tải danh mục...
+                  </div>
+                ) : (
+                  categoryOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
 
@@ -350,7 +373,9 @@ export default function MapLayerPage(): JSX.Element {
 
                   </TableCell>
                   <TableCell>
-                    {layer.category_name || getMapLayerCategoryLabel(layer.category)}
+                    {layer.category_name ||
+                      categories?.find((c) => c.key === layer.category)?.name ||
+                      getMapLayerCategoryLabel(layer.category)}
                   </TableCell>
                   <TableCell className="uppercase">{layer.geometry_type || '-'}</TableCell>
                   <TableCell>
@@ -378,44 +403,59 @@ export default function MapLayerPage(): JSX.Element {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         {canUpdate && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openEditDialog(layer)
-                            }}
-                            tooltip="Chỉnh sửa"
-                          >
-                            <Pen className="size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Chỉnh sửa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openEditDialog(layer)
+                                }}
+                              >
+                                <Pen className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Chỉnh sửa</TooltipContent>
+                          </Tooltip>
                         )}
                         {!layer.geoserver_layer && canPublish && (
-                          <Button
-                            variant="default"
-                            size="icon-xs"
-                            disabled={publishMutation.isPending}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openPublishDialog(layer)
-                            }}
-                            tooltip="Công bố lớp lên dịch vụ bản đồ"
-                          >
-                            <CloudUpload className="size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="default"
+                                size="icon-xs"
+                                aria-label="Công bố lớp lên dịch vụ bản đồ"
+                                disabled={publishMutation.isPending}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openPublishDialog(layer)
+                                }}
+                              >
+                                <CloudUpload className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Công bố lớp lên dịch vụ bản đồ</TooltipContent>
+                          </Tooltip>
                         )}
                         {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openDeleteDialog(layer)
-                            }}
-                            tooltip="Xóa"
-                          >
-                            <Trash2 className="text-destructive size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Xóa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openDeleteDialog(layer)
+                                }}
+                              >
+                                <Trash2 className="text-destructive size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Xóa</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </TableCell>
@@ -426,6 +466,12 @@ export default function MapLayerPage(): JSX.Element {
           </TableBody>
         </Table>
       </ToolTableCustom>
+        </TabsContent>
+
+        <TabsContent value="categories" className="space-y-4 m-0">
+          <CategoryManagementTab />
+        </TabsContent>
+      </Tabs>
 
       <MapLayerDetailDialog
         open={detailDialogOpen}

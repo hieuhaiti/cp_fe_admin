@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, AlertCircle, Layers, CloudRain } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Layers, CloudRain, Sun } from 'lucide-react'
 import type { ThreeTypeSimulationOutcome, TypeSimulationMatch } from './types'
 import { SCENARIO_TYPES } from './constants'
 
@@ -76,26 +76,31 @@ function SingleTypeCard({
               <span>Khớp kịch bản dự báo</span>
             </div>
 
-            <div className="space-y-1 rounded-md bg-muted/40 p-2.5 text-xs">
-              <div className="flex justify-between">
+            <div className="space-y-2 rounded-md bg-muted/40 p-2.5 text-xs">
+              <div className="flex flex-col gap-0.5">
                 <span className="text-muted-foreground">Mã kịch bản:</span>
-                <span className="font-mono font-bold text-foreground">{match.scenario.code}</span>
+                <span className="break-words font-mono font-bold text-foreground">
+                  {match.scenario.code}
+                </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-muted-foreground">Tên:</span>
-                <span className="font-medium text-foreground text-right truncate max-w-[180px]" title={match.scenario.nameVi}>
+                <span
+                  className="break-words font-medium text-foreground"
+                  title={match.scenario.nameVi}
+                >
                   {match.scenario.nameVi}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col gap-0.5">
                 <span className="text-muted-foreground">Lớp bản đồ:</span>
-                <span className="font-mono text-foreground flex items-center gap-1">
-                  <Layers className="size-3" />
+                <span className="flex items-center gap-1 break-all font-mono text-foreground">
+                  <Layers className="size-3 shrink-0" />
                   {match.scenario.layerCode}
                 </span>
               </div>
               {match.scenario.frequency && (
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-0.5">
                   <span className="text-muted-foreground">Tần suất:</span>
                   <span className="font-medium text-foreground">{match.scenario.frequency}</span>
                 </div>
@@ -114,6 +119,14 @@ function SingleTypeCard({
               </Button>
             )}
           </>
+        ) : match.status === 'no_rain' ? (
+          <div className="py-6 text-center space-y-1">
+            <Sun className="size-5 mx-auto text-emerald-600 dark:text-emerald-400" />
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Không có kịch bản ngập</p>
+            <p className="text-[11px] text-muted-foreground">
+              Mức mưa 0 mm/h — Thời tiết bình thường, không ngập úng.
+            </p>
+          </div>
         ) : (
           <div className="py-6 text-center space-y-1">
             <AlertCircle className="size-5 mx-auto text-muted-foreground" />
@@ -133,14 +146,24 @@ export default function ScenarioResultCards({
   onActivateType,
   isActivating,
 }: ScenarioResultCardsProps): JSX.Element {
+  const isZeroRain = outcome.inputRainfall <= 0
+
   return (
     <div className="space-y-3 pt-2">
       <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
         <div className="font-semibold text-foreground flex items-center gap-2">
-          <CloudRain className="size-4 text-primary" />
-          Kết quả tra cứu đồng thời cho mức mưa {outcome.inputRainfall} mm/h (Thời đoạn {outcome.selectedDuration})
+          {isZeroRain ? (
+            <>
+              <Sun className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Kết quả tra cứu cho mức mưa 0 mm/h (Không mưa — Không kích hoạt kịch bản ngập)</span>
+            </>
+          ) : (
+            <>
+              <CloudRain className="size-4 text-primary" />
+              <span>Kết quả tra cứu đồng thời cho mức mưa {outcome.inputRainfall} mm/h</span>
+            </>
+          )}
         </div>
-       
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

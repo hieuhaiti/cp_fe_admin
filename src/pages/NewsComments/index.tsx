@@ -17,6 +17,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { APPROVED_LABEL, APPROVED_CLASS, APPROVED_DOT } from '@/constant/newsCommentConstant'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
@@ -296,39 +297,53 @@ export default function NewsComments(): JSX.Element {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         {canApprove && (
-                          <Button
-                            variant={toApprovedFlag(isApproved) ? 'outline' : 'default'}
-                            size="icon-xs"
-                            disabled={toApprovedFlag(isApproved) || approveMutation.isPending}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (!toApprovedFlag(isApproved)) approveMutation.mutate(c.id)
-                            }}
-                            tooltip={
-                              toApprovedFlag(isApproved)
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={toApprovedFlag(isApproved) ? 'outline' : 'default'}
+                                size="icon-xs"
+                                disabled={toApprovedFlag(isApproved) || approveMutation.isPending}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (!toApprovedFlag(isApproved)) approveMutation.mutate(c.id)
+                                }}
+                                aria-label={
+                                  toApprovedFlag(isApproved)
+                                    ? 'Bình luận đã được duyệt'
+                                    : 'Duyệt bình luận'
+                                }
+                              >
+                                {toApprovedFlag(isApproved)
+                                  ? 'Đã duyệt'
+                                  : approveMutation.isPending
+                                    ? 'Đang duyệt...'
+                                    : 'Duyệt'}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {toApprovedFlag(isApproved)
                                 ? 'Bình luận đã được duyệt'
-                                : 'Duyệt bình luận'
-                            }
-                          >
-                            {toApprovedFlag(isApproved)
-                              ? 'Đã duyệt'
-                              : approveMutation.isPending
-                                ? 'Đang duyệt...'
-                                : 'Duyệt'}
-                          </Button>
+                                : 'Duyệt bình luận'}
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                         {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openDeleteDialog(c)
-                            }}
-                            tooltip="Xóa"
-                          >
-                            <Trash2 className="text-destructive size-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Xóa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openDeleteDialog(c)
+                                }}
+                              >
+                                <Trash2 className="text-destructive size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Xóa</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </TableCell>

@@ -29,7 +29,7 @@ import { CheckCircle2, Download, FileJson, Info } from 'lucide-react'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import CategorySelect from '@/components/common/CategorySelect'
-import { MAP_LAYER_CATEGORY_LABEL_VI, toCategorySlug } from '@/constant/mapLayerConstant'
+import { toCategorySlug } from '@/constant/mapLayerConstant'
 
 function extractGeoJson(raw: any): GeoJSON.GeoJSON | null {
   if (!raw || typeof raw !== 'object') return null
@@ -88,9 +88,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
   const user = useAuthStore((state) => state.user)
   const canPublish = hasPerm(user, 'layers', 'update')
   const [category, setCategory] = useState<string>('forest_district')
-  const [categoryName, setCategoryName] = useState<string>(
-    () => MAP_LAYER_CATEGORY_LABEL_VI.forest_district || 'Phân loại đối tượng theo huyện'
-  )
+  const [categoryName, setCategoryName] = useState<string>('Phân loại đối tượng theo huyện')
   const [name, setName] = useState<string>('')
   const [publishAfterImport, setPublishAfterImport] = useState<'true' | 'false'>(
     canPublish ? 'true' : 'false'
@@ -107,7 +105,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
       onSuccess: () => {
         setName('')
         setCategory('forest_district')
-        setCategoryName(MAP_LAYER_CATEGORY_LABEL_VI.forest_district || 'Phân loại đối tượng theo huyện')
+        setCategoryName('Phân loại đối tượng theo huyện')
         setPublishAfterImport(canPublish ? 'true' : 'false')
         setGeoJsonFiles([])
         setPreviewGeoJson(null)

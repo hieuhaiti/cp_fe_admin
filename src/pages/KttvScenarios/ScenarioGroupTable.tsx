@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Pen, Layers, AlertCircle, CheckCircle2 } from 'lucide-react'
 import type { ScenarioDraftItem, ScenarioGroupRow } from './types'
@@ -76,18 +77,23 @@ function ScenarioCell({
           {item.layerCode}
         </span>
         {canEdit && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit(item)
-            }}
-            title={`Chỉnh sửa ${typeTitle} (${item.code})`}
-            className="opacity-80 group-hover:opacity-100"
-          >
-            <Pen className="size-3" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(item)
+                }}
+                aria-label={`Chỉnh sửa ${typeTitle} (${item.code})`}
+                className="opacity-80 group-hover:opacity-100"
+              >
+                <Pen className="size-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{`Chỉnh sửa ${typeTitle} (${item.code})`}</TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>
