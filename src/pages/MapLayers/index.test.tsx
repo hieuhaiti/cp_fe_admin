@@ -55,7 +55,7 @@ vi.mock('@/service', () => ({
   useApiQuery: queryMock,
   useApiMutation: mutationMock,
 }))
-vi.mock('./MapLayerDetailDialog', () => ({ default: () => null })); vi.mock('./MapLayerFormDialog', () => ({ default: () => null })); vi.mock('./GeoTiffUploadDialog', () => ({ default: () => null }))
+vi.mock('./MapLayerDetailDialog', () => ({ default: () => null })); vi.mock('./MapLayerFormDialog', () => ({ default: () => null })); vi.mock('./GeoTiffUploadDialog', () => ({ default: () => null })); vi.mock('./ShapefileImportDialog', () => ({ default: () => null }))
 const admin = { id: 1, email: 'a@a.com', roleCode: 'so_tnmt', isActive: true, role: { code: 'so_tnmt', permissions: { layers: { create: true, update: true, delete: true }, raster: { create: true } } } } as User
 describe('MapLayers index', () => {
   beforeEach(() => {
@@ -68,10 +68,11 @@ describe('MapLayers index', () => {
     mutationMock.mockReturnValue({ mutate: vi.fn(), isPending: false })
   })
 
-  it('renders empty list and permission-gated image layer upload', () => {
+  it('renders empty list and permission-gated shapefile and image layer upload', () => {
     renderWithProviders(<MapLayerPage />)
     expect(screen.getByRole('heading', { name: 'Quản lý lớp dữ liệu' })).toBeInTheDocument()
     expect(screen.getByText('Không có dữ liệu')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Nhập Shapefile/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Thêm lớp ảnh bản đồ/ })).toBeInTheDocument()
   })
 

@@ -2,6 +2,8 @@ import apiClient from './common/apiClient'
 import type {
   ApiResponse,
   ImportJob,
+  ImportJobError,
+  ShapefileImportPayload,
   MapLayer,
   MapLayerLegend,
   MapLayerListData,
@@ -182,15 +184,8 @@ export default {
   },
 
   /** POST /admin/layers/imports/shapefile */
-  importShapefile: (data: {
-    fileObjectId: number | string
-    code: string
-    nameVi: string
-    category: string
-    targetSrid: number
-    isPublic: boolean
-    sourceEncoding?: string
-  }) => apiClient.post<{ jobId: number | string }>(`${serviceMapImportJobPath}/shapefile`, data),
+  importShapefile: (data: ShapefileImportPayload) =>
+    apiClient.post<ImportJob>(`${serviceMapImportJobPath}/shapefile`, data),
 
   /** POST /admin/layers/imports/excel */
   importExcel: (data: {
@@ -204,7 +199,7 @@ export default {
     sourceSrid: number
     targetSrid: number
     isPublic: boolean
-  }) => apiClient.post<{ jobId: number | string }>(`${serviceMapImportJobPath}/excel`, data),
+  }) => apiClient.post<ImportJob>(`${serviceMapImportJobPath}/excel`, data),
 
   /** GET /admin/layers/imports/:jobId */
   getImportJob: (jobId: number | string) =>
@@ -212,7 +207,7 @@ export default {
 
   /** GET /admin/layers/imports/:jobId/errors?page=&limit= */
   getImportErrors: (jobId: number | string, params?: { page?: number; limit?: number }) =>
-    apiClient.get(`${serviceMapImportJobPath}/${jobId}/errors`, { params }),
+    apiClient.get<ImportJobError[]>(`${serviceMapImportJobPath}/${jobId}/errors`, { params }),
 
   // Retained to avoid issuing requests to routes that do not exist in the
   // collection. Their UI flows need a product decision (import Shapefile/Excel

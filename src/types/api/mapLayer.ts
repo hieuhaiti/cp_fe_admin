@@ -14,7 +14,15 @@ export type GeometryType = 'point' | 'line' | 'polygon' | GeometryTypePostman
 export type LayerKind = 'basemap' | 'overlay'
 export type SourceFormat = 'shapefile' | 'geojson' | 'kml' | 'geotiff' | 'filegdb'
 export type ImportMode = 'overwrite' | 'append'
-export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type ImportJobStatus =
+  | 'queued'
+  | 'running'
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled'
 
 export interface MapLayerLegendEntry {
   label: string
@@ -213,13 +221,50 @@ export interface ImportGeoJsonInlineBody {
 export interface ImportJob {
   id: number
   job_id?: string
+  import_type?: string
+  file_object_id?: number
+  layer_id?: number
   layer_code?: string
   source_format?: SourceFormat
   status: ImportJobStatus
   progress?: number
+  attempt?: number
+  max_attempts?: number
+  feature_count?: number
+  geometry_type?: string
+  source_srid?: number
+  target_srid?: number
+  error_code?: string
   error_message?: string
+  started_at?: string
+  finished_at?: string
+  created_at?: string
+  updated_at?: string
+  publish_status?: string
+  geoserver_layer?: string
   createdAt?: string
   updatedAt?: string
+}
+
+export interface ImportJobError {
+  id: number
+  job_id: number
+  source_row: number | null
+  error_code: string
+  error_message: string
+  raw_data?: Record<string, unknown> | null
+  created_at?: string
+}
+
+export interface ShapefileImportPayload {
+  fileObjectId: number | string
+  code: string
+  nameVi: string
+  category: string
+  targetSrid: number
+  isPublic: boolean
+  sourceEncoding?: string
+  topologyProfile?: 'basic' | 'administrative_boundary'
 }
 
 export interface HarvestRasterBody {

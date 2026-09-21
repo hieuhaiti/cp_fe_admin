@@ -24,12 +24,12 @@ const COMMON_DEFINITIONS: StylePropertyDefinition[] = [
     step: 0.05,
     description: 'Giá trị từ 0 (trong suốt) đến 1 (rõ nét)',
   },
-  {
-    key: 'visible_by_default',
-    label: 'Bật mặc định trên bản đồ',
-    type: 'boolean',
-    description: 'Hiển thị lớp ngay khi mở trang bản đồ',
-  },
+  // {
+  //   key: 'visible_by_default',
+  //   label: 'Hiển thị trên bản đồ mặc định',
+  //   type: 'boolean',
+  //   description: 'Chọn để lớp này tự động mở khi vào trang bản đồ',
+  // },
 ]
 
 const POLYGON_DEFINITIONS: StylePropertyDefinition[] = [

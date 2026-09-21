@@ -46,12 +46,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { CloudUpload, FolderTree, Layers, Pen, Trash2 } from 'lucide-react'
+import { CloudUpload, FileArchive, FolderTree, Layers, Pen, Trash2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import PageLayout from '@/layout/pageLayout'
 import MapLayerDetailDialog from './MapLayerDetailDialog'
 import MapLayerFormDialog from './MapLayerFormDialog'
 import GeoTiffUploadDialog from './GeoTiffUploadDialog'
+import ShapefileImportDialog from './ShapefileImportDialog'
 import CategoryManagementTab from './CategoryManagementTab'
 import { formatDate } from '@/lib/date'
 import { hasPerm } from '@/lib/permissions'
@@ -75,6 +76,7 @@ function getPagination(data: unknown): Partial<Pagination> {
 
 export default function MapLayerPage(): JSX.Element {
   const user = useAuthStore((s) => s.user)
+  const canCreateLayer = hasPerm(user, 'layers', 'create')
   const canCreateRaster = hasPerm(user, 'raster', 'create') && hasPerm(user, 'layers', 'create')
   const canUpdate = hasPerm(user, 'layers', 'update')
   const canDelete = hasPerm(user, 'layers', 'delete')
@@ -138,10 +140,18 @@ export default function MapLayerPage(): JSX.Element {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [geoTiffDialogOpen, setGeoTiffDialogOpen] = useState(false)
+  const [shapefileDialogOpen, setShapefileDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [layerToDelete, setLayerToDelete] = useState<MapLayer | null>(null)
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
   const [layerToPublish, setLayerToPublish] = useState<MapLayer | null>(null)
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    if (searchParams.get('action') === 'import-shapefile') {
+      setShapefileDialogOpen(true)
+    }
+  }, [])
 
   const updateMutation = useApiMutation(
     (payload: { code: string; data: CreateMapLayerBody }) =>
@@ -324,6 +334,16 @@ export default function MapLayerPage(): JSX.Element {
               </SelectContent>
             </Select>
 
+            {canCreateLayer && (
+              <Button
+                onClick={() => setShapefileDialogOpen(true)}
+                className="gap-2 shadow-sm"
+              >
+                <FileArchive className="size-4" />
+                Nhập Shapefile
+              </Button>
+            )}
+
             {canCreateRaster && (
               <Button variant="outline" onClick={() => setGeoTiffDialogOpen(true)}>
                 Thêm lớp ảnh bản đồ
@@ -489,6 +509,11 @@ export default function MapLayerPage(): JSX.Element {
         open={geoTiffDialogOpen}
         onOpenChange={setGeoTiffDialogOpen}
         onPublished={() => dbQuery.refetch()}
+      />
+      <ShapefileImportDialog
+        open={shapefileDialogOpen}
+        onOpenChange={setShapefileDialogOpen}
+        onSuccess={() => dbQuery.refetch()}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

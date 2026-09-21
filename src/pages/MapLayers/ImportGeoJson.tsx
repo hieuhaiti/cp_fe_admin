@@ -25,7 +25,8 @@ import {
 } from '@/components/ui/file-upload'
 import { mapLayerService, useApiMutation } from '@/service'
 import { toast } from 'react-toastify'
-import { CheckCircle2, Download, FileJson, Info } from 'lucide-react'
+import { CheckCircle2, Download, FileArchive, FileJson, Info } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import CategorySelect from '@/components/common/CategorySelect'
@@ -85,6 +86,7 @@ const MAX_GEOJSON_SIZE = 50 * 1024 * 1024
 const GEOJSON_IMPORT_AVAILABLE = false
 
 export default function ImportGeoJsonPage(): JSX.Element {
+  const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const canPublish = hasPerm(user, 'layers', 'update')
   const [category, setCategory] = useState<string>('forest_district')
@@ -212,6 +214,18 @@ export default function ImportGeoJsonPage(): JSX.Element {
               <p className="mt-1 text-xs opacity-90">
                 Hiện tại API backend chưa hỗ trợ nhập trực tiếp GeoJSON. Để nhập dữ liệu lớp bản đồ, vui lòng sử dụng chức năng tải ảnh nguồn GeoTIFF hoặc liên hệ quản trị hệ thống để nhập qua Shapefile / Excel.
               </p>
+              <div className="mt-2.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 border-amber-300 bg-amber-100/60 text-xs font-medium text-amber-950 hover:bg-amber-200/60 dark:border-amber-700/60 dark:bg-amber-900/40 dark:text-amber-100"
+                  onClick={() => navigate('/map-layers?action=import-shapefile')}
+                >
+                  <FileArchive className="h-3.5 w-3.5" />
+                  Chuyển sang Nhập Shapefile (.zip)
+                </Button>
+              </div>
             </div>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">

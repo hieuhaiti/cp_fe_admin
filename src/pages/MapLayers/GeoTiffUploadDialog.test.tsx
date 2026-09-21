@@ -71,9 +71,9 @@ describe('GeoTiffUploadDialog', () => {
     mocks.publishImage.mockResolvedValue({ success: true })
   })
 
-  it('rejects submit without a file in default Time Series mode', () => {
+  it('rejects submit without a file in default mode', () => {
     renderDialog()
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu vào chuỗi thời gian' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tải lên và công bố' }))
     expect(mocks.toastError).toHaveBeenCalledWith('Vui lòng chọn tệp ảnh bản đồ.')
     expect(mocks.upload).not.toHaveBeenCalled()
   })
@@ -83,7 +83,7 @@ describe('GeoTiffUploadDialog', () => {
     fireEvent.change(screen.getByLabelText('Tệp ảnh bản đồ *'), {
       target: { files: [makeFile('map.png', 'image/png')] },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu vào chuỗi thời gian' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tải lên và công bố' }))
     expect(mocks.toastError).toHaveBeenCalledWith('Chỉ hỗ trợ tệp .tif hoặc .tiff.')
   })
 
@@ -92,6 +92,7 @@ describe('GeoTiffUploadDialog', () => {
     const onOpenChange = vi.fn()
     renderDialog({ onPublished, onOpenChange })
 
+    fireEvent.click(screen.getByRole('button', { name: /Lớp theo chuỗi thời gian/i }))
     fireEvent.change(screen.getByLabelText('Tệp ảnh bản đồ *'), {
       target: { files: [makeFile('map.tif', 'image/tiff')] },
     })
@@ -231,6 +232,25 @@ describe('GeoTiffUploadDialog', () => {
         })
       )
     })
+  })
+
+  it('automatically generates standalone layer code from title and via button', () => {
+    renderDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: /Công bố lớp độc lập/ }))
+
+    const titleInput = screen.getByLabelText(/^Tên lớp/)
+    fireEvent.change(titleInput, { target: { value: 'Bản Đồ Đô Thị 2026' } })
+
+    const codeInput = screen.getByLabelText(/Mã lớp độc lập/i) as HTMLInputElement
+    expect(codeInput.value).toBe('ban_do_do_thi_2026')
+
+    fireEvent.change(codeInput, { target: { value: 'custom_code' } })
+    expect(codeInput.value).toBe('custom_code')
+
+    const autoGenBtn = screen.getByRole('button', { name: /Tạo tự động/i })
+    fireEvent.click(autoGenBtn)
+    expect(codeInput.value).toBe('ban_do_do_thi_2026')
   })
 })
 
