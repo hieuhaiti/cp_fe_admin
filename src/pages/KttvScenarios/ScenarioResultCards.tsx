@@ -127,6 +127,14 @@ function SingleTypeCard({
               Mức mưa 0 mm/h — Thời tiết bình thường, không ngập úng.
             </p>
           </div>
+        ) : match.status === 'no_flood' ? (
+          <div className="py-6 text-center space-y-1">
+            <CheckCircle2 className="size-5 mx-auto text-emerald-600 dark:text-emerald-400" />
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Lượng mưa an toàn — Không gây ngập</p>
+            <p className="text-[11px] text-muted-foreground">
+              Mức mưa dưới ngưỡng gây ngập tối thiểu. Hệ thống thoát nước đáp ứng tốt, không ngập úng.
+            </p>
+          </div>
         ) : (
           <div className="py-6 text-center space-y-1">
             <AlertCircle className="size-5 mx-auto text-muted-foreground" />
@@ -147,6 +155,11 @@ export default function ScenarioResultCards({
   isActivating,
 }: ScenarioResultCardsProps): JSX.Element {
   const isZeroRain = outcome.inputRainfall <= 0
+  const isAllNoFlood =
+    outcome.hienTrang.status === 'no_flood' &&
+    outcome.caiTao.status === 'no_flood' &&
+    outcome.quyHoachRcp45.status === 'no_flood' &&
+    outcome.quyHoachRcp85.status === 'no_flood'
 
   return (
     <div className="space-y-3 pt-2">
@@ -156,6 +169,13 @@ export default function ScenarioResultCards({
             <>
               <Sun className="size-4 text-emerald-600 dark:text-emerald-400" />
               <span>Kết quả tra cứu cho mức mưa 0 mm/h (Không mưa — Không kích hoạt kịch bản ngập)</span>
+            </>
+          ) : isAllNoFlood ? (
+            <>
+              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <span>
+                Kết quả tra cứu cho mức mưa {outcome.inputRainfall} mm/h (Lượng mưa an toàn — Dưới ngưỡng gây ngập úng)
+              </span>
             </>
           ) : (
             <>

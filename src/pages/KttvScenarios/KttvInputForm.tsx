@@ -146,9 +146,15 @@ export default function KttvInputForm(): JSX.Element {
     const rain = matched.precipMm
     setValue('rainfall', String(rain))
     setValue('duration', '1h')
-    toast.info(
-      `Đã nhập lượng mưa dự báo lúc ${matched.hour}: ${rain} mm/h`
-    )
+    if (rain > 0 && rain < 29.1) {
+      toast.info(
+        `Đã nhập lượng mưa dự báo lúc ${matched.hour}: ${rain} mm/h (Dưới ngưỡng gây ngập 29.10 mm/h — An toàn)`
+      )
+    } else {
+      toast.info(
+        `Đã nhập lượng mưa dự báo lúc ${matched.hour}: ${rain} mm/h`
+      )
+    }
   }
 
   // Làm mới dữ liệu dự báo từ WeatherAPI qua server
@@ -180,10 +186,25 @@ export default function KttvInputForm(): JSX.Element {
     setSubmittedRainfall(rainVal)
 
     // 1. Tính toán kết quả cho cả 3 loại kịch bản từ dữ liệu thực tế
+    let outcome: ThreeTypeSimulationOutcome | null = null
     const realItems = (scenarioListData ?? []).map(scenarioFromDb)
     if (realItems.length > 0) {
-      const outcome = simulateThreeTypesFromList(realItems, rainVal, tideVal, durationVal)
+      outcome = simulateThreeTypesFromList(realItems, rainVal, tideVal, durationVal)
       setThreeTypeOutcome(outcome)
+    }
+
+    const isBelowThreshold =
+      rainVal > 0 &&
+      outcome &&
+      outcome.hienTrang.status === 'no_flood' &&
+      outcome.caiTao.status === 'no_flood' &&
+      outcome.quyHoachRcp45.status === 'no_flood' &&
+      outcome.quyHoachRcp85.status === 'no_flood'
+
+    if (isBelowThreshold) {
+      toast.info(
+        `Lượng mưa ${rainVal} mm/h dưới ngưỡng gây ngập (tối thiểu 29.10 mm/h). Khu vực an toàn, không kích hoạt kịch bản ngập.`
+      )
     }
 
     // 2. Tra cứu API backend hiện hữu (chỉ gọi khi lượng mưa > 0)
@@ -438,6 +459,13 @@ export default function KttvInputForm(): JSX.Element {
     (!!simResult &&
       simResult.status !== 'no_rain' &&
       simResult.simulationParams?.scenarioCode !== 'no_rain')
+  const isSafeBelowThreshold =
+    submittedRainfall !== null &&
+    submittedRainfall > 0 &&
+    matchedScenarios.length === 0 &&
+    (!simResult ||
+      simResult.status === 'no_rain' ||
+      simResult.simulationParams?.scenarioCode === 'no_rain')
   const isSimulated = submittedRainfall !== null || !!threeTypeOutcome || !!simResult
   const selectedItem = (forecastData?.hours ?? []).find((h) => h.hour === activeHour)
 
@@ -734,8 +762,104 @@ export default function KttvInputForm(): JSX.Element {
         </div>
       )}
 
-      {/* Kết quả tra cứu kịch bản phù hợp khi mưa > 0 */}
-      {isSimulated && !isZeroRainfall && (
+      {/* Kết quả khi lượng mưa an toàn (Dưới ngưỡng gây ngập) */}
+      {isSimulated && !isZeroRainfall && isSafeBelowThreshold && (
+        <div
+          className={`rounded-lg border p-4 space-y-3.5 ${
+            activeScenariosInSystem.length > 0
+              ? 'border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/30'
+              : 'border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/30'
+          }`}
+        >
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 font-medium text-foreground">
+              {activeScenariosInSystem.length > 0 ? (
+                <AlertTriangle className="size-5 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
+              )}
+              <span>
+                {activeScenariosInSystem.length > 0
+                  ? `Lượng mưa ${submittedRainfall} mm/h — Dưới ngưỡng gây ngập (Đang có kịch bản bật)`
+                  : `Lượng mưa ${submittedRainfall} mm/h — Dưới ngưỡng gây ngập lụt (An toàn)`}
+              </span>
+            </div>
+            <Badge
+              variant="outline"
+              className={
+                activeScenariosInSystem.length > 0
+                  ? 'text-amber-800 border-amber-300 bg-amber-100 dark:bg-amber-900/50 dark:text-amber-300 text-xs font-semibold'
+                  : 'text-emerald-800 border-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold'
+              }
+            >
+              {activeScenariosInSystem.length > 0
+                ? `${activeScenariosInSystem.length} kịch bản đang bật`
+                : 'Khu vực an toàn'}
+            </Badge>
+          </div>
+
+          {activeScenariosInSystem.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Lượng mưa <strong>{submittedRainfall} mm/h</strong> dưới ngưỡng tối thiểu gây ngập (29.10 mm/h theo kịch bản ngập nhẹ). Để tránh hiển thị ngập giả lập trên bản đồ WebGIS, bạn hãy tắt các kịch bản đang bật:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {activeScenariosInSystem.map((s) => (
+                  <div
+                    key={s.id}
+                    className="rounded-md border border-amber-200/80 bg-card/90 p-3 space-y-1 text-xs shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`scenario-type-badge ${s.type || 'hien_trang'}`}>
+                        {SCENARIO_TYPES[s.type as ScenarioTypeId]?.shortLabel ?? 'Hiện trạng'}
+                      </span>
+                      <span className="font-mono text-muted-foreground text-[11px] truncate max-w-[120px]">
+                        {s.code}
+                      </span>
+                    </div>
+                    <div className="font-semibold text-foreground text-sm truncate" title={s.name_vi}>
+                      {s.name_vi}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      Lớp: <code className="font-mono">{s.layer_code}</code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-1">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeactivateAllScenarios}
+                  disabled={deactivating}
+                  className="flex items-center gap-1.5"
+                >
+                  {deactivating ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin mr-1.5" />
+                      Đang tắt các kịch bản...
+                    </>
+                  ) : (
+                    <>
+                      <PowerOff className="size-4" />
+                      Tắt tất cả các kịch bản hiện tại ({activeScenariosInSystem.length})
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Mức mưa {submittedRainfall} mm/h nằm dưới ngưỡng tối thiểu xuất hiện điểm ngập (29.10 mm/h theo kịch bản ngập nhẹ). Hệ thống thoát nước đô thị đáp ứng tốt, không có nguy cơ ngập úng và không kích hoạt kịch bản ngập lụt nào.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Kết quả tra cứu kịch bản phù hợp khi có kịch bản khớp hoặc mưa lớn */}
+      {isSimulated && !isZeroRainfall && !isSafeBelowThreshold && (
         <div
           className={`rounded-lg border p-4 space-y-3.5 ${
             hasMatch

@@ -171,6 +171,48 @@ describe('KTTV Scenario Helpers', () => {
     expect(result.quyHoachRcp85.status).toBe('no_rain')
   })
 
+  it('returns no_flood status when rainfall is positive but below lowest scenario threshold (e.g. 0.38 mm/h < 29.10 mm/h)', () => {
+    const realScenarios: ScenarioDraftItem[] = [
+      {
+        id: 1,
+        code: 'scenario_light',
+        nameVi: 'Kịch bản ngập nhẹ',
+        type: 'hien_trang',
+        minRainfall: 29.1,
+        maxRainfall: 48.14,
+        minTide: 0.0,
+        maxTide: 0.84,
+        layerCode: 'kich_ban_ngap_nhe_rebuild',
+        isActive: true,
+      },
+      {
+        id: 13,
+        code: 'scenario_light_improved',
+        nameVi: 'Kịch bản ngập nhẹ - sau cải tạo',
+        type: 'cai_tao',
+        minRainfall: 29.1,
+        maxRainfall: 48.14,
+        minTide: 0.0,
+        maxTide: 0.84,
+        layerCode: 'kich_ban_ngap_nhe_sau_cai_tao_rebuild',
+        isActive: true,
+      },
+    ]
+
+    const result = simulateThreeTypesFromList(realScenarios, 0.38, 0.5, '1h')
+    expect(result.inputRainfall).toBe(0.38)
+    expect(result.hienTrang.status).toBe('no_flood')
+    expect(result.hienTrang.scenario).toBeNull()
+
+    expect(result.caiTao.status).toBe('no_flood')
+    expect(result.caiTao.scenario).toBeNull()
+
+    // Với mức mưa 35 mm/h (vượt ngưỡng 29.10), phải khớp kịch bản
+    const matchedResult = simulateThreeTypesFromList(realScenarios, 35, 0.5, '1h')
+    expect(matchedResult.hienTrang.status).toBe('matched')
+    expect(matchedResult.hienTrang.scenario?.code).toBe('scenario_light')
+  })
+
   it('formats rainfall ranges properly', () => {
     expect(formatRainfallRange(50, 100)).toBe('50 – 100 mm')
     expect(formatRainfallRange(150, null)).toBe('≥ 150 mm')

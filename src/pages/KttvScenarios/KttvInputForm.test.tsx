@@ -269,4 +269,37 @@ describe('KttvInputForm', () => {
     expect(await screen.findByText(/Lượng mưa 0 mm\/h — Không có kịch bản ngập nào đang bật/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Tắt tất cả/ })).not.toBeInTheDocument()
   })
+
+  it('displays safe notification card when rainfall is positive but below 29.10 mm/h (e.g. 0.38 mm/h)', async () => {
+    simulate.mockResolvedValue({
+      data: {
+        status: 'no_rain',
+        simulationParams: { scenarioCode: 'no_rain', scenarioName: 'Lượng mưa an toàn' },
+      },
+    })
+    const realScenarios = [
+      {
+        id: 1,
+        code: 'scenario_light',
+        name_vi: 'Kịch bản ngập nhẹ',
+        type: 'hien_trang',
+        min_rainfall: '29.1',
+        max_rainfall: '48.14',
+        layer_code: 'kich_ban_ngap_nhe_rebuild',
+        is_active: false,
+      },
+    ]
+    getAllScenarios.mockResolvedValue({ data: { items: realScenarios } })
+
+    renderWithProviders(<KttvInputForm />)
+    fireEvent.change(screen.getByLabelText(/Lượng mưa hiện tại/), { target: { value: '0.38' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tra cứu kịch bản' }))
+
+    // Không hiển thị kịch bản phù hợp
+    expect(screen.queryByText('Đã tìm thấy kịch bản phù hợp')).not.toBeInTheDocument()
+
+    // Hiển thị thông báo an toàn dưới ngưỡng gây ngập
+    expect(await screen.findByText(/Lượng mưa 0.38 mm\/h — Dưới ngưỡng gây ngập lụt \(An toàn\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Khu vực an toàn/)).toBeInTheDocument()
+  })
 })

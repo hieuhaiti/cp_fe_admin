@@ -196,18 +196,26 @@ export function simulateThreeTypesFromList(
       return true
     })
 
-    // Nếu không khớp khoảng chính xác, chọn kịch bản có ngưỡng minRainfall gần nhất thấp hơn rainfall
+    // Nếu không khớp khoảng chính xác, nếu lượng mưa vượt ngưỡng cao nhất thì chọn kịch bản cao nhất
     if (!best) {
       const lower = candidates
         .filter((c) => (c.minRainfall ?? 0) <= rainfall)
         .sort((a, b) => (b.minRainfall ?? 0) - (a.minRainfall ?? 0))
       if (lower.length > 0) {
         best = lower[0]
-      } else {
-        // Fallback chọn kịch bản có ngưỡng thấp nhất
-        best = [...candidates].sort(
-          (a, b) => (a.minRainfall ?? 0) - (b.minRainfall ?? 0)
-        )[0]
+      }
+      // Nếu rainfall nhỏ hơn tất cả minRainfall (ví dụ 0.38 < 29.10),
+      // không fallback ép chọn kịch bản thấp nhất, mà lượng mưa này là an toàn (không ngập).
+    }
+
+    if (!best) {
+      return {
+        type,
+        typeLabel: typeOption.label,
+        rcp,
+        rcpLabel: rcp ? RCP_OPTIONS[rcp].label : undefined,
+        status: 'no_flood',
+        scenario: null,
       }
     }
 
@@ -217,9 +225,9 @@ export function simulateThreeTypesFromList(
       rcp,
       rcpLabel: rcp ? RCP_OPTIONS[rcp].label : undefined,
       status: 'matched',
-      scenario: best ?? null,
-      layerCode: best?.layerCode,
-      layerName: best?.nameVi,
+      scenario: best,
+      layerCode: best.layerCode,
+      layerName: best.nameVi,
     }
   }
 
