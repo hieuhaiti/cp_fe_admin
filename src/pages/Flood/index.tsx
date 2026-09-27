@@ -345,12 +345,6 @@ export default function FloodPage() {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'run', selectedRunId] }),
     }
   )
-  const dashboard = dashboardQuery.data?.data
-
-  const publishedCount = useMemo(() => {
-    return (dashboard?.layers ?? []).filter((l: { module?: string }) => l.module === 'trend').length
-  }, [dashboard])
-
   // Auto-select the run with the highest monitorEnd once when runs first load.
   const hasAutoSelected = useRef(false)
   useEffect(() => {
@@ -439,7 +433,7 @@ export default function FloodPage() {
       </header>
 
       {/* KPI cards */}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-3">
         <MetricCard
           icon={
             latestByEndDate
@@ -474,12 +468,6 @@ export default function FloodPage() {
             return year != null ? String(year) : '—'
           })()}
           hint="Khoảng thời gian giám sát gần nhất đã hoàn thành"
-        />
-        <MetricCard
-          icon={Layers3}
-          label="Lớp bản đồ đã công bố"
-          value={String(publishedCount)}
-          hint="Số lớp dữ liệu đang hiển thị trên bản đồ"
         />
         <MetricCard
           icon={queue?.active ? Loader2 : CheckCircle2}

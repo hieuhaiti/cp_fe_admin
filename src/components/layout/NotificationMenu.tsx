@@ -79,6 +79,15 @@ function getNotificationPath(n: Notification): string | null {
     return explicitUrl
   }
 
+  // Cảnh báo kịch bản thủy văn -> link tới https://admincampha.tourismpj.pro.vn/flood
+  if (
+    type === 'hydro_scenario_triggered' ||
+    type.startsWith('hydro_') ||
+    (typeof n.title === 'string' && n.title.includes('kịch bản thủy văn'))
+  ) {
+    return 'https://admincampha.tourismpj.pro.vn/flood'
+  }
+
   // 3. channel/type → route + optional entity id
   const asId = (value: unknown): string | null => {
     if (value === null || value === undefined || value === '') return null
@@ -166,19 +175,49 @@ export function NotificationMenu() {
   }, [queryClient])
 
   const handleWsMessage = useCallback(
-    (message: { data?: { id?: number | string; title?: string | null; body?: string | null } }) => {
+    (message: {
+      data?: {
+        id?: number | string
+        title?: string | null
+        body?: string | null
+        type?: string
+        data?: Record<string, unknown>
+        [key: string]: unknown
+      }
+    }) => {
       refreshNotifications()
       if (!openRef.current) {
         const title = message.data?.title
         const body = message.data?.body
-        const text = title && body ? `${title}\n${body}` : title || body || 'Bạn có thông báo mới'
+        const createdAt =
+          (message.data?.created_at as string | undefined) ||
+          (message.data?.createdAt as string | undefined) ||
+          new Date().toISOString()
+        const timeStr = formatDateTime(createdAt)
+        const hasTimeInBody = Boolean(body && /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/.test(body))
+        const lines = [title, body].filter(Boolean)
+        if (!hasTimeInBody && timeStr && timeStr !== '-') {
+          lines.push(timeStr)
+        }
+        const text = lines.join('\n')
         toast.info(text, {
           toastId: `notification-${message.data?.id ?? 'new'}`,
           style: { whiteSpace: 'pre-line' },
+          onClick: () => {
+            const notif = (message.data || {}) as unknown as Notification
+            const path = getNotificationPath(notif)
+            if (path) {
+              if (/^https?:\/\//.test(path)) {
+                window.open(path, '_blank', 'noopener,noreferrer')
+              } else {
+                navigate(path)
+              }
+            }
+          },
         })
       }
     },
-    [refreshNotifications]
+    [refreshNotifications, navigate]
   )
 
   useNotificationWebSocket({

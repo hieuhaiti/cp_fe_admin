@@ -14,7 +14,6 @@ import {
   Upload,
   Mountain,
   Layers,
-  Percent,
 } from 'lucide-react'
 import { forestClassificationService, useApiMutation, useApiQuery } from '@/service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -745,15 +744,6 @@ function SnapshotOverview({
             {snapshot.attempt && snapshot.attempt > 1 && (
               <Badge variant="outline">Lần thử #{snapshot.attempt}</Badge>
             )}
-            {snapshot.oobAccuracy != null && (
-              <Badge variant="outline">OOB {(snapshot.oobAccuracy * 100).toFixed(1)}%</Badge>
-            )}
-            {snapshot.testKappa != null && (
-              <Badge variant="outline">Kappa {snapshot.testKappa.toFixed(2)}</Badge>
-            )}
-            {snapshot.cloudCover != null && (
-              <Badge variant="outline">Ngưỡng mây {snapshot.cloudCover}%</Badge>
-            )}
           </div>
           <div className="flex items-center gap-2">
             {previewUrl && (
@@ -803,9 +793,6 @@ function SnapshotOverview({
 }
 
 function KpiCards({ summary }: { summary: ForestClassSnapshot['provinceSummary'] | undefined }) {
-  const forestHa = finiteNumber(summary?.forestHa)
-  const mineHa = finiteNumber(summary?.mineHa)
-  const forestMineTotal = (forestHa ?? 0) + (mineHa ?? 0)
   const cards: Array<{
     icon: ReactNode
     label: string
@@ -833,19 +820,9 @@ function KpiCards({ summary }: { summary: ForestClassSnapshot['provinceSummary']
       hint: `Tỷ lệ ${formatPercent(summary?.minePercent ?? null)} · Bãi khai thác than (lớp 4)`,
       tone: 'bg-stone-50',
     },
-    {
-      icon: <Percent className="size-5 text-sky-700" />,
-      label: 'Rừng / (Rừng + Mỏ)',
-      value:
-        forestHa != null && mineHa != null && forestMineTotal > 0
-          ? formatPercent((forestHa / forestMineTotal) * 100)
-          : '—',
-      hint: 'Tỷ lệ giữa 2 nhóm ưu tiên theo dõi',
-      tone: 'bg-sky-50',
-    },
   ]
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((card) => (
         <Card key={card.label} className={card.tone}>
           <CardContent className="p-4">
