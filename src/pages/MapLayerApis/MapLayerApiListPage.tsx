@@ -364,29 +364,29 @@ export default function MapLayerApiListPage(): JSX.Element {
                 >
                   <TableCell className="font-mono text-xs">{api.id}</TableCell>
                   <TableCell>
-                    <div className="max-w-[220px]">
-                      <p className="truncate font-semibold text-xs text-foreground">
+                    <div className="max-w-[220px] min-w-0">
+                      <p className="truncate font-semibold text-xs text-foreground" title={api.layer_name || api.layer_name_vi || api.layer_code || ''}>
                         {api.layer_name || api.layer_name_vi || api.layer_code || '-'}
                       </p>
                       {api.layer_code && (
-                        <p className="text-muted-foreground truncate font-mono text-[11px]">
+                        <p className="text-muted-foreground truncate font-mono text-[11px]" title={api.layer_code}>
                           Mã: {api.layer_code}
                         </p>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="max-w-[260px] space-y-1">
-                      <p className="font-medium text-xs text-foreground">{api.name}</p>
+                    <div className="max-w-[260px] min-w-0 space-y-1">
+                      <p className="font-medium text-xs text-foreground break-words line-clamp-2" title={api.name}>{api.name}</p>
                       {api.slug && (
                         <div
-                          className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground hover:text-foreground"
+                          className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground hover:text-foreground max-w-full"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleCopyEndpoint(api.slug)
                           }}
                         >
-                          <span className="truncate">/{api.slug}/features</span>
+                          <span className="truncate break-all">/{api.slug}/features</span>
                           <Copy className="size-3 shrink-0 opacity-60" />
                         </div>
                       )}

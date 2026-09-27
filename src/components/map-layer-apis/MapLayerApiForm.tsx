@@ -510,7 +510,7 @@ export default function MapLayerApiForm({
               disabled={mode === 'edit'}
               className="w-full justify-between font-normal"
             >
-              <span className={selectedLayer ? '' : 'text-muted-foreground'}>
+              <span className={`truncate text-left min-w-0 ${selectedLayer ? '' : 'text-muted-foreground'}`}>
                 {selectedLayer
                   ? `[${selectedLayer.code}] ${layerLabel(selectedLayer)}`
                   : 'Chọn lớp bản đồ'}
@@ -633,18 +633,18 @@ export default function MapLayerApiForm({
 
         {/* Cảnh báo khi chọn lớp đã có API */}
         {existingRegistryForSelected && mode === 'create' && (
-          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1.5">
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1.5 break-words">
             <div className="flex items-center gap-1.5 font-semibold text-amber-900 dark:text-amber-100">
               <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
               Lớp bản đồ này đã có API chia sẻ ({existingRegistryForSelected.name})
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground break-words">
               Endpoint hiện tại:{' '}
-              <code className="font-mono text-foreground font-semibold">
+              <code className="font-mono text-foreground font-semibold break-all">
                 /api/v1/shared/{existingRegistryForSelected.slug}/features
               </code>
             </p>
-            <p>
+            <p className="break-words">
               Theo quy định, mỗi lớp bản đồ chỉ có duy nhất 1 API chia sẻ. Khi bạn nhấn nút <strong>"Cấp khóa cho lớp này"</strong> bên dưới, hệ thống sẽ cấp một khóa chia sẻ (API Key) mới cho đối tác mà không tạo trùng API.
             </p>
           </div>
@@ -652,19 +652,25 @@ export default function MapLayerApiForm({
 
         {selectedLayer && (
           <div className="space-y-1">
-            <FieldHint>
+            <FieldHint className="break-words">
               Nhóm: {selectedLayer.category_name ?? selectedLayer.category ?? 'Chưa phân nhóm'} · Kiểu hình học:{' '}
               {selectedLayer.geometry_type ?? 'Chưa xác định'}
             </FieldHint>
             {selectedLayerDisplayFields.length > 0 ? (
-              <FieldHint className="text-emerald-600 dark:text-emerald-400 font-medium">
+              <FieldHint className="text-emerald-600 dark:text-emerald-400 font-medium break-words">
                 ✓ Danh sách trường hiển thị của lớp ({selectedLayerDisplayFields.length} trường):{' '}
-                {selectedLayerDisplayFields.slice(0, 5).join(', ')}
+                <span className="font-mono break-all">{selectedLayerDisplayFields.slice(0, 5).join(', ')}</span>
                 {selectedLayerDisplayFields.length > 5 ? ` (+${selectedLayerDisplayFields.length - 5} trường khác)` : ''}
               </FieldHint>
             ) : (
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300">
-                ⚠️ Lớp bản đồ này chưa cấu hình danh sách trường hiển thị (displayFields). Vui lòng cấu hình trường trong Quản lý lớp bản đồ để chia sẻ API.
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 break-words space-y-1">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  Lớp bản đồ này chưa có danh sách trường thuộc tính (displayFields rỗng).
+                </div>
+                <p className="text-[11px] leading-relaxed break-words">
+                  Lớp này chưa được khai báo danh sách thuộc tính trong siêu dữ liệu (metadata). Hiện tại trang Quản lý lớp bản đồ chưa có giao diện cấu hình trường thuộc tính, do đó bạn vui lòng chọn một lớp bản đồ khác đã có sẵn trường dữ liệu để chia sẻ API.
+                </p>
               </div>
             )}
           </div>
@@ -858,7 +864,7 @@ export default function MapLayerApiForm({
                     return (
                       <label
                         key={field}
-                        className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded p-1 text-xs"
+                        className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded p-1 text-xs min-w-0"
                       >
                         <Checkbox
                           checked={isChecked}
@@ -876,7 +882,7 @@ export default function MapLayerApiForm({
                             }
                           }}
                         />
-                        <span className="font-mono truncate">{field}</span>
+                        <span className="font-mono truncate break-all min-w-0" title={field}>{field}</span>
                       </label>
                     )
                   })
@@ -945,7 +951,7 @@ export default function MapLayerApiForm({
                       return (
                         <label
                           key={field}
-                          className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded p-1 text-xs"
+                          className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded p-1 text-xs min-w-0"
                         >
                           <Checkbox
                             checked={isChecked}
@@ -961,7 +967,7 @@ export default function MapLayerApiForm({
                               }
                             }}
                           />
-                          <span className="font-mono truncate">{field}</span>
+                          <span className="font-mono truncate break-all min-w-0" title={field}>{field}</span>
                         </label>
                       )
                     })
@@ -1028,7 +1034,7 @@ export default function MapLayerApiForm({
                         return (
                           <label
                             key={field}
-                            className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded p-1 text-xs"
+                            className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded p-1 text-xs min-w-0"
                           >
                             <Checkbox
                               checked={isChecked}
@@ -1044,7 +1050,7 @@ export default function MapLayerApiForm({
                                 }
                               }}
                             />
-                            <span className="font-mono truncate">{field}</span>
+                            <span className="font-mono truncate break-all min-w-0" title={field}>{field}</span>
                           </label>
                         )
                       })

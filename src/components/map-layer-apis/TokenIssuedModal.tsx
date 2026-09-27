@@ -146,7 +146,7 @@ export default function TokenIssuedModal({
               )}
             </div>
             <div className="relative">
-              <pre className="max-h-28 overflow-x-auto rounded-md border bg-slate-950 p-3 font-mono text-xs leading-relaxed text-emerald-400 select-all">
+              <pre className="max-h-28 overflow-x-auto rounded-md border bg-slate-950 p-3 font-mono text-xs leading-relaxed text-emerald-400 select-all whitespace-pre-wrap break-all">
                 {token || 'Không có mã token'}
               </pre>
               <div className="mt-2 flex justify-end">
@@ -176,9 +176,9 @@ export default function TokenIssuedModal({
           {curlCommand && (
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-xs font-medium">
+                <span className="text-muted-foreground text-xs font-medium break-words">
                   Ví dụ lệnh gọi cURL (Endpoint:{' '}
-                  <code className="text-foreground font-mono">
+                  <code className="text-foreground font-mono break-all">
                     /api/v1/shared/{apiSlug}/features
                   </code>
                   ):
@@ -193,7 +193,7 @@ export default function TokenIssuedModal({
                   <span>{curlCopied ? 'Đã chép' : 'Chép cURL'}</span>
                 </Button>
               </div>
-              <pre className="overflow-x-auto rounded border bg-muted/60 p-2.5 font-mono text-[11px] leading-tight text-foreground select-all">
+              <pre className="overflow-x-auto rounded border bg-muted/60 p-2.5 font-mono text-[11px] leading-tight text-foreground select-all whitespace-pre-wrap break-all">
                 {curlCommand}
               </pre>
             </div>

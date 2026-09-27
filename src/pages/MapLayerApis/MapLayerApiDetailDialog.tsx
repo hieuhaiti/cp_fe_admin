@@ -219,7 +219,7 @@ export default function MapLayerApiDetailDialog({
 
               {api?.slug && (
                 <div className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2.5 py-1 text-xs">
-                  <span className="text-muted-foreground font-mono">
+                  <span className="text-muted-foreground font-mono break-all">
                     /api/v1/shared/{api.slug}/features
                   </span>
                   <Tooltip>
@@ -446,7 +446,7 @@ export default function MapLayerApiDetailDialog({
                     <div className="flex flex-wrap gap-1.5">
                       {Array.isArray(api.read_fields) && api.read_fields.length > 0 ? (
                         api.read_fields.map((f) => (
-                          <Badge key={f} variant="secondary" className="font-mono text-xs">
+                          <Badge key={f} variant="secondary" className="font-mono text-xs break-all max-w-full">
                             {f}
                           </Badge>
                         ))
@@ -461,7 +461,7 @@ export default function MapLayerApiDetailDialog({
                     <div className="flex flex-wrap gap-1.5">
                       {Array.isArray(api.write_fields) && api.write_fields.length > 0 ? (
                         api.write_fields.map((f) => (
-                          <Badge key={f} variant="outline" className="border-amber-400 font-mono text-xs text-amber-600 dark:text-amber-400">
+                          <Badge key={f} variant="outline" className="border-amber-400 font-mono text-xs text-amber-600 dark:text-amber-400 break-all max-w-full">
                             {f}
                           </Badge>
                         ))
@@ -476,7 +476,7 @@ export default function MapLayerApiDetailDialog({
                     <div className="flex flex-wrap gap-1.5">
                       {Array.isArray(api.search_fields) && api.search_fields.length > 0 ? (
                         api.search_fields.map((f) => (
-                          <Badge key={f} variant="outline" className="font-mono text-xs">
+                          <Badge key={f} variant="outline" className="font-mono text-xs break-all max-w-full">
                             {f}
                           </Badge>
                         ))
