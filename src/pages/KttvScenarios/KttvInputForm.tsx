@@ -711,7 +711,7 @@ export default function KttvInputForm(): JSX.Element {
                 {activeScenariosInSystem.map((s) => (
                   <div
                     key={s.id}
-                    className="rounded-md border border-amber-200/80 bg-card/90 p-3 space-y-1 text-xs shadow-2xs"
+                    className="rounded-md border border-amber-200/80 bg-card/90 p-3 space-y-1 text-xs shadow-2xs min-w-0"
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span className={`scenario-type-badge ${s.type || 'hien_trang'}`}>
@@ -725,7 +725,7 @@ export default function KttvInputForm(): JSX.Element {
                       {s.name_vi}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      Lớp: <code className="font-mono">{s.layer_code}</code>
+                      Lớp: <code className="font-mono break-all">{s.layer_code}</code>
                     </div>
                   </div>
                 ))}
@@ -807,7 +807,7 @@ export default function KttvInputForm(): JSX.Element {
                 {activeScenariosInSystem.map((s) => (
                   <div
                     key={s.id}
-                    className="rounded-md border border-amber-200/80 bg-card/90 p-3 space-y-1 text-xs shadow-2xs"
+                    className="rounded-md border border-amber-200/80 bg-card/90 p-3 space-y-1 text-xs shadow-2xs min-w-0"
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span className={`scenario-type-badge ${s.type || 'hien_trang'}`}>
@@ -821,7 +821,7 @@ export default function KttvInputForm(): JSX.Element {
                       {s.name_vi}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      Lớp: <code className="font-mono">{s.layer_code}</code>
+                      Lớp: <code className="font-mono break-all">{s.layer_code}</code>
                     </div>
                   </div>
                 ))}
