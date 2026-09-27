@@ -1,13 +1,15 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { AlertCircle, Loader2, Pen, Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import MapLayerApiForm from '@/components/map-layer-apis/MapLayerApiForm'
+import TokenIssuedModal from '@/components/map-layer-apis/TokenIssuedModal'
 import { mapLayerApiService, useApiMutation, useApiQuery } from '@/service'
 import type {
   ApiResponse,
   CreateMapLayerApiBody,
   MapApiCreateResponse,
+  MapApiKeyIssueData,
   MapLayerApi,
 } from '@/types/api'
 import {
@@ -30,6 +32,8 @@ export default function MapLayerApiFormDialog({
   onSaved,
 }: MapLayerApiFormDialogProps) {
   const isEdit = !!apiId
+  const [tokenModalOpen, setTokenModalOpen] = useState(false)
+  const [issuedData, setIssuedData] = useState<MapApiKeyIssueData | null>(null)
 
   const detailQuery = useApiQuery(
     ['mapLayerApiDetailEditDialog', apiId],
@@ -45,15 +49,18 @@ export default function MapLayerApiFormDialog({
   })()
 
   const createMutation = useApiMutation(
-    (payload: CreateMapLayerApiBody) => mapLayerApiService.create(payload),
+    (payload: CreateMapLayerApiBody) => mapLayerApiService.createKeyForLayer(payload),
     {
       onSuccess: (response: ApiResponse<MapApiCreateResponse>) => {
-        const rawKey = response?.data?.apiKey || response?.data?.raw_key
-        toast.success(rawKey ? `Tạo API key thành công: ${rawKey}` : 'Tạo API key thành công', {
-          autoClose: rawKey ? 12000 : 3000,
-        })
-        onSaved?.()
-        onOpenChange(false)
+        const rawKey = response?.data?.token || response?.data?.apiKey || response?.data?.raw_key
+        if (rawKey && response.data) {
+          setIssuedData(response.data)
+          setTokenModalOpen(true)
+        } else {
+          toast.success('Đăng ký API lớp bản đồ thành công')
+          onSaved?.()
+          onOpenChange(false)
+        }
       },
       onError: (error) => {
         toast.error(getMappedErrorMessage(error, 'Không thể tạo API'))
@@ -83,7 +90,8 @@ export default function MapLayerApiFormDialog({
   }, [detailQuery.error])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
@@ -147,5 +155,18 @@ export default function MapLayerApiFormDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    <TokenIssuedModal
+      open={tokenModalOpen}
+      onOpenChange={(open) => {
+        setTokenModalOpen(open)
+        if (!open) {
+          onSaved?.()
+          onOpenChange(false)
+        }
+      }}
+      data={issuedData}
+    />
+  </>
   )
 }

@@ -4,10 +4,13 @@ import SourceImagesPage from './index'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import { renderWithProviders } from '@/test/renderWithProviders'
 import type { SatelliteImageMember } from '@/types/api'
+import { RepublishLayerDialog } from './SourceImageActions'
+import { republishLayerFormSchema } from './sourceImageForms'
 
 const mocks = vi.hoisted(() => ({
   listImages: vi.fn(),
   publishImage: vi.fn(),
+  getCategories: vi.fn(),
   updateCoverageKey: vi.fn(),
   deleteImage: vi.fn(),
   getCleanupStatus: vi.fn(),
@@ -16,6 +19,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/service', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/service')>(),
+  layerCategoryService: {
+    getAll: mocks.getCategories,
+  },
   remoteSensingService: {
     listImages: mocks.listImages,
     publishImage: mocks.publishImage,
@@ -103,6 +109,13 @@ const setAdminUser = () => {
 describe('SourceImagesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getCategories.mockResolvedValue({
+      data: [
+        { id: 1, key: 'flood', name: 'Ngập lụt và thủy văn' },
+        { id: 2, key: 'land_cover', name: 'Lớp phủ mặt đất' },
+      ],
+    })
+    mocks.publishImage.mockResolvedValue({ status: 200 })
     mocks.listImages.mockResolvedValue({
       status: 200,
       message: 'OK',
@@ -199,6 +212,65 @@ describe('SourceImagesPage', () => {
     })
   })
 
+  it('blocks invalid publication and shows all required field errors', async () => {
+    renderWithProviders(
+      <RepublishLayerDialog
+        image={{ ...sampleImages[0], thematic_group: null }}
+        open
+        onOpenChange={vi.fn()}
+        onSuccess={vi.fn()}
+      />
+    )
+    fireEvent.change(screen.getByLabelText(/Tên lớp hiển thị/), { target: { value: '   ' } })
+    fireEvent.change(screen.getByLabelText(/Mã lớp \(code\)/), { target: { value: 'Bad-code' } })
+    fireEvent.change(screen.getByLabelText(/Hệ tọa độ/), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Công bố ngay' }))
+
+    expect(await screen.findByText('Tên lớp hiển thị không được để trống')).toBeInTheDocument()
+    expect(screen.getByText(/Mã lớp chỉ gồm chữ thường/)).toBeInTheDocument()
+    expect(screen.getByText('Vui lòng chọn danh mục')).toBeInTheDocument()
+    expect(screen.getByText('Vui lòng nhập hệ tọa độ (SRID) hợp lệ')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Hệ tọa độ/)).toHaveAttribute('aria-invalid', 'true')
+    expect(mocks.publishImage).not.toHaveBeenCalled()
+  })
+
+  it('selects a server category and publishes its key with a trimmed name', async () => {
+    const onSuccess = vi.fn()
+    const onOpenChange = vi.fn()
+    renderWithProviders(
+      <RepublishLayerDialog image={sampleImages[0]} open onOpenChange={onOpenChange} onSuccess={onSuccess} />
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: /Danh mục/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Lớp phủ mặt đất' }))
+    expect(screen.getByRole('combobox', { name: /Danh mục/ })).toHaveTextContent('Lớp phủ mặt đất')
+    fireEvent.change(screen.getByLabelText(/Tên lớp hiển thị/), { target: { value: '  Kịch bản ngập cực đoan  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Công bố ngay' }))
+
+    await waitFor(() => {
+      expect(mocks.publishImage).toHaveBeenCalledWith(52, {
+        code: sampleImages[0].scene_code,
+        nameVi: 'Kịch bản ngập cực đoan',
+        category: 'land_cover',
+        srid: 4326,
+        minZoom: 0,
+        maxZoom: 22,
+        isPublic: false,
+      })
+      expect(onSuccess).toHaveBeenCalledOnce()
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+  })
+
+  it('shows category loading errors with a retry action', async () => {
+    mocks.getCategories.mockRejectedValue(new Error('Không thể kết nối máy chủ'))
+    renderWithProviders(
+      <RepublishLayerDialog image={sampleImages[0]} open onOpenChange={vi.fn()} onSuccess={vi.fn()} />
+    )
+    expect(await screen.findByText(/Lỗi tải danh mục: Không thể kết nối máy chủ/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thử lại' })).toBeInTheDocument()
+    expect(mocks.publishImage).not.toHaveBeenCalled()
+  })
+
   it('mở dialog xóa ảnh và cho phép chọn xóa kèm tệp lưu trữ', async () => {
     setAdminUser()
     renderWithProviders(<SourceImagesPage />)
@@ -215,5 +287,59 @@ describe('SourceImagesPage', () => {
       expect(screen.getByText(/Chỉ xóa bản ghi thông tin/i)).toBeInTheDocument()
       expect(screen.getByText(/Xóa bản ghi VÀ yêu cầu xóa tệp lưu trữ GeoTIFF/i)).toBeInTheDocument()
     })
+  })
+})
+
+const validPublication = {
+  code: 'kich_ban_ngap_cuc_doan_rcp8_5_2050_rebuild_1789840290763',
+  nameVi: 'Kịch bản ngập cực đoan - RCP8.5 - 2050',
+  category: 'flood',
+  srid: 4326,
+  minZoom: 0,
+  maxZoom: 22,
+  isPublic: false,
+}
+
+describe('republishLayerFormSchema', () => {
+  it('accepts the requested code and trims name/category without losing accents', () => {
+    expect(republishLayerFormSchema.parse({
+      ...validPublication,
+      nameVi: `  ${validPublication.nameVi}  `,
+      category: ' flood ',
+    })).toEqual(validPublication)
+  })
+
+  it.each(['', ' ', 'Bad_Code', '1_layer', 'layer-name', 'a'.repeat(64)])(
+    'rejects invalid code %j', (code) => {
+      expect(republishLayerFormSchema.safeParse({ ...validPublication, code }).success).toBe(false)
+    }
+  )
+
+  it.each(['', '   ', 'a'.repeat(201)])('rejects invalid display name %j', (nameVi) => {
+    expect(republishLayerFormSchema.safeParse({ ...validPublication, nameVi }).success).toBe(false)
+  })
+
+  it.each(['', '   ', 'a'.repeat(51)])('rejects invalid category %j', (category) => {
+    expect(republishLayerFormSchema.safeParse({ ...validPublication, category }).success).toBe(false)
+  })
+
+  it.each([undefined, '', NaN, Infinity, 0, -1, 4326.5, 1000000])(
+    'rejects invalid SRID %j with Vietnamese feedback', (srid) => {
+      const result = republishLayerFormSchema.safeParse({ ...validPublication, srid })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].path).toEqual(['srid'])
+        expect(result.error.issues[0].message).toMatch(/SRID/)
+      }
+    }
+  )
+
+  it.each([1, 4326, 32648, 999999])('accepts SRID within the contract: %i', (srid) => {
+    expect(republishLayerFormSchema.safeParse({ ...validPublication, srid }).success).toBe(true)
+  })
+
+  it('rejects inverted zoom bounds and permits absent bounds', () => {
+    expect(republishLayerFormSchema.safeParse({ ...validPublication, minZoom: 23, maxZoom: 22 }).success).toBe(false)
+    expect(republishLayerFormSchema.safeParse({ ...validPublication, minZoom: null, maxZoom: null }).success).toBe(true)
   })
 })

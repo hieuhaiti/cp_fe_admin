@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import {
   ChevronDown,
@@ -8,6 +9,7 @@ import {
   Link2,
   Play,
   RotateCcw,
+  Search,
   ShieldCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,8 +24,21 @@ import { getMappedErrorMessage } from '@/validators/mapLayerApiValidators'
 type PublicTestMeta = { fetchedAt?: string }
 
 export default function PublicSlugTester() {
-  const [slug, setSlug] = useState('')
-  const [apiKey, setApiKey] = useState('')
+  const [searchParams] = useSearchParams()
+  const [slug, setSlug] = useState(() => searchParams.get('slug') || '')
+  const [apiKey, setApiKey] = useState(
+    () => searchParams.get('token') || searchParams.get('apiKey') || ''
+  )
+  const [q, setQ] = useState(() => searchParams.get('q') || '')
+
+  useEffect(() => {
+    const s = searchParams.get('slug')
+    const t = searchParams.get('token') || searchParams.get('apiKey')
+    const queryQ = searchParams.get('q')
+    if (s) setSlug(s)
+    if (t) setApiKey(t)
+    if (queryQ) setQ(queryQ)
+  }, [searchParams])
   const [limit, setLimit] = useState('50')
   const [loading, setLoading] = useState(false)
   const [json, setJson] = useState<unknown>(null)
@@ -47,6 +62,7 @@ export default function PublicSlugTester() {
   function resetAll() {
     setSlug('')
     setApiKey('')
+    setQ('')
     setLimit('50')
     setJson(null)
     setError('')
@@ -78,6 +94,7 @@ export default function PublicSlugTester() {
       const response = await mapLayerApiService.getConsumerFeatures(slug.trim(), apiKey.trim(), {
         page: 1,
         limit: Number(limit) || 50,
+        ...(q.trim() ? { q: q.trim() } : {}),
       })
       setJson(response.data ?? response)
       setMeta({ fetchedAt: new Date().toISOString() })
@@ -164,6 +181,22 @@ export default function PublicSlugTester() {
                 value={limit}
                 onChange={(event) => setLimit(event.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="public-q" className="inline-flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Từ khóa tìm kiếm (?q=...)
+              </Label>
+              <Input
+                id="public-q"
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+                placeholder="VD: Cẩm Phả, Quang Hanh (bỏ trống nếu lấy tất cả)"
+              />
+              <p className="text-muted-foreground text-xs">
+                Tìm kiếm theo các cột đã cấu hình trong mục searchFields của API này.
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">

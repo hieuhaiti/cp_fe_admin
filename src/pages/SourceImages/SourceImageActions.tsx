@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'react-toastify'
 import {
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import CategorySelect from '@/components/common/CategorySelect'
 import { Loader2, RefreshCw, AlertTriangle, Trash2, Send, Layers } from 'lucide-react'
 import { mapLayerService } from '@/service'
 import { formatLifecycleStatus } from '@/lib/uiTerminology'
@@ -52,10 +53,11 @@ export function RepublishLayerDialog({
 
   const form = useForm<RepublishLayerFormValues>({
     resolver: zodResolver(republishLayerFormSchema),
+    mode: 'onTouched',
     defaultValues: {
       code: '',
       nameVi: '',
-      category: 'raster',
+      category: '',
       srid: 4326,
       minZoom: 0,
       maxZoom: 22,
@@ -68,7 +70,7 @@ export function RepublishLayerDialog({
       form.reset({
         code: sanitizeLayerCode(image.scene_code || image.title || 'layer'),
         nameVi: image.title || image.scene_code || 'Lớp ảnh bản đồ',
-        category: image.thematic_group || 'raster',
+        category: image.thematic_group?.trim() || '',
         srid: 4326,
         minZoom: 0,
         maxZoom: 22,
@@ -108,7 +110,7 @@ export function RepublishLayerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90dvh] max-w-md overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Layers className="size-5 text-primary" />
@@ -119,14 +121,22 @@ export function RepublishLayerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 pt-2">
+        <form id="republish-layer-form" noValidate onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 pt-2">
           <div className="space-y-1">
             <Label htmlFor="republish-name-vi" className="text-xs font-semibold">
               Tên lớp hiển thị <span className="text-destructive">*</span>
             </Label>
-            <Input id="republish-name-vi" {...form.register('nameVi')} className="h-9 text-xs" />
+            <Input
+              id="republish-name-vi"
+              {...form.register('nameVi')}
+              aria-required="true"
+              aria-invalid={Boolean(form.formState.errors.nameVi)}
+              aria-describedby={form.formState.errors.nameVi ? 'republish-name-error' : undefined}
+              disabled={isSubmitting}
+              className="h-9 text-xs"
+            />
             {form.formState.errors.nameVi && (
-              <p className="text-[11px] text-destructive">{form.formState.errors.nameVi.message}</p>
+              <p id="republish-name-error" role="alert" className="text-[11px] text-destructive">{form.formState.errors.nameVi.message}</p>
             )}
           </div>
 
@@ -137,29 +147,43 @@ export function RepublishLayerDialog({
             <Input
               id="republish-code"
               {...form.register('code')}
+              aria-required="true"
+              aria-invalid={Boolean(form.formState.errors.code)}
+              aria-describedby="republish-code-feedback"
+              disabled={isSubmitting}
               className="h-9 font-mono text-xs"
               placeholder="vd: lop_phu_campha_2025"
             />
             {form.formState.errors.code ? (
-              <p className="text-[11px] text-destructive">{form.formState.errors.code.message}</p>
+              <p id="republish-code-feedback" role="alert" className="text-[11px] text-destructive">{form.formState.errors.code.message}</p>
             ) : (
-              <p className="text-[10px] text-muted-foreground">
+              <p id="republish-code-feedback" className="text-[10px] text-muted-foreground">
                 Định danh duy nhất của lớp bản đồ. Hãy nhập mã mới nếu mã lớp cũ đã bị xóa.
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="republish-category" className="text-xs font-semibold">
-                Danh mục <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="republish-category"
-                {...form.register('category')}
-                className="h-9 text-xs"
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Controller
+              control={form.control}
+              name="category"
+              render={({ field, fieldState }) => (
+                <CategorySelect
+                  key={`${image?.id}-${open}`}
+                  id="republish-category"
+                  label="Danh mục"
+                  required
+                  category={field.value}
+                  onCategoryChange={(value) => {
+                    field.onChange(value)
+                    field.onBlur()
+                  }}
+                  disabled={isSubmitting}
+                  error={fieldState.error?.message}
+                  className="min-w-0 space-y-1"
+                />
+              )}
+            />
             <div className="space-y-1">
               <Label htmlFor="republish-srid" className="text-xs font-semibold">
                 Hệ tọa độ (SRID) <span className="text-destructive">*</span>
@@ -167,11 +191,21 @@ export function RepublishLayerDialog({
               <Input
                 id="republish-srid"
                 type="number"
-                {...form.register('srid', {
-                  setValueAs: (v) => (v === '' ? '' : Number(v)),
-                })}
+                min={1}
+                max={999999}
+                step={1}
+                {...form.register('srid', { valueAsNumber: true })}
+                aria-required="true"
+                aria-invalid={Boolean(form.formState.errors.srid)}
+                aria-describedby={form.formState.errors.srid ? 'republish-srid-error' : undefined}
+                disabled={isSubmitting}
                 className="h-9 text-xs"
               />
+              {form.formState.errors.srid && (
+                <p id="republish-srid-error" role="alert" className="text-[11px] text-destructive">
+                  {form.formState.errors.srid.message}
+                </p>
+              )}
             </div>
           </div>
 
@@ -185,7 +219,7 @@ export function RepublishLayerDialog({
             >
               Hủy
             </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting}>
+            <Button id="republish-submit" type="submit" size="sm" disabled={isSubmitting || !image}>
               {isSubmitting ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Send className="mr-1.5 size-4" />}
               Công bố ngay
             </Button>

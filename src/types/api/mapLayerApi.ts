@@ -5,9 +5,8 @@ export interface MapApiScope {
   [key: string]: any
 }
 
-export type MapApiCreateResponse = MapApi & {
-  apiKey?: string
-  raw_key?: string
+export type MapApiCreateResponse = MapApiKeyIssueData & {
+  api?: MapApi
 }
 
 export interface MapApi {
@@ -36,6 +35,14 @@ export interface MapApi {
   published_at?: string
   created_at?: string
   updated_at?: string
+
+  // Canonical server fields
+  read_fields?: string[]
+  write_fields?: string[]
+  search_fields?: string[]
+  allowed_methods?: string[]
+  default_sort_field?: string
+  layer_name?: string
 }
 
 /** Legacy alias */
@@ -43,7 +50,7 @@ export type MapLayerApi = MapApi
 
 export interface MapApiListData {
   items?: MapApi[]
-  apis: MapApi[]
+  apis?: MapApi[]
   pagination?: import('./index').Pagination
 }
 
@@ -82,6 +89,11 @@ export interface CreateMapApiBody {
   allowedMethods?: string[]
   defaultSortField?: string
   metadata?: Record<string, unknown>
+  // Key issuance fields (when creating registry + issuing initial key)
+  consumer?: string
+  keyName?: string
+  key_name?: string
+  scopes?: string[]
 }
 
 export interface UpdateMapApiBody {
@@ -106,29 +118,80 @@ export type UpdateMapLayerApiBody = UpdateMapApiBody
 
 /** A share key row returned by GET /admin/api-registry/:registryId/keys. */
 export interface MapApiKey {
-  id: number | string
-  name?: string
-  consumer?: string
+  id: string
+  registry_id?: number | string
+  name: string
+  consumer: string
+  token_version?: number
+  token_hint?: string
   scopes?: string[]
+  quota_per_minute?: number
   quotaPerMinute?: number
+  expires_at?: string | null
   expiresAt?: string | null
+  created_at?: string | null
+  createdAt?: string | null
+  rotated_at?: string | null
+  rotatedAt?: string | null
+  revoked_at?: string | null
   revokedAt?: string | null
+  token?: string
 }
 
 export interface MapApiKeyListData {
   items?: MapApiKey[]
 }
 
-/** Response of POST /map-apis and /map-apis/:id/regenerate — raw key returned once. */
+export interface IssueKeyBody {
+  name: string
+  consumer: string
+  scopes?: string[]
+  quotaPerMinute?: number
+  expiresInHours?: number
+}
+
+/** Response of POST /admin/api-registry/:id/keys and rotate — raw token returned once. */
 export interface MapApiKeyIssueData {
+  id?: string
+  registry_id?: number | string
+  name?: string
+  consumer?: string
+  token_version?: number
+  token_hint?: string
+  scopes?: string[]
+  quota_per_minute?: number
+  expires_at?: string | null
+  token?: string
   api?: MapApi
   apiKey?: string
   raw_key?: string
-  token?: string
+}
+
+export interface RegistryKeyCreationData extends MapApiKeyIssueData {
+  api: MapApi
+}
+
+export interface MapApiUsageSummary {
+  calls: number
+  quota_rejections: number
+  errors: number
+  avg_duration_ms: number | string
+}
+
+export interface MapApiUsageByKey {
+  key_id: string
+  calls: number
+  last_called_at: string | null
+}
+
+export interface MapApiUsageData {
+  summary: MapApiUsageSummary
+  byKey: MapApiUsageByKey[]
 }
 
 /** Consumer-side (/map-data/*) — used from citizen apps */
 export interface MapDataFeaturesQuery {
+  q?: string
   bbox?: string
   page?: number
   limit?: number

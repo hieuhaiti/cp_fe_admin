@@ -97,6 +97,15 @@ export default function KttvInputForm(): JSX.Element {
     staleTime: 60 * 1000,
   })
 
+  // Tính động ngưỡng lượng mưa tối thiểu của kịch bản hiện trạng từ CSDL/API (không chặn cứng)
+  const lowestMinRainfall = useMemo(() => {
+    const vals = (scenarioListData ?? [])
+      .filter((s) => s.type === 'hien_trang' || !s.type)
+      .map((s) => (s.min_rainfall != null ? Number(s.min_rainfall) : null))
+      .filter((v): v is number => v !== null && !isNaN(v) && v > 0)
+    return vals.length > 0 ? Math.min(...vals) : null
+  }, [scenarioListData])
+
   const currentHourStr = `${String(new Date().getHours()).padStart(2, '0')}:00`
   const activeHour = selectedHour || currentHourStr
 
@@ -146,9 +155,9 @@ export default function KttvInputForm(): JSX.Element {
     const rain = matched.precipMm
     setValue('rainfall', String(rain))
     setValue('duration', '1h')
-    if (rain > 0 && rain < 29.1) {
+    if (rain > 0 && lowestMinRainfall !== null && rain < lowestMinRainfall) {
       toast.info(
-        `Đã nhập lượng mưa dự báo lúc ${matched.hour}: ${rain} mm/h (Dưới ngưỡng gây ngập 29.10 mm/h — An toàn)`
+        `Đã nhập lượng mưa dự báo lúc ${matched.hour}: ${rain} mm/h (Dưới ngưỡng gây ngập ${lowestMinRainfall.toFixed(2)} mm/h — An toàn)`
       )
     } else {
       toast.info(
@@ -202,8 +211,11 @@ export default function KttvInputForm(): JSX.Element {
       outcome.quyHoachRcp85.status === 'no_flood'
 
     if (isBelowThreshold) {
+      const thresholdText = lowestMinRainfall !== null
+        ? ` (tối thiểu ${lowestMinRainfall.toFixed(2)} mm/h)`
+        : ''
       toast.info(
-        `Lượng mưa ${rainVal} mm/h dưới ngưỡng gây ngập (tối thiểu 29.10 mm/h). Khu vực an toàn, không kích hoạt kịch bản ngập.`
+        `Lượng mưa ${rainVal} mm/h dưới ngưỡng gây ngập${thresholdText}. Khu vực an toàn, không kích hoạt kịch bản ngập.`
       )
     }
 
@@ -824,7 +836,7 @@ export default function KttvInputForm(): JSX.Element {
           {activeScenariosInSystem.length > 0 ? (
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Lượng mưa <strong>{submittedRainfall} mm/h</strong> dưới ngưỡng tối thiểu gây ngập (29.10 mm/h theo kịch bản ngập nhẹ). Để tránh hiển thị ngập giả lập trên bản đồ WebGIS, bạn hãy tắt các kịch bản đang bật:
+                Lượng mưa <strong>{submittedRainfall} mm/h</strong> dưới ngưỡng tối thiểu gây ngập{lowestMinRainfall !== null ? ` (${lowestMinRainfall.toFixed(2)} mm/h theo kịch bản)` : ''}. Để tránh hiển thị ngập giả lập trên bản đồ WebGIS, bạn hãy tắt các kịch bản đang bật:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {activeScenariosInSystem.map((s) => (
@@ -875,7 +887,7 @@ export default function KttvInputForm(): JSX.Element {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Mức mưa {submittedRainfall} mm/h nằm dưới ngưỡng tối thiểu xuất hiện điểm ngập (29.10 mm/h theo kịch bản ngập nhẹ). Hệ thống thoát nước đô thị đáp ứng tốt, không có nguy cơ ngập úng và không kích hoạt kịch bản ngập lụt nào.
+              Mức mưa {submittedRainfall} mm/h nằm dưới ngưỡng tối thiểu xuất hiện điểm ngập{lowestMinRainfall !== null ? ` (${lowestMinRainfall.toFixed(2)} mm/h theo kịch bản)` : ''}. Hệ thống thoát nước đô thị đáp ứng tốt, không có nguy cơ ngập úng và không kích hoạt kịch bản ngập lụt nào.
             </p>
           )}
         </div>
