@@ -146,6 +146,8 @@ export interface MapLayerListParams {
   is_active?: boolean
   is_public?: boolean
   isPublic?: boolean
+  isShareable?: boolean
+  shareable?: boolean
   publish_data?: boolean
 
   page?: number

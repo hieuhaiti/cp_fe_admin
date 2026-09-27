@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import {
+  AlertCircle,
+  CheckCircle2,
   Copy,
   ExternalLink,
   KeyRound,
@@ -19,7 +21,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -91,6 +96,14 @@ function getLayerFieldCount(layer: MapLayer): number {
   return Array.isArray(raw) ? raw.length : 0
 }
 
+function isLayerShareable(layer: MapLayer): boolean {
+  const isPostgis = !layer.storage_kind || layer.storage_kind === 'postgis'
+  const isRaster = layer.geometry_type === 'RASTER' || layer.storage_kind === 'raster'
+  const isPublished = !layer.publish_status || layer.publish_status === 'published'
+  const hasFields = getLayerFieldCount(layer) > 0
+  return isPostgis && !isRaster && isPublished && hasFields
+}
+
 export default function MapLayerApiListPage(): JSX.Element {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
@@ -104,6 +117,7 @@ export default function MapLayerApiListPage(): JSX.Element {
   const [searchValue, setSearchValue] = useState<string>('')
   const [activeFilter, setActiveFilter] = useState<'all' | 'true' | 'false'>('all')
   const [layerFilter, setLayerFilter] = useState<string>('all')
+  const [shareableFilter, setShareableFilter] = useState<'all' | 'eligible' | 'ineligible'>('all')
 
   const queryParams = {
     page: currentPage,
@@ -134,10 +148,29 @@ export default function MapLayerApiListPage(): JSX.Element {
     () => getLayerItems(layerOptionsQuery.data),
     [layerOptionsQuery.data]
   )
+
+  const { eligibleLayers, ineligibleLayers } = useMemo(() => {
+    const eligible: MapLayer[] = []
+    const ineligible: MapLayer[] = []
+    for (const layer of layerOptions) {
+      if (isLayerShareable(layer)) {
+        eligible.push(layer)
+      } else {
+        ineligible.push(layer)
+      }
+    }
+    return { eligibleLayers: eligible, ineligibleLayers: ineligible }
+  }, [layerOptions])
+
   const selectedFilterLayer = useMemo(() => {
     if (layerFilter === 'all') return null
     return layerOptions.find((l) => String(l.id) === layerFilter) ?? null
   }, [layerFilter, layerOptions])
+
+  const isSelectedLayerShareable = useMemo(() => {
+    if (!selectedFilterLayer) return true
+    return isLayerShareable(selectedFilterLayer)
+  }, [selectedFilterLayer])
   const filteredApis = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase()
     if (!keyword) return apis
@@ -251,11 +284,73 @@ export default function MapLayerApiListPage(): JSX.Element {
       title="Quản lý API Lớp bản đồ"
       description="Đăng ký và cấp khóa chia sẻ dữ liệu GeoJSON cho các đối tác tích hợp"
     >
+      {selectedFilterLayer && !isSelectedLayerShareable && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <span className="font-semibold">
+                Lớp &quot;{layerLabel(selectedFilterLayer)}&quot; chưa đủ điều kiện chia sẻ API:
+              </span>{' '}
+              {getLayerFieldCount(selectedFilterLayer) === 0
+                ? 'Chưa được cấu hình danh sách trường dữ liệu hiển thị (0 trường).'
+                : 'Lớp chưa được xuất bản hoặc thuộc định dạng không hỗ trợ chia sẻ GeoJSON.'}
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/map-layers')}
+            className="h-7 gap-1 border-amber-500/40 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200 text-xs font-medium"
+          >
+            <ExternalLink className="size-3.5" />
+            <span>Đến Quản lý lớp bản đồ</span>
+          </Button>
+        </div>
+      )}
       <ToolTableCustom
         searchValue={searchValue}
         setSearchValue={setSearchValue}
         filter={
           <div className="flex flex-wrap items-center gap-2">
+            {/* Lọc theo điều kiện chia sẻ */}
+            <Select
+              value={shareableFilter}
+              onValueChange={(value) => {
+                const val = value as 'all' | 'eligible' | 'ineligible'
+                setShareableFilter(val)
+                if (val === 'eligible' && selectedFilterLayer && !isLayerShareable(selectedFilterLayer)) {
+                  setLayerFilter('all')
+                } else if (val === 'ineligible' && selectedFilterLayer && isLayerShareable(selectedFilterLayer)) {
+                  setLayerFilter('all')
+                }
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-48 sm:w-52">
+                <SelectValue placeholder="Điều kiện chia sẻ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  Tất cả điều kiện ({layerOptions.length})
+                </SelectItem>
+                <SelectItem value="eligible">
+                  <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                    <CheckCircle2 className="size-3.5" />
+                    Đủ điều kiện ({eligibleLayers.length})
+                  </span>
+                </SelectItem>
+                <SelectItem value="ineligible">
+                  <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
+                    <AlertCircle className="size-3.5" />
+                    Chưa đủ điều kiện ({ineligibleLayers.length})
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Chọn lớp bản đồ */}
             <Select
               value={layerFilter}
               onValueChange={(value) => {
@@ -263,19 +358,58 @@ export default function MapLayerApiListPage(): JSX.Element {
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="w-64 sm:w-72">
+              <SelectTrigger className="w-64 sm:w-80">
                 <SelectValue placeholder="Lớp bản đồ" />
               </SelectTrigger>
-              <SelectContent className="max-h-72">
-                <SelectItem value="all">Tất cả lớp bản đồ</SelectItem>
-                {layerOptions.map((layer) => {
-                  const fieldCount = getLayerFieldCount(layer)
-                  return (
-                    <SelectItem key={layer.id ?? layer.code} value={String(layer.id)}>
-                      {layerLabel(layer)} ({fieldCount > 0 ? `${fieldCount} trường` : '0 trường'})
-                    </SelectItem>
-                  )
-                })}
+              <SelectContent className="max-h-80">
+                <SelectItem value="all">
+                  {shareableFilter === 'eligible'
+                    ? `Tất cả lớp đủ điều kiện (${eligibleLayers.length})`
+                    : shareableFilter === 'ineligible'
+                    ? `Tất cả lớp chưa đủ điều kiện (${ineligibleLayers.length})`
+                    : `Tất cả lớp bản đồ (${layerOptions.length})`}
+                </SelectItem>
+
+                {(shareableFilter === 'all' || shareableFilter === 'eligible') && eligibleLayers.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3.5" />
+                      Đủ điều kiện chia sẻ ({eligibleLayers.length})
+                    </SelectLabel>
+                    {eligibleLayers.map((layer) => {
+                      const fieldCount = getLayerFieldCount(layer)
+                      return (
+                        <SelectItem key={layer.id ?? layer.code} value={String(layer.id)} className="pl-6">
+                          <span className="font-medium">{layerLabel(layer)}</span>{' '}
+                          <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                            ({fieldCount} trường)
+                          </span>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectGroup>
+                )}
+
+                {shareableFilter === 'all' && eligibleLayers.length > 0 && ineligibleLayers.length > 0 && (
+                  <SelectSeparator />
+                )}
+
+                {(shareableFilter === 'all' || shareableFilter === 'ineligible') && ineligibleLayers.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      <AlertCircle className="size-3.5" />
+                      Chưa đủ điều kiện ({ineligibleLayers.length} - chưa cấu hình trường)
+                    </SelectLabel>
+                    {ineligibleLayers.map((layer) => (
+                      <SelectItem key={layer.id ?? layer.code} value={String(layer.id)} className="pl-6 text-muted-foreground">
+                        <span>{layerLabel(layer)}</span>{' '}
+                        <span className="text-[11px] font-mono text-muted-foreground/70">
+                          (0 trường)
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
               </SelectContent>
             </Select>
 
@@ -314,7 +448,19 @@ export default function MapLayerApiListPage(): JSX.Element {
             </Select>
 
             {canCreate && (
-              <Button onClick={() => openAddDialog()} className="gap-1.5">
+              <Button
+                onClick={() => {
+                  if (selectedFilterLayer && !isSelectedLayerShareable) {
+                    toast.warning(
+                      `Lớp "${layerLabel(selectedFilterLayer)}" chưa đủ điều kiện chia sẻ (cần cấu hình trường trong Quản lý lớp bản đồ).`
+                    )
+                    return
+                  }
+                  openAddDialog(layerFilter !== 'all' ? Number(layerFilter) : undefined)
+                }}
+                className="gap-1.5"
+                variant={selectedFilterLayer && !isSelectedLayerShareable ? 'secondary' : 'default'}
+              >
                 <Plus className="size-4" />
                 <span>
                   {layerFilter !== 'all' && selectedFilterLayer
@@ -363,12 +509,37 @@ export default function MapLayerApiListPage(): JSX.Element {
                   ) : (
                     <div>
                       <Layers className="mx-auto h-8 w-8 opacity-30" />
-                      <p className="mt-2 text-sm">Chưa có API lớp bản đồ nào được đăng ký.</p>
+                      <p className="mt-2 text-sm">
+                        {selectedFilterLayer
+                          ? `Lớp "${layerLabel(selectedFilterLayer)}" chưa có API nào được đăng ký.`
+                          : 'Chưa có API lớp bản đồ nào được đăng ký.'}
+                      </p>
+                      {selectedFilterLayer && (
+                        <p className="mt-1 text-xs">
+                          {isSelectedLayerShareable ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                              ✓ Lớp đủ điều kiện chia sẻ ({getLayerFieldCount(selectedFilterLayer)} trường thuộc tính hiển thị).
+                            </span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400 font-medium">
+                              ⚠ Lớp chưa đủ điều kiện chia sẻ (cần cấu hình trường trong Quản lý lớp bản đồ).
+                            </span>
+                          )}
+                        </p>
+                      )}
                       {canCreate && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openAddDialog(layerFilter !== 'all' ? Number(layerFilter) : undefined)}
+                          onClick={() => {
+                            if (selectedFilterLayer && !isSelectedLayerShareable) {
+                              toast.warning(
+                                `Lớp "${layerLabel(selectedFilterLayer)}" chưa đủ điều kiện chia sẻ (cần cấu hình trường trong Quản lý lớp bản đồ).`
+                              )
+                              return
+                            }
+                            openAddDialog(layerFilter !== 'all' ? Number(layerFilter) : undefined)
+                          }}
                           className="mt-3 gap-1.5"
                         >
                           <Plus className="size-3.5" />
