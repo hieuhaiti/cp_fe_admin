@@ -21,7 +21,13 @@ vi.mock('@/service', () => ({
 
 vi.mock('./MapLayerApiDetailDialog', () => ({ default: () => null }))
 vi.mock('./MapLayerApiFormDialog', () => ({
-  default: ({ open }: { open: boolean }) => (open ? <div>API form opened</div> : null),
+  default: ({ open, initialLayerId }: { open: boolean; initialLayerId?: number | null }) =>
+    open ? (
+      <div>
+        API form opened
+        {initialLayerId != null && <span>layer-id:{initialLayerId}</span>}
+      </div>
+    ) : null,
 }))
 vi.mock('@/components/map-layer-apis/IssueKeyDialog', () => ({ default: () => null }))
 vi.mock('@/components/map-layer-apis/TokenIssuedModal', () => ({ default: () => null }))
@@ -85,5 +91,40 @@ describe('MapLayerApiListPage', () => {
     expect(screen.getByText('Đường ranh giới')).toBeInTheDocument()
     expect(screen.getByText('/api-duong-ranh-gioi/features')).toBeInTheDocument()
     expect(screen.getByText('2 trường đọc')).toBeInTheDocument()
+  })
+
+  it('assigns selected layer id to form dialog when empty state register is clicked', () => {
+    queryMock.mockImplementation((key: unknown[]) => {
+      const queryName = Array.isArray(key) ? key[0] : ''
+      if (queryName === 'map-layers-for-map-api-filter') {
+        return {
+          data: {
+            data: {
+              items: [
+                {
+                  id: 94,
+                  code: 'duong_ranh_gioi',
+                  name_vi: 'Đường ranh giới',
+                  metadata: { displayFields: ['fid_xoa02', 'i'] },
+                },
+              ],
+            },
+          },
+          refetch: vi.fn(),
+          isLoading: false,
+        }
+      }
+      return {
+        data: { data: { items: [] }, metadata: { total: 0 } },
+        refetch: vi.fn(),
+        isLoading: false,
+      }
+    })
+
+    renderWithProviders(<MapLayerApiListPage />)
+    const quickRegisterBtn = screen.getByRole('button', { name: /Đăng ký ngay/i })
+    expect(quickRegisterBtn).toBeInTheDocument()
+    fireEvent.click(quickRegisterBtn)
+    expect(screen.getByText('API form opened')).toBeInTheDocument()
   })
 })

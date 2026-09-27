@@ -22,6 +22,7 @@ interface MapLayerApiFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   apiId: number | null
+  initialLayerId?: number | null
   onSaved?: () => void
 }
 
@@ -29,6 +30,7 @@ export default function MapLayerApiFormDialog({
   open,
   onOpenChange,
   apiId,
+  initialLayerId,
   onSaved,
 }: MapLayerApiFormDialogProps) {
   const isEdit = !!apiId
@@ -132,6 +134,7 @@ export default function MapLayerApiFormDialog({
             <MapLayerApiForm
               mode={isEdit ? 'edit' : 'create'}
               initialData={initialData}
+              initialLayerId={initialLayerId}
               submitting={createMutation.isPending || updateMutation.isPending}
               onCancel={() => onOpenChange(false)}
               onSubmitCreate={(payload) => {

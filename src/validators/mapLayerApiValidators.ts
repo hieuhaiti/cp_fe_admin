@@ -219,7 +219,7 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
     const firstErr = errors[0]
     if (typeof firstErr === 'string') {
       if (firstErr.includes('INVALID_REGISTRY_FIELD')) {
-        return 'Lớp bản đồ chưa được cấu hình trường dữ liệu hợp lệ (cần cấu hình displayFields trong quản lý lớp).'
+        return 'Lớp bản đồ chưa được cấu hình trường dữ liệu hợp lệ (vui lòng cấu hình trường dữ liệu hiển thị trong quản lý lớp).'
       }
       if (firstErr.includes('REGISTRY_EXCEEDS_LAYER_METADATA')) {
         return 'Cấu hình trường vượt quá danh sách trường hiển thị của lớp bản đồ.'
@@ -234,7 +234,7 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
         return 'Phương thức ghi và danh sách trường ghi phải được cấu hình đồng thời.'
       }
       if (firstErr.includes('REGISTRY_EXCEEDS_LAYER_METADATA')) {
-        return 'Cấu hình trường vượt quá danh sách trường cho phép trong siêu dữ liệu của lớp (displayFields / editableFields).'
+        return 'Cấu hình trường vượt quá danh sách trường cho phép trong siêu dữ liệu của lớp (trường hiển thị / trường chỉnh sửa).'
       }
       if (firstErr.includes('INVALID_REGISTRY_FIELD')) {
         return 'Cấu hình trường không hợp lệ hoặc chứa trường bị cấm (như geom, id).'
@@ -262,7 +262,7 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
       return 'Lớp bản đồ này hoặc mã định danh (slug) đã được tạo API chia sẻ.'
     }
     if (serverMessage.includes('Cấu hình trường không hợp lệ')) {
-      return 'Lớp bản đồ chưa được cấu hình trường dữ liệu hợp lệ (cần cấu hình displayFields trong quản lý lớp).'
+      return 'Lớp bản đồ chưa được cấu hình trường dữ liệu hợp lệ (vui lòng cấu hình trường dữ liệu hiển thị trong quản lý lớp).'
     }
     return serverMessage
   }

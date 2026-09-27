@@ -86,6 +86,11 @@ function layerLabel(layer: MapLayer) {
   return layer.name_vi || layer.name || layer.code
 }
 
+function getLayerFieldCount(layer: MapLayer): number {
+  const raw = layer.metadata?.displayFields ?? layer.metadata?.display_fields
+  return Array.isArray(raw) ? raw.length : 0
+}
+
 export default function MapLayerApiListPage(): JSX.Element {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
@@ -118,7 +123,7 @@ export default function MapLayerApiListPage(): JSX.Element {
 
   const layerOptionsQuery = useApiQuery(
     ['map-layers-for-map-api-filter'],
-    () => mapLayerService.getAll({ page: 1, limit: 100 }),
+    () => mapLayerService.getAllLayers(),
     {},
     false,
     false
@@ -129,6 +134,10 @@ export default function MapLayerApiListPage(): JSX.Element {
     () => getLayerItems(layerOptionsQuery.data),
     [layerOptionsQuery.data]
   )
+  const selectedFilterLayer = useMemo(() => {
+    if (layerFilter === 'all') return null
+    return layerOptions.find((l) => String(l.id) === layerFilter) ?? null
+  }, [layerFilter, layerOptions])
   const filteredApis = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase()
     if (!keyword) return apis
@@ -154,6 +163,7 @@ export default function MapLayerApiListPage(): JSX.Element {
   }, [currentPage, totalPages])
 
   const [selectedApiId, setSelectedApiId] = useState<number | null>(null)
+  const [initialLayerIdForForm, setInitialLayerIdForForm] = useState<number | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -192,8 +202,15 @@ export default function MapLayerApiListPage(): JSX.Element {
     }
   }
 
-  function openAddDialog() {
+  function openAddDialog(customLayerId?: number) {
     setSelectedApiId(null)
+    const targetLayerId =
+      customLayerId !== undefined
+        ? customLayerId
+        : layerFilter !== 'all'
+          ? Number(layerFilter)
+          : null
+    setInitialLayerIdForForm(targetLayerId)
     setFormDialogOpen(true)
   }
 
@@ -246,16 +263,19 @@ export default function MapLayerApiListPage(): JSX.Element {
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-64 sm:w-72">
                 <SelectValue placeholder="Lớp bản đồ" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-72">
                 <SelectItem value="all">Tất cả lớp bản đồ</SelectItem>
-                {layerOptions.map((layer) => (
-                  <SelectItem key={layer.id ?? layer.code} value={String(layer.id)}>
-                    {layerLabel(layer)}
-                  </SelectItem>
-                ))}
+                {layerOptions.map((layer) => {
+                  const fieldCount = getLayerFieldCount(layer)
+                  return (
+                    <SelectItem key={layer.id ?? layer.code} value={String(layer.id)}>
+                      {layerLabel(layer)} ({fieldCount > 0 ? `${fieldCount} trường` : '0 trường'})
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
 
@@ -294,9 +314,13 @@ export default function MapLayerApiListPage(): JSX.Element {
             </Select>
 
             {canCreate && (
-              <Button onClick={openAddDialog} className="gap-1.5">
+              <Button onClick={() => openAddDialog()} className="gap-1.5">
                 <Plus className="size-4" />
-                <span>Đăng ký API mới</span>
+                <span>
+                  {layerFilter !== 'all' && selectedFilterLayer
+                    ? 'Đăng ký ngay'
+                    : 'Đăng ký API mới'}
+                </span>
               </Button>
             )}
             <Button
@@ -344,7 +368,7 @@ export default function MapLayerApiListPage(): JSX.Element {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={openAddDialog}
+                          onClick={() => openAddDialog(layerFilter !== 'all' ? Number(layerFilter) : undefined)}
                           className="mt-3 gap-1.5"
                         >
                           <Plus className="size-3.5" />
@@ -530,8 +554,14 @@ export default function MapLayerApiListPage(): JSX.Element {
       {/* Form Dialog for Create / Edit Registry */}
       <MapLayerApiFormDialog
         open={formDialogOpen}
-        onOpenChange={setFormDialogOpen}
+        onOpenChange={(open) => {
+          setFormDialogOpen(open)
+          if (!open) {
+            setInitialLayerIdForForm(null)
+          }
+        }}
         apiId={selectedApiId}
+        initialLayerId={initialLayerIdForForm}
         onSaved={() => {
           listQuery.refetch()
         }}

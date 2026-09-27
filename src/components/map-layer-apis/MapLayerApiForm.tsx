@@ -41,6 +41,7 @@ import {
 interface MapLayerApiFormProps {
   mode: 'create' | 'edit'
   initialData?: MapLayerApi | null
+  initialLayerId?: number | null
   submitting?: boolean
   onSubmitCreate: (payload: CreateMapLayerApiBody) => void
   onSubmitUpdate: (payload: Partial<CreateMapLayerApiBody>) => void
@@ -120,6 +121,7 @@ function FieldError({ message }: { message?: string }) {
 export default function MapLayerApiForm({
   mode,
   initialData,
+  initialLayerId,
   submitting = false,
   onSubmitCreate,
   onSubmitUpdate,
@@ -144,14 +146,21 @@ export default function MapLayerApiForm({
     false
   )
 
-  // 2. Fetch selected layer if editing
+  // 2. Fetch selected layer if editing or if initialLayerId is provided in create mode
+  const targetLayerId = mode === 'edit' ? initialData?.layer_id : initialLayerId
   const selectedLayerQuery = useApiQuery(
-    ['map-layer-for-map-api-form-selected', initialData?.layer_id],
-    () => mapLayerService.getById(initialData!.layer_id!),
-    { enabled: mode === 'edit' && initialData?.layer_id != null },
+    ['map-layer-for-map-api-form-selected', targetLayerId],
+    () => mapLayerService.getById(targetLayerId!),
+    { enabled: Boolean(targetLayerId && Number(targetLayerId) > 0) },
     false,
     false
   )
+
+  useEffect(() => {
+    if (mode === 'create' && initialLayerId && selectedLayerQuery.data?.data) {
+      setChosenLayer(selectedLayerQuery.data.data)
+    }
+  }, [mode, initialLayerId, selectedLayerQuery.data])
 
   // 3. Fetch existing registries to detect duplicate layer registration
   const allRegistriesQuery = useApiQuery(
@@ -189,7 +198,10 @@ export default function MapLayerApiForm({
   const form = useForm<FormInputValues, unknown, FormValues>({
     resolver: zodResolver(mode === 'edit' ? editMapLayerApiFormSchema : createMapLayerApiSchema),
     mode: 'onChange',
-    defaultValues,
+    defaultValues: {
+      ...defaultValues,
+      ...(mode === 'create' && initialLayerId ? { layer_id: Number(initialLayerId) } : {}),
+    },
   })
 
   // Local field configuration state
@@ -364,9 +376,16 @@ export default function MapLayerApiForm({
     }
 
     if (mode === 'create') {
-      form.reset(defaultValues)
+      const initId = initialLayerId ? Number(initialLayerId) : 0
+      form.reset({
+        ...defaultValues,
+        layer_id: initId,
+      })
+      if (initId > 0) {
+        form.clearErrors('layer_id')
+      }
     }
-  }, [mode, initialData, form])
+  }, [mode, initialData, initialLayerId, form])
 
   // Auto-suggest API name and slug when selecting a layer in create mode
   useEffect(() => {
@@ -435,7 +454,7 @@ export default function MapLayerApiForm({
         if (mode === 'create') {
           if (selectedLayer && selectedLayerDisplayFields.length === 0) {
             toast.error(
-              'Lớp bản đồ này chưa cấu hình danh sách trường hiển thị (displayFields). Vui lòng cấu hình trường trong Quản trị lớp bản đồ trước khi tạo API chia sẻ.'
+              'Lớp bản đồ này chưa cấu hình danh sách trường dữ liệu hiển thị. Vui lòng cấu hình trường trong Quản trị lớp bản đồ trước khi tạo API chia sẻ.'
             )
             return
           }
@@ -666,10 +685,10 @@ export default function MapLayerApiForm({
               <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 break-words space-y-1">
                 <div className="font-semibold flex items-center gap-1.5">
                   <AlertCircle className="size-3.5 shrink-0" />
-                  Lớp bản đồ này chưa có danh sách trường thuộc tính (displayFields rỗng).
+                  Lớp bản đồ này chưa có danh sách trường thuộc tính hiển thị.
                 </div>
                 <p className="text-[11px] leading-relaxed break-words">
-                  Lớp này chưa được khai báo danh sách thuộc tính trong siêu dữ liệu (metadata). Hiện tại trang Quản lý lớp bản đồ chưa có giao diện cấu hình trường thuộc tính, do đó bạn vui lòng chọn một lớp bản đồ khác đã có sẵn trường dữ liệu để chia sẻ API.
+                  Lớp này chưa có danh sách thuộc tính trong siêu dữ liệu (metadata). Bạn có thể vào mục <strong>Quản lý lớp dữ liệu</strong> &rarr; chọn <strong>Chỉnh sửa</strong> để cấu hình danh sách trường dữ liệu hiển thị cho lớp này, hoặc chọn một lớp bản đồ khác đã có sẵn trường thuộc tính.
                 </p>
               </div>
             )}

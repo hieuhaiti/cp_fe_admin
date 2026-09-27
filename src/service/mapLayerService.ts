@@ -117,6 +117,46 @@ export default {
   getAll: (params?: MapLayerListParams) =>
     apiClient.get<MapLayerListData>(serviceMapLayerPath, { params }),
 
+  /** Lấy toàn bộ danh sách lớp bản đồ (tự động phân trang và gộp kết quả nếu tổng số lớp > 100) */
+  getAllLayers: async (
+    params?: Omit<MapLayerListParams, 'page' | 'limit'>
+  ): Promise<ApiResponse<{ items: MapLayer[]; mapLayers: MapLayer[] }>> => {
+    const firstRes = await apiClient.get<MapLayerListData>(serviceMapLayerPath, {
+      params: { ...params, page: 1, limit: 100 },
+    })
+    const firstItems = listItems(firstRes)
+    const pagination = (firstRes.metadata ?? (firstRes.data as unknown as Record<string, unknown>)?.pagination) as
+      | { totalPages?: number; total?: number }
+      | undefined
+    const totalPages = pagination?.totalPages ?? 1
+
+    if (totalPages <= 1) {
+      return {
+        ...firstRes,
+        data: { items: firstItems, mapLayers: firstItems },
+      }
+    }
+
+    const remainingPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+    const responses = await Promise.all(
+      remainingPages.map((page) =>
+        apiClient.get<MapLayerListData>(serviceMapLayerPath, {
+          params: { ...params, page, limit: 100 },
+        })
+      )
+    )
+
+    const allItems = [...firstItems]
+    for (const res of responses) {
+      allItems.push(...listItems(res))
+    }
+
+    return {
+      ...firstRes,
+      data: { items: allItems, mapLayers: allItems },
+    }
+  },
+
   /** GET /admin/layers/:layerId */
   getById: (layerId: number | string) =>
     apiClient.get<MapLayer>(`${serviceMapLayerPath}/${layerId}`),
@@ -125,6 +165,18 @@ export default {
   getByCode: async (code: string) => {
     const layerId = await resolveLayerId(code)
     return apiClient.get<MapLayer>(`${serviceMapLayerPath}/${layerId}`)
+  },
+
+  /** GET /admin/layers/:layerId/fields — get columns, displayFields, and searchFields */
+  getFields: async (idOrCode: number | string) => {
+    const layerId = await resolveLayerId(idOrCode)
+    return apiClient.get<{
+      layerId: number
+      tableName: string
+      availableColumns: string[]
+      displayFields: string[]
+      searchFields: string[]
+    }>(`${serviceMapLayerPath}/${layerId}/fields`, { silent: true })
   },
 
   /** PATCH /admin/layers/:layerId */

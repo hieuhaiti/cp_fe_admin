@@ -27,7 +27,7 @@ const ERROR_CODE_TRANSLATIONS: Record<string, string> = {
   GEE_DOWNLOAD_URL_STALE: 'Liên kết tải ảnh đã hết hiệu lực; vui lòng làm mới',
   SOURCE_IMAGE_IN_USE: 'Ảnh nguồn đang được liên kết trong lớp bản đồ; không thể xóa trực tiếp',
   CLEANUP_IN_PROGRESS: 'Hệ thống đang thực hiện giải phóng tài nguyên',
-  INVALID_REGISTRY_FIELD: 'Lớp bản đồ chưa được cấu hình trường dữ liệu hợp lệ (cần cấu hình displayFields trong quản lý lớp)',
+  INVALID_REGISTRY_FIELD: 'Lớp bản đồ chưa được cấu hình trường dữ liệu hợp lệ (vui lòng cấu hình trường dữ liệu hiển thị trong quản lý lớp)',
   REGISTRY_EXCEEDS_LAYER_METADATA: 'Cấu hình trường vượt quá danh sách trường hiển thị của lớp bản đồ',
   REGISTRY_FIELD_CONTRACT: 'Trường tìm kiếm hoặc sắp xếp phải thuộc danh sách trường đọc của lớp',
   REGISTRY_WRITE_CONTRACT: 'Phương thức ghi và danh sách trường ghi phải được cấu hình đồng thời',

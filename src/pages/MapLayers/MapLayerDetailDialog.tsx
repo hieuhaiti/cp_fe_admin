@@ -15,7 +15,7 @@ import {
 } from '@/lib/geoserver'
 import { toast } from 'react-toastify'
 import { useState } from 'react'
-import { CalendarClock, Database, Download, Info, RefreshCw, ShieldCheck } from 'lucide-react'
+import { CalendarClock, Database, Download, Info, ListFilter, RefreshCw, ShieldCheck } from 'lucide-react'
 
 interface MapLayerDetailDialogProps {
   open: boolean
@@ -320,6 +320,47 @@ export default function MapLayerDetailDialog({
                 </CardContent>
               </Card>
 
+              <Card className="lg:col-span-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <span className="flex items-center gap-2">
+                      <ListFilter className="text-primary size-4" aria-hidden="true" />
+                      Trường thuộc tính hiển thị
+                    </span>
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {Array.isArray((layer.metadata as any)?.displayFields) ? (layer.metadata as any).displayFields.length : 0} trường
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <span className="text-muted-foreground block text-xs font-medium mb-1.5">
+                      Danh sách trường hiển thị trên WebGIS / API:
+                    </span>
+                    {Array.isArray((layer.metadata as any)?.displayFields) && (layer.metadata as any).displayFields.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(layer.metadata as any).displayFields.map((field: string) => {
+                          const isSearchable = Array.isArray((layer.metadata as any)?.searchFields) && (layer.metadata as any).searchFields.includes(field)
+                          return (
+                            <Badge
+                              key={field}
+                              variant={isSearchable ? 'default' : 'secondary'}
+                              className={`font-mono text-xs break-all ${isSearchable ? 'bg-primary/90' : ''}`}
+                            >
+                              {field}
+                              {isSearchable && <span className="ml-1 text-[10px] opacity-80">(tìm kiếm)</span>}
+                            </Badge>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        Chưa cấu hình trường hiển thị. Nhấn nút &quot;Chỉnh sửa&quot; để bổ sung trường cho lớp này.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               <Card className="lg:col-span-2">
                 <CardHeader className="pb-4">

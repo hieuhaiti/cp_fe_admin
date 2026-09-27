@@ -20,6 +20,7 @@ export interface RequestOptions {
   headers?: Record<string, string>
   mapApiKey?: string
   anonymousId?: string
+  silent?: boolean
 }
 
 function getAccessToken() {
@@ -55,7 +56,11 @@ function neutralizeApiMessages(body: any) {
   return body
 }
 
-async function handleResponse<T>(res: Response, isAuthEndpoint = false): Promise<ApiResponse<T>> {
+async function handleResponse<T>(
+  res: Response,
+  isAuthEndpoint = false,
+  silent = false
+): Promise<ApiResponse<T>> {
   const contentType = res.headers.get('content-type') || ''
   const isJson = contentType.includes('application/json')
   const body = neutralizeApiMessages(isJson ? await res.json() : undefined)
@@ -66,7 +71,7 @@ async function handleResponse<T>(res: Response, isAuthEndpoint = false): Promise
     err.body = body
     err.isAuthRequest = isAuthEndpoint
 
-    if (res.status !== 401 || isAuthEndpoint) {
+    if (!silent && (res.status !== 401 || isAuthEndpoint)) {
       const errors = body?.errors
       if (Array.isArray(errors) && errors.length) {
         const detail = errors
@@ -246,13 +251,13 @@ export async function get<T = any>(
     method: 'GET',
     headers: buildHeaders(opts, false),
   })
-  return handleResponse(res, isAuthUrl(url))
+  return handleResponse(res, isAuthUrl(url), opts.silent)
 }
 
 function normalizeGetOpts(input?: Record<string, any> | RequestOptions): RequestOptions {
   if (!input) return {}
   if ('params' in input || 'lang' in input || 'skipLang' in input || 'headers' in input ||
-      'mapApiKey' in input || 'anonymousId' in input || 'useForm' in input) {
+      'mapApiKey' in input || 'anonymousId' in input || 'useForm' in input || 'silent' in input) {
     return input as RequestOptions
   }
   return { params: input as Record<string, any> }
@@ -271,7 +276,7 @@ export async function post<T = any>(
 
   const finalUrl = buildQuery(url, opts)
   const res = await requestWithRefresh(finalUrl, { method: 'POST', headers, body })
-  return handleResponse(res, isAuthUrl(url))
+  return handleResponse(res, isAuthUrl(url), opts.silent)
 }
 
 export async function put<T = any>(
@@ -287,7 +292,7 @@ export async function put<T = any>(
 
   const finalUrl = buildQuery(url, opts)
   const res = await requestWithRefresh(finalUrl, { method: 'PUT', headers, body })
-  return handleResponse(res, isAuthUrl(url))
+  return handleResponse(res, isAuthUrl(url), opts.silent)
 }
 
 export async function patch<T = any>(
@@ -303,7 +308,7 @@ export async function patch<T = any>(
 
   const finalUrl = buildQuery(url, opts)
   const res = await requestWithRefresh(finalUrl, { method: 'PATCH', headers, body })
-  return handleResponse(res, isAuthUrl(url))
+  return handleResponse(res, isAuthUrl(url), opts.silent)
 }
 
 export async function del<T = any>(
@@ -317,7 +322,7 @@ export async function del<T = any>(
 
   const finalUrl = buildQuery(url, opts)
   const res = await requestWithRefresh(finalUrl, { method: 'DELETE', headers, body })
-  return handleResponse(res, isAuthUrl(url))
+  return handleResponse(res, isAuthUrl(url), opts.silent)
 }
 
 function normalizeBodyOpts(input?: boolean | RequestOptions): RequestOptions {

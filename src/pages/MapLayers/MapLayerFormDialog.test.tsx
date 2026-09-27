@@ -192,4 +192,41 @@ describe('MapLayerFormDialog', () => {
     // fillColor input vẫn phải còn đó (được hiển thị với placeholder #3388FF)
     expect(screen.queryByPlaceholderText('#3388FF')).toBeInTheDocument()
   })
+
+  it('allows adding and configuring displayFields and searchFields', async () => {
+    const onSubmit = vi.fn()
+    renderDialog({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('Tên lớp dữ liệu *'), { target: { value: 'Lớp Quy Hoạch' } })
+
+    const fieldInput = screen.getByPlaceholderText(/Nhập tên cột hoặc dán danh sách/i)
+    expect(fieldInput).toBeInTheDocument()
+
+    // Nhập nhiều trường ngăn cách bởi dấu phẩy
+    fireEvent.change(fieldInput, { target: { value: 'ma_qh, ten_qh, dien_tich' } })
+    fireEvent.click(screen.getByRole('button', { name: /Thêm trường/i }))
+
+    // Kiểm tra các trường đã được thêm vào danh sách
+    expect(screen.getByText('ma_qh')).toBeInTheDocument()
+    expect(screen.getByText('ten_qh')).toBeInTheDocument()
+    expect(screen.getByText('dien_tich')).toBeInTheDocument()
+
+    // Bật tìm kiếm cho ten_qh
+    const searchButtons = screen.getAllByTitle(/tìm kiếm nhanh/i)
+    expect(searchButtons.length).toBeGreaterThanOrEqual(3)
+    fireEvent.click(searchButtons[1]) // toggle ten_qh
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'lop_quy_hoach',
+          metadata: expect.objectContaining({
+            displayFields: ['ma_qh', 'ten_qh', 'dien_tich'],
+            searchFields: ['ten_qh'],
+          }),
+        })
+      )
+    })
+  })
 })

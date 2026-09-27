@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
-import { Plus, Trash2, ListChecks, FileCode } from 'lucide-react'
+import { Plus, Trash2, ListChecks, FileCode, ListFilter, Search, X, Database, Check } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -639,6 +639,277 @@ function StyleEditor({
   )
 }
 
+// ── DisplayFields & SearchFields (Trường thuộc tính hiển thị & tìm kiếm) ──────
+
+interface DisplayFieldsEditorProps {
+  displayFields: string[]
+  searchFields: string[]
+  availableColumns: string[]
+  loadingColumns: boolean
+  onDisplayFieldsChange: (fields: string[]) => void
+  onSearchFieldsChange: (fields: string[]) => void
+}
+
+function DisplayFieldsEditor({
+  displayFields,
+  searchFields,
+  availableColumns,
+  loadingColumns,
+  onDisplayFieldsChange,
+  onSearchFieldsChange,
+}: DisplayFieldsEditorProps) {
+  const [fieldInput, setFieldInput] = useState('')
+
+  function handleAddField(rawInput?: string) {
+    const text = (rawInput ?? fieldInput).trim()
+    if (!text) return
+
+    // Hỗ trợ nhập 1 trường hoặc dán chuỗi phân tách bởi dấu phẩy, chấm phẩy, khoảng trắng
+    const candidateFields = text
+      .split(/[,;\s]+/)
+      .map((f) => f.trim().toLowerCase())
+      .filter((f) => f && /^[a-z0-9_]+$/.test(f))
+
+    if (candidateFields.length === 0) {
+      toast.warn('Tên trường chỉ được chứa chữ cái thường (a-z), chữ số (0-9) và dấu gạch dưới (_)')
+      return
+    }
+
+    const currentSet = new Set(displayFields)
+    const added: string[] = []
+    for (const f of candidateFields) {
+      if (!currentSet.has(f)) {
+        currentSet.add(f)
+        added.push(f)
+      }
+    }
+
+    if (added.length === 0) {
+      toast.info('Các trường này đã có trong danh sách hiển thị')
+    } else {
+      onDisplayFieldsChange(Array.from(currentSet))
+      if (!rawInput) setFieldInput('')
+    }
+  }
+
+  function handleRemoveField(fieldToRemove: string) {
+    onDisplayFieldsChange(displayFields.filter((f) => f !== fieldToRemove))
+    onSearchFieldsChange(searchFields.filter((f) => f !== fieldToRemove))
+  }
+
+  function handleToggleSearchField(field: string) {
+    if (searchFields.includes(field)) {
+      onSearchFieldsChange(searchFields.filter((f) => f !== field))
+    } else {
+      if (searchFields.length >= 10) {
+        toast.warn('Hệ thống chỉ cho phép tối đa 10 trường tìm kiếm')
+        return
+      }
+      onSearchFieldsChange([...searchFields, field])
+    }
+  }
+
+  function handleAddAllAvailable() {
+    const currentSet = new Set(displayFields)
+    for (const col of availableColumns) {
+      currentSet.add(col)
+    }
+    onDisplayFieldsChange(Array.from(currentSet))
+  }
+
+  function handleClearAll() {
+    onDisplayFieldsChange([])
+    onSearchFieldsChange([])
+  }
+
+  const unaddedColumns = availableColumns.filter((col) => !displayFields.includes(col))
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border/80 bg-muted/15 p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-0.5">
+          <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <ListFilter className="size-3.5 text-primary" />
+            Cấu hình trường dữ liệu hiển thị
+          </Label>
+          <p className="text-[11px] text-muted-foreground">
+            Các cột thông tin hiển thị trên bảng thuộc tính WebGIS và chia sẻ qua API dữ liệu.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {displayFields.length > 0 ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-2xs">
+              <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{displayFields.length} trường hiển thị</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-muted-foreground/20 bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-muted-foreground/50" />
+              <span>0 trường hiển thị</span>
+            </div>
+          )}
+          {displayFields.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleClearAll}
+              className="h-7 gap-1.5 border-destructive/30 bg-destructive/5 px-2.5 text-xs font-medium text-destructive transition-all hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+              title="Bỏ chọn toàn bộ trường hiển thị"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Xóa tất cả</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Input thêm trường mới */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Input
+            value={fieldInput}
+            onChange={(e) => setFieldInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleAddField()
+              }
+            }}
+            placeholder="Nhập tên cột hoặc dán danh sách ngăn cách bởi dấu phẩy (vd: ten_xa, ma_xa, dien_tich)..."
+            className="h-8 font-mono text-xs"
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => handleAddField()}
+          disabled={!fieldInput.trim()}
+          className="h-8 shrink-0 text-xs gap-1"
+        >
+          <Plus className="size-3.5" />
+          <span>Thêm trường</span>
+        </Button>
+      </div>
+
+      {/* Gợi ý cột từ bảng dữ liệu PostGIS nếu có */}
+      {loadingColumns && (
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground p-1">
+          <Database className="size-3 animate-pulse text-primary" />
+          <span>Đang tải danh sách cột từ cơ sở dữ liệu...</span>
+        </div>
+      )}
+      {!loadingColumns && availableColumns.length > 0 && (
+        <div className="space-y-1.5 rounded-md border border-dashed border-border/70 bg-background/50 p-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+              <Database className="size-3 text-primary" />
+              Cột có trong bảng dữ liệu ({availableColumns.length} cột):
+            </span>
+            {unaddedColumns.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={handleAddAllAvailable}
+                className="h-5 px-1 text-[10px] text-primary hover:underline"
+              >
+                + Thêm tất cả ({unaddedColumns.length})
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pt-1">
+            {availableColumns.map((col) => {
+              const isAdded = displayFields.includes(col)
+              return (
+                <button
+                  key={col}
+                  type="button"
+                  onClick={() => {
+                    if (isAdded) {
+                      handleRemoveField(col)
+                    } else {
+                      handleAddField(col)
+                    }
+                  }}
+                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] transition-colors ${
+                    isAdded
+                      ? 'bg-primary/10 text-primary border border-primary/30 font-semibold'
+                      : 'border border-dashed border-muted-foreground/40 bg-muted/30 text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  }`}
+                  title={isAdded ? `Nhấn để bỏ cột "${col}"` : `Nhấn để thêm cột "${col}" vào danh sách`}
+                >
+                  {isAdded ? <Check className="size-3" /> : <Plus className="size-3 opacity-60" />}
+                  <span className="break-all">{col}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Danh sách các trường hiển thị đã chọn */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>Danh sách trường được chọn ({displayFields.length}):</span>
+          <span className="text-[10px] italic">Bật icon kính lúp để cho phép tìm kiếm nhanh qua tham số ?q=</span>
+        </div>
+
+        {displayFields.length === 0 ? (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300">
+            <p className="font-medium">Chưa có trường hiển thị nào được chọn.</p>
+            <p className="text-[11px] mt-0.5">
+              Vui lòng nhập tên trường hoặc click chọn từ cột trong bảng dữ liệu ở trên để kích hoạt hiển thị thuộc tính và chia sẻ API.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto rounded-md border bg-background p-2">
+            {displayFields.map((field) => {
+              const isSearchable = searchFields.includes(field)
+              return (
+                <div
+                  key={field}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs shadow-xs transition-colors ${
+                    isSearchable
+                      ? 'border-blue-300 bg-blue-50/80 text-blue-900 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-200'
+                      : 'border-border/80 bg-background text-foreground'
+                  }`}
+                >
+                  <span className="font-mono font-medium text-xs break-all">{field}</span>
+                  {isSearchable && (
+                    <span className="text-[10px] bg-blue-200/60 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 rounded px-1 py-0.5 font-sans font-medium">
+                      Tìm kiếm
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSearchField(field)}
+                    className={`rounded p-0.5 transition-colors ${
+                      isSearchable ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-200/50' : 'text-muted-foreground/60 hover:text-primary hover:bg-accent'
+                    }`}
+                    title={isSearchable ? 'Đang bật tìm kiếm nhanh (click để tắt)' : 'Bật tìm kiếm nhanh cho trường này'}
+                  >
+                    <Search className="size-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveField(field)}
+                    className="rounded p-0.5 text-muted-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    title={`Xóa trường "${field}"`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MapLayerFormDialog({
   open,
   onOpenChange,
@@ -658,6 +929,10 @@ export default function MapLayerFormDialog({
   const [legendJsonInvalid, setLegendJsonInvalid] = useState(false)
   const [defaultStyle, setDefaultStyle] = useState<MapLayerDefaultStyle | null>(null)
   const [styleJsonInvalid, setStyleJsonInvalid] = useState(false)
+  const [displayFields, setDisplayFields] = useState<string[]>([])
+  const [searchFields, setSearchFields] = useState<string[]>([])
+  const [availableColumns, setAvailableColumns] = useState<string[]>([])
+  const [loadingColumns, setLoadingColumns] = useState(false)
 
   const layerQuery = useApiQuery(
     ['mapLayer', layerCode],
@@ -691,6 +966,9 @@ export default function MapLayerFormDialog({
       setLegendJsonInvalid(false)
       setDefaultStyle(null)
       setStyleJsonInvalid(false)
+      setDisplayFields([])
+      setSearchFields([])
+      setAvailableColumns([])
       return
     }
 
@@ -710,6 +988,43 @@ export default function MapLayerFormDialog({
       const initialStyle = layer.metadata?.defaultStyle ?? layer.default_style ?? null
       setDefaultStyle(initialStyle)
       setStyleJsonInvalid(false)
+
+      const initialDisplay = Array.isArray(layer.metadata?.displayFields)
+        ? (layer.metadata.displayFields as string[])
+        : []
+      const initialSearch = Array.isArray(layer.metadata?.searchFields)
+        ? (layer.metadata.searchFields as string[])
+        : []
+      setDisplayFields(initialDisplay)
+      setSearchFields(initialSearch)
+
+      if (layer.id != null) {
+        setLoadingColumns(true)
+        mapLayerService
+          .getFields(layer.id)
+          .then((res) => {
+            const data = (res as any)?.data ?? res
+            const cols = data?.availableColumns
+            if (Array.isArray(cols)) {
+              setAvailableColumns(cols)
+            }
+          })
+          .catch(() => {
+            const fallbackCols = new Set<string>()
+            if (Array.isArray(layer.metadata?.displayFields)) {
+              layer.metadata.displayFields.forEach((f) => typeof f === 'string' && fallbackCols.add(f))
+            }
+            if (layer.properties && typeof layer.properties === 'object') {
+              Object.keys(layer.properties)
+                .filter((k) => k !== 'geom')
+                .forEach((k) => fallbackCols.add(k))
+            }
+            if (fallbackCols.size > 0) {
+              setAvailableColumns(Array.from(fallbackCols))
+            }
+          })
+          .finally(() => setLoadingColumns(false))
+      }
     }
   }, [open, isEdit, layer])
 
@@ -777,6 +1092,16 @@ export default function MapLayerFormDialog({
     const code = isEdit && layer?.code ? layer.code : toLayerCode(name.trim())
     const expectedUpdatedAt = isEdit ? (layer?.updatedAt ?? layer?.updated_at ?? undefined) : undefined
     const cleanedStyle = cleanStyleObject(defaultStyle)
+    const cleanedDisplayFields = Array.from(
+      new Set(displayFields.map((f) => f.trim().toLowerCase()).filter(Boolean))
+    )
+    const cleanedSearchFields = Array.from(
+      new Set(
+        searchFields
+          .map((f) => f.trim().toLowerCase())
+          .filter((f) => cleanedDisplayFields.includes(f))
+      )
+    )
 
     const payload: CreateMapLayerBody = {
       code,
@@ -794,6 +1119,12 @@ export default function MapLayerFormDialog({
       legend_config: legendConfig,
       metadata: {
         defaultStyle: cleanedStyle ?? null,
+        ...(cleanedDisplayFields.length > 0 || (isEdit && Array.isArray(layer?.metadata?.displayFields))
+          ? { displayFields: cleanedDisplayFields }
+          : {}),
+        ...(cleanedSearchFields.length > 0 || (isEdit && Array.isArray(layer?.metadata?.searchFields))
+          ? { searchFields: cleanedSearchFields }
+          : {}),
       },
       ...(properties ? { properties } : {}),
       ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}),
@@ -876,6 +1207,15 @@ export default function MapLayerFormDialog({
             style={defaultStyle}
             onStyleChange={setDefaultStyle}
             onJsonValidityChange={(isValid) => setStyleJsonInvalid(!isValid)}
+          />
+
+          <DisplayFieldsEditor
+            displayFields={displayFields}
+            searchFields={searchFields}
+            availableColumns={availableColumns}
+            loadingColumns={loadingColumns}
+            onDisplayFieldsChange={setDisplayFields}
+            onSearchFieldsChange={setSearchFields}
           />
 
 
