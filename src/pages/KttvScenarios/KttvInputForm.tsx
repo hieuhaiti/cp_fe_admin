@@ -207,8 +207,8 @@ export default function KttvInputForm(): JSX.Element {
       )
     }
 
-    // 2. Tra cứu API backend hiện hữu (chỉ gọi khi lượng mưa > 0)
-    if (rainVal > 0) {
+    // 2. Tra cứu API backend hiện hữu (chỉ gọi khi lượng mưa > 0 và không thuộc diện an toàn dưới ngưỡng)
+    if (rainVal > 0 && !isBelowThreshold) {
       try {
         const res = await kttvScenarioService.simulate({
           rainfall: rainVal,
@@ -249,6 +249,15 @@ export default function KttvInputForm(): JSX.Element {
         threeTypeOutcome.quyHoachRcp45,
         threeTypeOutcome.quyHoachRcp85,
       ]
+
+      // Nếu tất cả các nhóm kịch bản đều dưới ngưỡng ngập (an toàn) hoặc không mưa
+      const isAllSafeOrNoFlood = candidates.every(
+        (c) => c.status === 'no_flood' || c.status === 'no_rain'
+      )
+      if (isAllSafeOrNoFlood) {
+        return []
+      }
+
       candidates.forEach((c) => {
         if (c.status === 'matched' && c.scenario) {
           if (!list.some((existing) => String(existing.scenarioId) === String(c.scenario!.id))) {
@@ -265,8 +274,13 @@ export default function KttvInputForm(): JSX.Element {
           }
         }
       })
+
+      // Đã có threeTypeOutcome phân tích chuẩn xác theo các nhóm kịch bản từ hệ thống,
+      // tuyệt đối không fallback lấy simResult của kịch bản đơn lẻ.
+      return list
     }
 
+    // Chỉ khi KHÔNG có threeTypeOutcome mới xét simResult từ API máy chủ
     if (
       list.length === 0 &&
       simResult &&
@@ -454,16 +468,25 @@ export default function KttvInputForm(): JSX.Element {
 
   const isZeroRainfall = submittedRainfall !== null && submittedRainfall <= 0
   const activeScenariosInSystem = (scenarioListData ?? []).filter((s) => s.is_active)
+  const isAllNoFlood =
+    !!threeTypeOutcome &&
+    threeTypeOutcome.hienTrang.status === 'no_flood' &&
+    threeTypeOutcome.caiTao.status === 'no_flood' &&
+    threeTypeOutcome.quyHoachRcp45.status === 'no_flood' &&
+    threeTypeOutcome.quyHoachRcp85.status === 'no_flood'
+
   const hasMatch =
     matchedScenarios.length > 0 ||
-    (!!simResult &&
+    (!threeTypeOutcome &&
+      !!simResult &&
       simResult.status !== 'no_rain' &&
       simResult.simulationParams?.scenarioCode !== 'no_rain')
   const isSafeBelowThreshold =
     submittedRainfall !== null &&
     submittedRainfall > 0 &&
     matchedScenarios.length === 0 &&
-    (!simResult ||
+    (isAllNoFlood ||
+      !simResult ||
       simResult.status === 'no_rain' ||
       simResult.simulationParams?.scenarioCode === 'no_rain')
   const isSimulated = submittedRainfall !== null || !!threeTypeOutcome || !!simResult
