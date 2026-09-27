@@ -79,13 +79,12 @@ function getNotificationPath(n: Notification): string | null {
     return explicitUrl
   }
 
-  // Cảnh báo kịch bản thủy văn -> link tới https://admincampha.tourismpj.pro.vn/flood
   if (
     type === 'hydro_scenario_triggered' ||
     type.startsWith('hydro_') ||
     (typeof n.title === 'string' && n.title.includes('kịch bản thủy văn'))
   ) {
-    return 'https://admincampha.tourismpj.pro.vn/flood'
+    return '/kttv-scenarios'
   }
 
   // 3. channel/type → route + optional entity id
