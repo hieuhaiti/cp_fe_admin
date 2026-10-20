@@ -6,6 +6,7 @@ import {
   FolderTree,
   Layers,
   Loader2,
+  LockKeyhole,
   Plus,
   RefreshCw,
   Search,
@@ -46,6 +47,12 @@ import { useLayerCategories } from '@/hooks/useLayerCategories'
 import { toast } from 'react-toastify'
 import type { LayerCategory } from '@/types/api'
 import { cn } from '@/lib/utils'
+
+// These categories are managed by dedicated features and hidden from the Client layer list.
+const AUTOMATIC_CATEGORY_FEATURES = new Map<string, string>([
+  ['flood', 'Ngập lụt'],
+  ['forest', 'Phân loại đối tượng'],
+])
 
 function removeVietnameseTones(str: string): string {
   return str
@@ -139,6 +146,7 @@ export default function CategoryManagementTab() {
   }
 
   const handleToggleVisibility = async (cat: LayerCategory) => {
+    if (AUTOMATIC_CATEGORY_FEATURES.has(cat.key)) return
     const nextVisibility = cat.isVisible === false
     setTogglingKey(cat.key)
     try {
@@ -166,7 +174,7 @@ export default function CategoryManagementTab() {
   }
 
   const handleConfirmDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || AUTOMATIC_CATEGORY_FEATURES.has(deleteTarget.key)) return
     try {
       await deleteCategory(deleteTarget.key)
       toast.success(`Đã xóa danh mục "${deleteTarget.name}" thành công.`)
@@ -283,6 +291,9 @@ export default function CategoryManagementTab() {
                 const isToggling = isUpdatingVisibility && togglingKey === cat.key
                 const layerCount = cat.layerCount ?? 0
                 const hasLayers = layerCount > 0
+                const automaticFeature = AUTOMATIC_CATEGORY_FEATURES.get(cat.key)
+                const isAutomatic = automaticFeature !== undefined
+                const descriptionId = `category-${cat.key}-description`
 
                 return (
                   <TableRow key={cat.key} className="hover:bg-muted/40 transition-colors">
@@ -290,7 +301,24 @@ export default function CategoryManagementTab() {
                       {index + 1}
                     </TableCell>
                     <TableCell className="font-medium text-foreground">
-                      {cat.name}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{cat.name}</span>
+                        {isAutomatic && (
+                          <Badge variant="secondary" className="gap-1 text-xs font-normal">
+                            <LockKeyhole className="size-3" aria-hidden="true" />
+                            Tự động · Chỉ đọc
+                          </Badge>
+                        )}
+                      </div>
+                      {isAutomatic && (
+                        <p
+                          id={descriptionId}
+                          className="mt-1.5 max-w-sm whitespace-normal text-xs font-normal leading-relaxed text-muted-foreground"
+                        >
+                          Danh mục tự động của chức năng {automaticFeature}. Không cho phép chỉnh sửa hoặc xóa.
+                          {' '}Không hiển thị trong danh sách “Lớp dữ liệu” trên WebGIS; được quản lý trong chức năng riêng.
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell>
                       <code className="px-2 py-0.5 rounded-md bg-muted text-[11px] font-mono text-muted-foreground border">
@@ -321,38 +349,50 @@ export default function CategoryManagementTab() {
                       </Tooltip>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant={isVisible ? 'outline' : 'ghost'}
-                            size="sm"
-                            disabled={isToggling}
-                            onClick={() => handleToggleVisibility(cat)}
-                            className={cn(
-                              'h-7 px-2.5 text-xs font-medium gap-1.5 transition-all',
-                              isVisible
-                                ? 'border-emerald-300 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                : 'border-border text-muted-foreground hover:bg-muted'
-                            )}
-                            aria-label={`Chuyển trạng thái hiển thị của ${cat.name}`}
-                          >
-                            {isToggling ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : isVisible ? (
-                              <Eye className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                            ) : (
-                              <EyeOff className="size-3.5 text-muted-foreground" />
-                            )}
-                            <span>{isVisible ? 'Hiện trên WebGIS' : 'Ẩn trên WebGIS'}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isVisible
-                            ? 'Nhấn để ẩn danh mục này khỏi thanh chọn lớp WebGIS'
-                            : 'Nhấn để hiển thị lại danh mục này trên WebGIS'}
-                        </TooltipContent>
-                      </Tooltip>
+                      {isAutomatic ? (
+                        <Badge
+                          id={`category-${cat.key}-visibility`}
+                          variant="outline"
+                          className="gap-1.5 font-normal text-muted-foreground"
+                          aria-describedby={descriptionId}
+                        >
+                          <EyeOff className="size-3.5" aria-hidden="true" />
+                          Ẩn khỏi danh sách lớp
+                        </Badge>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant={isVisible ? 'outline' : 'ghost'}
+                              size="sm"
+                              disabled={isToggling}
+                              onClick={() => handleToggleVisibility(cat)}
+                              className={cn(
+                                'h-7 px-2.5 text-xs font-medium gap-1.5 transition-all',
+                                isVisible
+                                  ? 'border-emerald-300 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                  : 'border-border text-muted-foreground hover:bg-muted'
+                              )}
+                              aria-label={`Chuyển trạng thái hiển thị của ${cat.name}`}
+                            >
+                              {isToggling ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : isVisible ? (
+                                <Eye className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                              ) : (
+                                <EyeOff className="size-3.5 text-muted-foreground" />
+                              )}
+                              <span>{isVisible ? 'Hiện trên WebGIS' : 'Ẩn trên WebGIS'}</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isVisible
+                              ? 'Nhấn để ẩn danh mục này khỏi thanh chọn lớp WebGIS'
+                              : 'Nhấn để hiển thị lại danh mục này trên WebGIS'}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <Tooltip>
@@ -362,19 +402,25 @@ export default function CategoryManagementTab() {
                               type="button"
                               variant="ghost"
                               size="icon-xs"
-                              disabled={isDeleting || hasLayers}
-                              onClick={() => setDeleteTarget(cat)}
+                              id={`delete-category-${cat.key}`}
+                              disabled={isDeleting || hasLayers || isAutomatic}
+                              onClick={() => {
+                                if (!isAutomatic) setDeleteTarget(cat)
+                              }}
                               className="text-destructive hover:bg-destructive/10 disabled:opacity-40 disabled:pointer-events-none"
                               aria-label={`Xóa danh mục ${cat.name}`}
+                              aria-describedby={isAutomatic ? descriptionId : undefined}
                             >
                               <Trash2 className="size-4" />
                             </Button>
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="left">
-                          {hasLayers
-                            ? `Đang có ${layerCount} lớp bản đồ sử dụng, không thể xóa`
-                            : `Xóa danh mục "${cat.name}"`}
+                          {isAutomatic
+                            ? 'Danh mục tự động, không cho phép chỉnh sửa hoặc xóa'
+                            : hasLayers
+                              ? `Đang có ${layerCount} lớp bản đồ sử dụng, không thể xóa`
+                              : `Xóa danh mục "${cat.name}"`}
                         </TooltipContent>
                       </Tooltip>
                     </TableCell>

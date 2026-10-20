@@ -102,6 +102,37 @@ describe('CategoryManagementTab', () => {
     expect(deleteBtnEnabled).not.toBeDisabled()
   })
 
+  it.each([
+    { key: 'flood', name: 'Ngập lụt', feature: 'Ngập lụt', isVisible: true },
+    { key: 'flood', name: 'Ngập lụt', feature: 'Ngập lụt', isVisible: false },
+    { key: 'forest', name: 'Phân loại đối tượng', feature: 'Phân loại đối tượng', isVisible: true },
+    { key: 'forest', name: 'Phân loại đối tượng', feature: 'Phân loại đối tượng', isVisible: false },
+  ])('locks automatic category $key when API visibility is $isVisible', async ({ key, name, feature, isVisible }) => {
+    vi.mocked(layerCategoryService.getAll).mockResolvedValueOnce({
+      status: 200,
+      message: 'Thành công',
+      data: [{ id: 3, key, name, isVisible, layerCount: 0 }],
+    })
+
+    renderWithProviders(<CategoryManagementTab />)
+
+    expect(await screen.findByText(name)).toBeInTheDocument()
+    expect(screen.getByText('Tự động · Chỉ đọc')).toBeInTheDocument()
+    expect(screen.getByText(`Danh mục tự động của chức năng ${feature}.`, { exact: false }))
+      .toHaveTextContent('Không cho phép chỉnh sửa hoặc xóa.')
+    expect(screen.getByText('Ẩn khỏi danh sách lớp')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: `Chuyển trạng thái hiển thị của ${name}` }))
+      .not.toBeInTheDocument()
+
+    const deleteButton = screen.getByRole('button', { name: `Xóa danh mục ${name}` })
+    expect(deleteButton).toBeDisabled()
+    fireEvent.click(deleteButton)
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(layerCategoryService.updateVisibility).not.toHaveBeenCalled()
+    expect(layerCategoryService.delete).not.toHaveBeenCalled()
+  })
+
   it('opens add category modal and creates category', async () => {
     vi.mocked(layerCategoryService.create).mockResolvedValueOnce({
       status: 201,
