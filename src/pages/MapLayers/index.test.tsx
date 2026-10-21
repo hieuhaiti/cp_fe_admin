@@ -68,12 +68,19 @@ describe('MapLayers index', () => {
     mutationMock.mockReturnValue({ mutate: vi.fn(), isPending: false })
   })
 
-  it('renders empty list and permission-gated shapefile and image layer upload', () => {
+  it('renders empty list and image upload without the removed Shapefile entry', () => {
     renderWithProviders(<MapLayerPage />)
     expect(screen.getByRole('heading', { name: 'Lớp bản đồ' })).toBeInTheDocument()
     expect(screen.getByText('Không có dữ liệu')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Nhập Shapefile/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Nhập Shapefile/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Thêm lớp ảnh bản đồ/ })).toBeInTheDocument()
+  })
+
+  it('does not expose image upload without raster create permission', () => {
+    useAuthStore.setState({ user: { ...admin, role: { ...admin.role!, permissions: { layers: { read: true } } } } as User })
+    renderWithProviders(<MapLayerPage />)
+    expect(screen.queryByRole('button', { name: /Thêm lớp ảnh bản đồ/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Nhập Shapefile/ })).not.toBeInTheDocument()
   })
 
   it('renders category filter dropdown with default "Tất cả danh mục"', () => {

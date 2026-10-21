@@ -39,5 +39,8 @@ describe('MapLayerApiPublicPage', () => {
     expect(screen.getByRole('tab', { name: 'Hướng dẫn tích hợp' })).toHaveAttribute('data-state', 'active')
     expect(screen.getByText('Tổng quan')).toBeInTheDocument()
     expect(screen.getByText('/api/v1/shared/{slug}/features')).toBeInTheDocument()
+    expect(screen.queryByText('X-Map-Api-Key')).not.toBeInTheDocument()
+    expect(screen.getByText(/hoặc khóa đã bị thu hồi hay hết hạn/)).toBeInTheDocument()
+    expect(screen.getByText('Khóa không có quyền thực hiện thao tác hoặc phương thức này không được phép')).toBeInTheDocument()
   })
 })

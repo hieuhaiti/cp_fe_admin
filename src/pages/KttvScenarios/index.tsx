@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import {
   Table,
@@ -24,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Pen, Trash2, Plus, Layers, CheckCircle2, XCircle } from 'lucide-react'
+import { Pen, Trash2, Plus, Layers } from 'lucide-react'
 import PageLayout from '@/layout/pageLayout'
 import { formatDate } from '@/lib/date'
 import { hasPerm } from '@/lib/permissions'
@@ -299,31 +300,10 @@ export default function KttvScenariosPage(): JSX.Element {
                             {item.layer?.nameVi ?? item.layer_code}
                           </TableCell>
                           <TableCell className="text-center">
-                            {item.is_active ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span
-                                    className="inline-flex items-center justify-center text-emerald-600 dark:text-emerald-400"
-                                    aria-label="Kích hoạt"
-                                  >
-                                    <CheckCircle2 className="size-4" />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>Kích hoạt</TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span
-                                    className="inline-flex items-center justify-center text-muted-foreground"
-                                    aria-label="Vô hiệu"
-                                  >
-                                    <XCircle className="size-4 text-red-600" />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>Vô hiệu</TooltipContent>
-                              </Tooltip>
-                            )}
+                            <StatusDotBadge
+                              label={item.is_active ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                              tone={item.is_active ? 'success' : 'neutral'}
+                            />
                           </TableCell>
                           <TableCell className="text-sm">
                             {item.created_at ? formatDate(item.created_at) : '—'}

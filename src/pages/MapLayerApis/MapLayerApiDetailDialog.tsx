@@ -382,7 +382,7 @@ export default function MapLayerApiDetailDialog({
                                 {isRevoked ? (
                                   <StatusDotBadge label="Đã thu hồi" tone="destructive" />
                                 ) : isRotated ? (
-                                  <StatusDotBadge label="Đã xoay" tone="neutral" />
+                                  <StatusDotBadge label="Đã thay khóa" tone="neutral" />
                                 ) : isExpired ? (
                                   <StatusDotBadge label="Đã hết hạn" tone="warning" />
                                 ) : (
@@ -397,6 +397,7 @@ export default function MapLayerApiDetailDialog({
                                         <Button
                                           variant="ghost"
                                           size="icon-xs"
+                                          aria-label="Xoay khóa"
                                           onClick={() => handleOpenRotate(k)}
                                         >
                                           <RotateCcw className="h-3.5 w-3.5" />
@@ -410,6 +411,7 @@ export default function MapLayerApiDetailDialog({
                                         <Button
                                           variant="ghost"
                                           size="icon-xs"
+                                          aria-label="Thu hồi khóa"
                                           onClick={() => handleOpenRevoke(k)}
                                           className="text-destructive hover:text-destructive"
                                         >

@@ -7,7 +7,7 @@ import type { LayerLifecycleInfo, SatelliteImageMember } from '@/types/api'
 describe('SourceImagesTable status presentation', () => {
   it.each([
     [null, 'none', 'Đang hoạt động: test_layer', false],
-    ['2026-10-01', 'complete', 'Đã dọn: test_layer', false],
+    ['2026-10-01', 'complete', 'Đã dọn lớp: test_layer', false],
     ['2026-10-01', 'queued', 'Đang dọn (test_layer)', true],
     ['2026-10-01', 'running', 'Đang dọn (test_layer)', true],
     ['2026-10-01', 'failed', 'Dọn dẹp thất bại (test_layer)', true],

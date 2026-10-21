@@ -28,3 +28,14 @@ it('displays Vietnamese permissions without changing enabled permissions', () =>
   expect(permissions.users.delete).toBe(false)
   expect(permissions.api_registry).toEqual(['share', 'grant'])
 })
+
+it.each([
+  [true, 'Đang hoạt động'],
+  [false, 'Ngừng hoạt động'],
+])('renders activity=%s from an isolated account fixture', (isActive, label) => {
+  const user = { id: 7, email: 'fixture@example.com', isActive }
+  query.mockReturnValue({ data: { data: user } })
+  renderWithProviders(<UserDetailDialog open userId={7} onOpenChange={vi.fn()} />)
+  expect(screen.getByLabelText(label)).toHaveAttribute('data-status-dot-badge')
+  expect(user.isActive).toBe(isActive)
+})

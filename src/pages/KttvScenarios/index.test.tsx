@@ -87,3 +87,26 @@ describe('KTTV success notification ownership', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 })
+
+describe('KTTV activity status badges — isolated fixtures', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useAuthStore.setState({ user: admin })
+    mutationMock.mockReturnValue({ mutate: remove, isPending: false })
+  })
+
+  it.each([
+    [true, 'Đang hoạt động', 'Ngừng hoạt động'],
+    [false, 'Ngừng hoạt động', 'Đang hoạt động'],
+  ])('renders is_active=%s without changing the fixture', (isActive, label, absentLabel) => {
+    const scenario = { ...item, is_active: isActive }
+    queryMock.mockReturnValue({ data: { data: { items: [scenario] } }, refetch: vi.fn() })
+    renderWithProviders(<KttvScenariosPage />)
+    const badge = screen.getByLabelText(label)
+    expect(badge).toHaveAttribute('data-status-dot-badge')
+    expect(badge).toHaveAttribute('tabindex', '0')
+    expect(screen.queryByLabelText(absentLabel)).not.toBeInTheDocument()
+    expect(scenario.is_active).toBe(isActive)
+    expect(remove).not.toHaveBeenCalled()
+  })
+})

@@ -31,6 +31,26 @@ function renderUpload(itemFile: File, props: Record<string, unknown> = {}) {
 }
 
 describe('FileUpload', () => {
+  it.each(['success', 'error'] as const)('exposes the %s upload result without reporting the opposite state', async (result) => {
+    const selected = makeFile('result.txt', 'text/plain')
+    const onUpload = vi.fn(async (files: File[], options: {
+      onProgress: (file: File, progress: number) => void
+      onSuccess: (file: File) => void
+      onError: (file: File, error: Error) => void
+    }) => {
+      options.onProgress(files[0], 50)
+      if (result === 'success') options.onSuccess(files[0])
+      else options.onError(files[0], new Error('Isolated upload failure'))
+    })
+    renderUpload(selected, { onUpload })
+    fireEvent.change(screen.getByLabelText('Files'), { target: { files: [selected] } })
+    const message = result === 'success' ? 'Tải lên hoàn tất' : 'Lỗi: Không thể tải tệp lên. Vui lòng thử lại.'
+    expect(await screen.findByText(message)).toBeInTheDocument()
+    const row = screen.getByRole('listitem')
+    expect(row).toHaveAccessibleDescription(expect.stringContaining(message))
+    if (result === 'error') expect(screen.queryByText('Tải lên hoàn tất')).not.toBeInTheDocument()
+    expect(onUpload).toHaveBeenCalledOnce()
+  })
   it('accepts valid files and renders metadata', async () => {
     const selected = makeFile('readme.txt', 'text/plain')
     const callbacks = renderUpload(selected)

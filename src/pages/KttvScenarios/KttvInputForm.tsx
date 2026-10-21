@@ -614,9 +614,14 @@ export default function KttvInputForm(): JSX.Element {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2" role="status">
                   <span className="text-xs text-muted-foreground">Chế độ mốc {activeHour}:</span>
-                  <Badge variant="outline">
-                    {isScheduleLoading ? 'Đang tải…' : isScheduleError ? 'Chưa tải được' : !activeSlot ? 'Chưa có lịch trình' : isManualHour ? 'Thủ công' : 'Tự động'}
-                  </Badge>
+                  {isScheduleLoading || isScheduleError || !activeSlot ? (
+                    <StatusDotBadge
+                      label={isScheduleLoading ? 'Đang tải…' : isScheduleError ? 'Chưa tải được' : 'Chưa có lịch trình'}
+                      tone={isScheduleError ? 'destructive' : 'neutral'}
+                    />
+                  ) : (
+                    <Badge variant="outline">{isManualHour ? 'Thủ công' : 'Tự động'}</Badge>
+                  )}
                   {isScheduleError && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => refetchSchedule()}>
                       Tải lại lịch trình

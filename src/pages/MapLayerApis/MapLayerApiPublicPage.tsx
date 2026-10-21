@@ -241,11 +241,11 @@ print(f"{data['total']} đối tượng, trả về {data['returned']}")`}
                   <tbody className="divide-y">
                     <tr>
                       <td className="py-2 pr-4 font-mono">401</td>
-                      <td className="py-2 text-muted-foreground">Thiếu hoặc sai <Code>X-Map-Api-Key</Code></td>
+                      <td className="py-2 text-muted-foreground">Thiếu hoặc sai <Code>Authorization: Bearer &lt;token&gt;</Code>, hoặc khóa đã bị thu hồi hay hết hạn</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-mono">403</td>
-                      <td className="py-2 text-muted-foreground">Khóa bị thu hồi hoặc hết hạn</td>
+                      <td className="py-2 text-muted-foreground">Khóa không có quyền thực hiện thao tác hoặc phương thức này không được phép</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-mono">404</td>

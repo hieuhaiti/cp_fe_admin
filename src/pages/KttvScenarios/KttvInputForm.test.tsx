@@ -194,14 +194,15 @@ describe('KttvInputForm', () => {
 
   it('shows missing schedule separately from automatic mode', async () => {
     renderWithProviders(<KttvInputForm />)
-    expect(await screen.findByText('Chưa có lịch trình')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Chưa có lịch trình')).toHaveAttribute('data-status-dot-badge')
     expect(screen.getByRole('button', { name: 'Khôi phục tự động' })).toBeDisabled()
   })
 
   it('shows a retry action when loading the schedule fails', async () => {
     getForecastSchedule.mockRejectedValue(new Error('Mất kết nối'))
     renderWithProviders(<KttvInputForm />)
-    expect(await screen.findByText('Chưa tải được')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Chưa tải được')).toHaveAttribute('data-status-dot-badge')
+    expect(screen.getByLabelText('Chưa tải được')).toHaveClass('text-(--destructive-hover)')
     expect(screen.getByRole('button', { name: 'Khôi phục tự động' })).toBeDisabled()
     getForecastSchedule.mockResolvedValue({ data: [] })
     fireEvent.click(screen.getByRole('button', { name: 'Tải lại lịch trình' }))

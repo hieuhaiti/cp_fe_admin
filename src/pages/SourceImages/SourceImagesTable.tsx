@@ -43,7 +43,7 @@ function LayerLifecycleCell({
 
   const cleanup = layer.cleanupStatus || 'none'
   if (cleanup === 'complete') {
-    return <StatusDotBadge label={`Đã dọn: ${layer.code}`} tone="neutral" className="max-w-36" />
+    return <StatusDotBadge label={`Đã dọn lớp: ${layer.code}`} tone="neutral" className="max-w-36" />
   }
 
   if (['queued', 'running'].includes(cleanup)) {
