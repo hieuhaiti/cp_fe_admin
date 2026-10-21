@@ -1,6 +1,7 @@
+import { STATUS_DOT } from '@/constant/feedbackConstant'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import type { ReactNode } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { citizenFeedbackService, useApiQuery } from '@/service'
 import type { ApiResponse } from '@/types/api'
 import { MapPin, User } from 'lucide-react'
@@ -106,9 +107,7 @@ export default function FeedbackDetailDialog({
             )}
 
             <Row label="Trạng thái xử lý">
-              <Badge variant="outline" className={STATUS_CLASS[feedback.status] ?? ''}>
-                {STATUS_LABEL[feedback.status] ?? feedback.status}
-              </Badge>
+              <StatusDotBadge label={STATUS_LABEL[feedback.status] ?? 'Chưa xác định'} badgeClass={STATUS_CLASS[feedback.status]} dotClass={STATUS_DOT[feedback.status]} />
             </Row>
 
             <Row label="Người gửi">

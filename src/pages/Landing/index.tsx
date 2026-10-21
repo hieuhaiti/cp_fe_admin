@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { adminDashboardService, useApiQuery } from '@/service'
@@ -254,7 +255,7 @@ export default function LandingPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              Chỉ số vận hành & Hiện trạng thực tế
+              Chỉ số tổng quan
             </h2>
             <p className="text-xs text-muted-foreground">
               Số liệu tổng hợp từ cơ sở dữ liệu GIS và kết quả các mô hình đã nghiệm thu.
@@ -315,9 +316,8 @@ export default function LandingPage() {
                       ? 'Đã chạy mô hình'
                       : 'Chưa có kỳ'
                 }
-                statusBadge={
-                  formatModelStatus(flood?.status)
-                }
+                statusBadge={formatModelStatus(flood?.status)}
+                statusTone={['FAILED', 'DLQ'].includes(flood?.status?.toUpperCase() ?? '') ? 'destructive' : flood?.status?.toUpperCase() === 'SUCCEEDED' ? 'success' : ['PENDING', 'QUEUED', 'RUNNING'].includes(flood?.status?.toUpperCase() ?? '') ? 'warning' : 'neutral'}
                 meta={
                   flood
                     ? `Kỳ: ${formatDateRange(flood.monitorStart, flood.monitorEnd) || 'Gần nhất'}`
@@ -389,11 +389,8 @@ export default function LandingPage() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            Lối tắt tác nghiệp trọng tâm
+            Truy cập nhanh
           </h2>
-          <p className="text-xs text-muted-foreground">
-            Các phân hệ nghiệp vụ ưu tiên cho vị trí công tác của bạn.
-          </p>
         </div>
 
         {priorityLinks.length === 0 && otherLinks.length === 0 ? (
@@ -415,21 +412,14 @@ export default function LandingPage() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                       {item.icon}
                     </div>
-                    <span className="rounded-md bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
-                      Trọng tâm
-                    </span>
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
                       {item.name}
                     </h3>
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                      Truy cập trực tiếp phân hệ {item.name.toLowerCase()}
-                    </p>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-1 text-xs font-medium text-primary">
-                  <span>Mở phân hệ</span>
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                 </div>
               </Link>
@@ -449,7 +439,6 @@ export default function LandingPage() {
                     <div className="truncate text-sm font-medium text-foreground group-hover:text-primary">
                       {item.name}
                     </div>
-                    <div className="text-[11px] text-muted-foreground">Phân hệ bổ trợ</div>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
@@ -506,7 +495,7 @@ export default function LandingPage() {
             >
               <span className="flex items-center gap-2">
                 <FileCheck2 className="h-4 w-4 text-primary" />
-                Sổ tay hướng dẫn Admin (PDF)
+                Hướng dẫn quản trị (PDF)
               </span>
               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
             </a>
@@ -524,6 +513,7 @@ function OperationalKpiCard({
   value,
   unit,
   statusBadge,
+  statusTone,
   meta,
   linkTo,
   linkText,
@@ -534,6 +524,7 @@ function OperationalKpiCard({
   value: string | null
   unit?: string
   statusBadge?: string
+  statusTone?: 'neutral' | 'success' | 'warning' | 'info' | 'destructive'
   meta: string
   linkTo: string
   linkText: string
@@ -547,9 +538,9 @@ function OperationalKpiCard({
             {title}
           </span>
           {statusBadge && !loading && (
-            <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
-              {statusBadge}
-            </span>
+            statusTone ? <StatusDotBadge label={statusBadge} tone={statusTone} /> : (
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">{statusBadge}</span>
+            )
           )}
         </div>
 

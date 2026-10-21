@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
-import { TruncatedBadge } from '@/components/common/TruncatedBadge'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { formatDateTime } from '@/lib/date'
 function formatFileSize(bytes?: number | string | null): string {
   if (!bytes) return '—'
@@ -20,10 +20,10 @@ function formatFileSize(bytes?: number | string | null): string {
   if (num < 1024 * 1024 * 1024) return `${(num / (1024 * 1024)).toFixed(1)} MB`
   return `${(num / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
-import { Layers, FolderInput, Trash2, ShieldAlert, Clock, AlertCircle } from 'lucide-react'
+import { Layers, FolderInput, Trash2, ShieldAlert } from 'lucide-react'
 import type { SatelliteImageMember, LayerLifecycleInfo } from '@/types/api'
 
-function LayerStatusBadge({
+function LayerLifecycleCell({
   layer,
   onViewCleanup,
 }: {
@@ -38,81 +38,45 @@ function LayerStatusBadge({
   const isDeleted = Boolean(layer.deletedAt)
 
   if (!isDeleted) {
-    return (
-      <TruncatedBadge
-        variant="default"
-        maxWidthClass="max-w-36"
-        className="gap-1 font-mono text-[10px] bg-emerald-600 hover:bg-emerald-700"
-        label={layer.code}
-      >
-        <span className="size-1.5 shrink-0 rounded-full bg-white animate-pulse" />
-        <span className="truncate">{layer.code}</span>
-      </TruncatedBadge>
-    )
+    return <StatusDotBadge label={`Đang hoạt động: ${layer.code}`} tone="success" className="max-w-36" />
   }
 
   const cleanup = layer.cleanupStatus || 'none'
   if (cleanup === 'complete') {
-    return (
-      <TruncatedBadge
-        variant="secondary"
-        maxWidthClass="max-w-36"
-        className="font-mono text-[10px]"
-        label={`Đã dọn: ${layer.code}`}
-      >
-        Đã dọn: {layer.code}
-      </TruncatedBadge>
-    )
+    return <StatusDotBadge label={`Đã dọn: ${layer.code}`} tone="neutral" className="max-w-36" />
   }
 
   if (['queued', 'running'].includes(cleanup)) {
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => onViewCleanup?.(layer.id)}
-            className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
-            aria-label={`Đang dọn (${layer.code})`}
-          >
-            <Clock className="size-2.5 shrink-0 animate-spin" />
-            <span className="truncate">Đang dọn ({layer.code})</span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">{`Đang dọn (${layer.code})`}</TooltipContent>
-      </Tooltip>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onViewCleanup?.(layer.id)}
+        className="min-h-7 h-auto max-w-36 p-0"
+        aria-label={`Đang dọn (${layer.code})`}
+      >
+        <StatusDotBadge label={`Đang dọn (${layer.code})`} tone="warning" tooltip={false} />
+      </Button>
     )
   }
 
   if (cleanup === 'failed') {
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => onViewCleanup?.(layer.id)}
-            className="inline-flex max-w-36 items-center gap-1 truncate rounded bg-destructive/15 text-destructive px-1.5 py-0.5 font-mono text-[10px] font-semibold border border-destructive/30 hover:bg-destructive/25 transition-colors"
-            aria-label={`Dọn lỗi (${layer.code})`}
-          >
-            <AlertCircle className="size-2.5 shrink-0" />
-            <span className="truncate">Dọn lỗi ({layer.code})</span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">{`Dọn lỗi (${layer.code})`}</TooltipContent>
-      </Tooltip>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onViewCleanup?.(layer.id)}
+        className="min-h-7 h-auto max-w-36 p-0"
+        aria-label={`Dọn dẹp thất bại (${layer.code})`}
+      >
+        <StatusDotBadge label={`Dọn dẹp thất bại (${layer.code})`} tone="destructive" tooltip={false} />
+      </Button>
     )
   }
 
-  return (
-    <TruncatedBadge
-      variant="outline"
-      maxWidthClass="max-w-36"
-      className="font-mono text-[10px]"
-      label={`Đã xóa: ${layer.code}`}
-    >
-      Đã xóa: {layer.code}
-    </TruncatedBadge>
-  )
+  return <StatusDotBadge label={`Đã xóa: ${layer.code}`} tone="neutral" className="max-w-36" />
 }
 
 export function SourceImagesTable({
@@ -224,7 +188,7 @@ export function SourceImagesTable({
 
                 {/* 4. Lớp độc lập */}
                 <TableCell>
-                  <LayerStatusBadge
+                  <LayerLifecycleCell
                     layer={image.standaloneLayer}
                     type="standalone"
                     onViewCleanup={onViewCleanup}
@@ -233,7 +197,7 @@ export function SourceImagesTable({
 
                 {/* 5. Lớp chuỗi thời gian */}
                 <TableCell>
-                  <LayerStatusBadge
+                  <LayerLifecycleCell
                     layer={image.timeSeriesLayer}
                     type="timeSeries"
                     onViewCleanup={onViewCleanup}

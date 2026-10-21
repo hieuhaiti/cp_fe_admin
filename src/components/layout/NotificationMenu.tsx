@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Bell, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -351,7 +352,7 @@ export function NotificationMenu() {
                     <span className={cn('min-w-0 flex-1 text-sm', !read && 'font-medium')}>
                       {primary}
                     </span>
-                    {!read && <span className="bg-primary h-2 w-2 rounded-full" />}
+                    {!read && <StatusDotBadge label="Chưa đọc" tone="info" tooltip={false} className="shrink-0" />}
                     <Button
                       type="button"
                       variant="ghost"

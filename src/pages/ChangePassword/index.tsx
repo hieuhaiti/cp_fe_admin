@@ -78,7 +78,7 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <PageLayout title="Đổi mật khẩu" description="Cập nhật mật khẩu đăng nhập của bạn">
+    <PageLayout title="Đổi mật khẩu">
       <Card className="p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-xl">
           <div className="space-y-2">

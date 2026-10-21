@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import CategoryManagementTab from './CategoryManagementTab'
 import { renderWithProviders } from '@/test/renderWithProviders'
@@ -49,8 +49,8 @@ describe('CategoryManagementTab', () => {
     expect(screen.getByText('0 lớp')).toBeInTheDocument()
 
     // Visibility status buttons
-    expect(screen.getByText('Hiện trên WebGIS')).toBeInTheDocument()
-    expect(screen.getByText('Ẩn trên WebGIS')).toBeInTheDocument()
+    expect(screen.getByText('Đang hiển thị')).toBeInTheDocument()
+    expect(screen.getByText('Đang ẩn')).toBeInTheDocument()
   })
 
   it('filters categories by search term', async () => {
@@ -58,7 +58,7 @@ describe('CategoryManagementTab', () => {
 
     expect(await screen.findByText('Hành chính')).toBeInTheDocument()
 
-    const searchInput = screen.getByPlaceholderText('Tìm danh mục...')
+    const searchInput = screen.getByPlaceholderText('Tìm danh mục')
     fireEvent.change(searchInput, { target: { value: 'dia danh' } })
 
     expect(screen.getByText('Địa danh')).toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('CategoryManagementTab', () => {
 
     renderWithProviders(<CategoryManagementTab />)
 
-    const toggleBtn = await screen.findByRole('button', { name: /Chuyển trạng thái hiển thị của Hành chính/i })
+    const toggleBtn = await screen.findByRole('button', { name: 'Ẩn danh mục Hành chính trên WebGIS' })
     fireEvent.click(toggleBtn)
 
     await waitFor(() => {
@@ -118,10 +118,10 @@ describe('CategoryManagementTab', () => {
 
     expect(await screen.findByText(name)).toBeInTheDocument()
     expect(screen.getByText('Tự động · Chỉ đọc')).toBeInTheDocument()
-    expect(screen.getByText(`Danh mục tự động của chức năng ${feature}.`, { exact: false }))
-      .toHaveTextContent('Không cho phép chỉnh sửa hoặc xóa.')
+    expect(screen.getByText(`Danh mục do chức năng ${feature} quản lý.`, { exact: false }))
+      .toHaveTextContent('Không thể sửa hoặc xóa.')
     expect(screen.getByText('Ẩn khỏi danh sách lớp')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: `Chuyển trạng thái hiển thị của ${name}` }))
+    expect(screen.queryByRole('button', { name: `${isVisible ? 'Ẩn' : 'Hiển thị'} danh mục ${name} trên WebGIS` }))
       .not.toBeInTheDocument()
 
     const deleteButton = screen.getByRole('button', { name: `Xóa danh mục ${name}` })
@@ -151,12 +151,14 @@ describe('CategoryManagementTab', () => {
     const addBtn = screen.getByRole('button', { name: /Thêm danh mục/i })
     fireEvent.click(addBtn)
 
-    expect(await screen.findByText('Thêm danh mục lớp mới')).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'Thêm danh mục' })
+    expect(dialog).not.toHaveAttribute('aria-describedby')
+    expect(within(dialog).queryByText(/Mã nhận diện/)).not.toBeInTheDocument()
 
-    const nameInput = screen.getByPlaceholderText('VD: Hạ tầng cấp thoát nước')
+    const nameInput = within(dialog).getByLabelText(/Tên danh mục/)
     fireEvent.change(nameInput, { target: { value: 'Giao thông mới' } })
 
-    const submitBtn = screen.getByRole('button', { name: 'Tạo danh mục' })
+    const submitBtn = within(dialog).getByRole('button', { name: 'Thêm danh mục' })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {

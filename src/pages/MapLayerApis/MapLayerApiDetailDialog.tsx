@@ -233,7 +233,7 @@ export default function MapLayerApiDetailDialog({
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Sao chép link Endpoint</TooltipContent>
+                    <TooltipContent side="top">Sao chép địa chỉ API</TooltipContent>
                   </Tooltip>
                 </div>
               )}
@@ -380,21 +380,13 @@ export default function MapLayerApiDetailDialog({
                               </TableCell>
                               <TableCell>
                                 {isRevoked ? (
-                                  <Badge variant="destructive" className="text-[10px]">
-                                    Đã thu hồi
-                                  </Badge>
+                                  <StatusDotBadge label="Đã thu hồi" tone="destructive" />
                                 ) : isRotated ? (
-                                  <Badge variant="outline" className="text-muted-foreground text-[10px]">
-                                    Đã xoay
-                                  </Badge>
+                                  <StatusDotBadge label="Đã xoay" tone="neutral" />
                                 ) : isExpired ? (
-                                  <Badge variant="outline" className="border-amber-400 text-amber-600 text-[10px]">
-                                    Hết hạn
-                                  </Badge>
+                                  <StatusDotBadge label="Đã hết hạn" tone="warning" />
                                 ) : (
-                                  <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 text-[10px]">
-                                    Hoạt động
-                                  </Badge>
+                                  <StatusDotBadge label="Đang hoạt động" tone="success" />
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
@@ -410,7 +402,7 @@ export default function MapLayerApiDetailDialog({
                                           <RotateCcw className="h-3.5 w-3.5" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent side="top">Xoay khóa (Cấp token mới)</TooltipContent>
+                                      <TooltipContent side="top">Xoay khóa</TooltipContent>
                                     </Tooltip>
 
                                     <Tooltip>
@@ -589,7 +581,7 @@ export default function MapLayerApiDetailDialog({
                                   <span>ID: {item.key_id.slice(0, 8)}...</span>
                                   {keyInfo?.token_hint && (
                                     <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-                                      Hint: {keyInfo.token_hint}
+                                      Nhận diện: {keyInfo.token_hint}
                                     </span>
                                   )}
                                 </div>
@@ -640,10 +632,9 @@ export default function MapLayerApiDetailDialog({
       <AlertDialog open={rotateConfirmOpen} onOpenChange={setRotateConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xoay khóa API (Rotate Key)</AlertDialogTitle>
+            <AlertDialogTitle>Xoay khóa API</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xoay khóa "{keyToRotate?.name}"? Hệ thống sẽ tạo một chuỗi mã
-              Token mới và vô hiệu hóa mã Token cũ ngay lập tức.
+              Xoay khóa "{keyToRotate?.name}"? Khóa mới sẽ được tạo và khóa cũ bị vô hiệu hóa ngay lập tức.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -664,7 +655,7 @@ export default function MapLayerApiDetailDialog({
       <AlertDialog open={revokeConfirmOpen} onOpenChange={setRevokeConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Thu hồi khóa API (Revoke Key)</AlertDialogTitle>
+            <AlertDialogTitle className="text-destructive">Thu hồi khóa API</AlertDialogTitle>
             <AlertDialogDescription>
               Bạn có chắc chắn muốn thu hồi khóa "{keyToRevoke?.name}"? Đơn vị "{keyToRevoke?.consumer}"
               sẽ không thể tiếp tục gọi API bằng khóa này. Thao tác này không thể hoàn tác.

@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -131,7 +132,7 @@ export default function DocumentFormDialog({
 
   const onFileValidate = useCallback((file: File): string | null => {
     if (!ACCEPTED_MIME.includes(file.type)) return 'Chỉ chấp nhận PDF, DOC, DOCX hoặc XML'
-    if (file.size > MAX_FILE_SIZE) return 'Kích thước file không được quá 50MB'
+    if (file.size > MAX_FILE_SIZE) return 'Kích thước tệp không được quá 50 MB'
     return null
   }, [])
 
@@ -171,20 +172,20 @@ export default function DocumentFormDialog({
       onSubmit(buildUpdatePayload(data))
       return
     }
-    if (docFiles.length === 0) { toast.error('Vui lòng chọn file văn bản để tải lên'); return }
+    if (docFiles.length === 0) { toast.error('Chọn tệp văn bản để tải lên'); return }
     onSubmit(buildCreateFormData(data))
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent {...(isEdit ? {} : { 'aria-describedby': undefined })} className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
         <div className="shrink-0 border-b px-6 py-5 pr-12">
-          <DialogTitle>{isEdit ? 'Chỉnh sửa văn bản' : 'Thêm văn bản mới'}</DialogTitle>
-          <DialogDescription className="mt-1">
-            {isEdit
-              ? 'Cập nhật thông tin văn bản. File gốc không thể thay đổi sau khi tạo.'
-              : 'Điền đầy đủ thông tin và tải lên file văn bản.'}
-          </DialogDescription>
+          <DialogTitle>{isEdit ? 'Chỉnh sửa văn bản' : 'Thêm văn bản'}</DialogTitle>
+          {isEdit && (
+            <DialogDescription className="mt-1">
+              Tệp gốc không thể thay đổi sau khi tạo.
+            </DialogDescription>
+          )}
         </div>
 
         {detailLoading ? (
@@ -199,14 +200,11 @@ export default function DocumentFormDialog({
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
               {isEdit && doc && (
                 <div className="space-y-1">
-                  <Label>File hiện tại</Label>
+                  <Label>Tệp hiện tại</Label>
                   <div className="bg-muted/40 flex items-center gap-3 rounded-md border p-3">
                     <FileText className="text-primary size-8 shrink-0" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{doc.original_name || 'Văn bản'}</p>
-                      <p className="text-muted-foreground text-xs">
-                        File không thay đổi được sau khi tạo.
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -215,7 +213,7 @@ export default function DocumentFormDialog({
               {!isEdit && (
                 <div className="space-y-2">
                   <Label>
-                    File văn bản <span className="text-destructive">*</span>
+                    Tệp văn bản <span className="text-destructive">*</span>
                   </Label>
                   <FileUpload
                     value={docFiles}
@@ -229,11 +227,11 @@ export default function DocumentFormDialog({
                     <FileUploadDropzone className="border-dashed">
                       <div className="flex flex-col items-center gap-1 text-center">
                         <FileText className="text-muted-foreground size-6" />
-                        <p className="text-sm font-medium">Kéo thả file vào đây</p>
+                        <p className="text-sm font-medium">Kéo thả tệp vào đây</p>
                         <FileUploadTrigger asChild>
-                          <Button type="button" variant="outline" size="sm">Chọn file</Button>
+                          <Button type="button" variant="outline" size="sm">Chọn tệp</Button>
                         </FileUploadTrigger>
-                        <p className="text-muted-foreground text-xs">PDF, DOC, DOCX, XML · tối đa 50MB</p>
+                        <p className="text-muted-foreground text-xs">PDF, DOC, DOCX, XML · tối đa 50 MB</p>
                       </div>
                     </FileUploadDropzone>
                     <FileUploadList>
@@ -316,15 +314,9 @@ export default function DocumentFormDialog({
               <p className="text-muted-foreground text-xs">
                 {isEdit ? (
                   changedCount === 0 ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="bg-muted-foreground/40 size-1.5 rounded-full" />
-                      Chưa có thay đổi nào để lưu
-                    </span>
+                    <StatusDotBadge label="Chưa có thay đổi nào để lưu" tone="neutral" />
                   ) : (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="bg-primary size-1.5 rounded-full" />
-                      {changedCount} trường đã thay đổi
-                    </span>
+                    <StatusDotBadge label={`${changedCount} trường đã thay đổi`} tone="warning" />
                   )
                 ) : (
                   <span>Các trường có dấu (*) là bắt buộc</span>
@@ -340,7 +332,7 @@ export default function DocumentFormDialog({
                   ) : (
                     <span className="flex items-center gap-2">
                       <Save className="size-4" />
-                      {isEdit ? 'Cập nhật' : 'Tạo mới'}
+                      {isEdit ? 'Lưu thay đổi' : 'Thêm văn bản'}
                     </span>
                   )}
                 </Button>

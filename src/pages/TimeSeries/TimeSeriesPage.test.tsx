@@ -241,8 +241,8 @@ describe('TimeSeriesPage', () => {
     setAdmin()
     renderWithProviders(<TimeSeriesPage />)
 
-    expect(screen.getByText('Quản lý lớp dữ liệu theo thời gian')).toBeInTheDocument()
-    expect(screen.getByText(/tổng hợp các ảnh cùng nhóm thành lớp dữ liệu theo thời gian/)).toBeInTheDocument()
+    expect(screen.getByText('Lớp bản đồ theo thời gian')).toBeInTheDocument()
+    expect(screen.getByText('Tổng hợp các ảnh cùng nhóm thành một lớp bản đồ.')).toBeInTheDocument()
     expect(screen.getAllByText('lop_phu_do_thi_ts').length).toBeGreaterThan(0)
     expect(screen.getByText('Mã nhóm')).toBeInTheDocument()
     expect(screen.getByText('lop_phu_do_thi')).toBeInTheDocument()

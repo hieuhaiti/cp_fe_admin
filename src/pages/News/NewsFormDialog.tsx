@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { newsService, useApiQuery } from '@/service'
 import type { ApiResponse, NewsData } from '@/types/api'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -38,8 +38,8 @@ const newsSchema = z.object({
   content: z.string().min(1, 'Nội dung là bắt buộc'),
   slug: z
     .string()
-    .max(500, 'Slug không được vượt quá 500 ký tự')
-    .regex(/^[a-z0-9-]*$/, 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang')
+    .max(500, 'Định danh đường dẫn không được vượt quá 500 ký tự')
+    .regex(/^[a-z0-9-]*$/, 'Định danh đường dẫn chỉ được chứa chữ thường, số và dấu gạch ngang')
     .optional()
     .or(z.literal('')),
   summary: z
@@ -141,8 +141,8 @@ export default function NewsFormDialog({
   }, [news, reset, open])
 
   const onThumbnailValidate = useCallback((file: File): string | null => {
-    if (!file.type.startsWith('image/')) return 'Chỉ chấp nhận file ảnh'
-    if (file.size > 10 * 1024 * 1024) return 'Kích thước file không được quá 10MB'
+    if (!file.type.startsWith('image/')) return 'Chỉ chấp nhận tệp ảnh'
+    if (file.size > 10 * 1024 * 1024) return 'Kích thước tệp không được quá 10 MB'
     return null
   }, [])
 
@@ -179,11 +179,8 @@ export default function NewsFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto p-4 sm:p-6">
-        <DialogTitle>{isEdit ? 'Chỉnh sửa tin tức' : 'Thêm tin tức mới'}</DialogTitle>
-        <DialogDescription>
-          {isEdit ? 'Cập nhật thông tin bài viết' : 'Điền thông tin để tạo bài viết mới'}
-        </DialogDescription>
+      <DialogContent aria-describedby={undefined} className="max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto p-4 sm:p-6">
+        <DialogTitle>{isEdit ? 'Sửa bài viết' : 'Thêm bài viết'}</DialogTitle>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="mt-4 space-y-4">
           <div className="space-y-2">
@@ -195,7 +192,7 @@ export default function NewsFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slug">Slug</Label>
+            <Label htmlFor="slug">Định danh đường dẫn</Label>
             <Input id="slug" {...register('slug')} placeholder="tieu-de-bai-viet" />
             {errors.slug && <p className="text-destructive text-sm">{errors.slug.message}</p>}
           </div>
@@ -224,7 +221,7 @@ export default function NewsFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (phân cách bằng dấu phẩy)</Label>
+            <Label htmlFor="tags">Từ khóa (phân cách bằng dấu phẩy)</Label>
             <Input id="tags" {...register('tags')} placeholder="cam-pha, moi-truong, ngap-lut" />
           </div>
 
@@ -272,7 +269,7 @@ export default function NewsFormDialog({
               <div className="mb-2">
                 <img
                   src={parseLink(news.thumbnail_url)}
-                  alt="Thumbnail hiện tại"
+                  alt="Ảnh đại diện hiện tại"
                   className="h-20 w-32 rounded border object-cover"
                 />
                 <p className="text-muted-foreground mt-1 text-xs">Ảnh hiện tại</p>
@@ -326,7 +323,7 @@ export default function NewsFormDialog({
               Hủy
             </Button>
             <Button type="submit" disabled={isSubmitting || isLoading} className="w-full sm:w-auto">
-              {isSubmitting || isLoading ? 'Đang xử lý...' : isEdit ? 'Cập nhật' : 'Tạo mới'}
+              {isSubmitting || isLoading ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Thêm bài viết'}
             </Button>
           </div>
         </form>

@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { newsCommentService, useApiQuery } from '@/service'
 import type { ApiResponse, NewsComment } from '@/types/api'
 import { UserText } from '@/components/common/UserText'
@@ -51,9 +51,9 @@ export default function NewsCommentDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
+      <DialogContent aria-describedby={undefined} className="max-h-[80vh] max-w-2xl overflow-y-auto">
         <DialogTitle>Chi tiết bình luận</DialogTitle>
-        <DialogDescription>Thông tin chi tiết bình luận đã chọn</DialogDescription>
+
 
         {comment ? (
           <div className="mt-4 space-y-3">
@@ -136,9 +136,9 @@ export default function NewsCommentDetailDialog({
               <span className="font-semibold">Trạng thái:</span>
               <span className="col-span-2">
                 {toApprovedFlag(isApproved) ? (
-                  <Badge variant="default">Đã duyệt</Badge>
+                  <StatusDotBadge label="Đã duyệt" tone="success" />
                 ) : (
-                  <Badge variant="secondary">Chờ duyệt</Badge>
+                  <StatusDotBadge label="Chờ duyệt" tone="warning" />
                 )}
               </span>
             </div>

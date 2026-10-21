@@ -1,3 +1,4 @@
+import { STATUS_LABEL as FEEDBACK_STATUS_LABEL, STATUS_CLASS, STATUS_DOT } from '@/constant/feedbackConstant'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -50,23 +51,8 @@ import type {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const FEEDBACK_STATUS_LABEL: Record<string, string> = {
-  pending: 'Chờ tiếp nhận',
-  under_review: 'Đang xem xét',
-  approved: 'Đã duyệt',
-  rejected: 'Từ chối',
-  resolved: 'Đã xử lý',
-}
-const FEEDBACK_STATUS_TONE: Record<string, { badge: string; dot: string }> = {
-  pending: { badge: 'border-warning/30 bg-warning/10 text-warning', dot: 'bg-warning' },
-  under_review: { badge: 'border-info/30 bg-info/10 text-info', dot: 'bg-info' },
-  approved: { badge: 'border-success/30 bg-success/10 text-success', dot: 'bg-success' },
-  rejected: {
-    badge: 'border-destructive/30 bg-destructive/10 text-destructive',
-    dot: 'bg-destructive',
-  },
-  resolved: { badge: 'border-success/30 bg-success/10 text-success', dot: 'bg-success' },
-}
+
+const FEEDBACK_STATUS_TONE = Object.fromEntries(Object.keys(FEEDBACK_STATUS_LABEL).map(status => [status, { badge: STATUS_CLASS[status], dot: STATUS_DOT[status] }]))
 const DEFAULT_STATUS_TONE = {
   badge: 'border-border bg-muted text-muted-foreground',
   dot: 'bg-muted-foreground',
@@ -518,12 +504,7 @@ function ForestVsMineCard({
             Rừng & Mỏ tại Cẩm Phả
           </CardTitle>
           {snapshotStatus && (
-            <Badge
-              variant="outline"
-              className="border-success/30 bg-success/10 text-success text-xs"
-            >
-              {snapshotStatus === 'published' ? 'Đã xuất bản' : snapshotStatus}
-            </Badge>
+            <StatusDotBadge label={snapshotStatus === 'published' ? 'Đã xuất bản' : 'Chưa xác định'} tone={snapshotStatus === 'published' ? 'success' : 'neutral'} />
           )}
         </div>
         <CardDescription>

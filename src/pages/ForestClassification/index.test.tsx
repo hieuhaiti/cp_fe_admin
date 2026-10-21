@@ -35,14 +35,17 @@ const manager = { id: 1, email: 'f@f.com', roleCode: 'so_tnmt', isActive: true, 
 
 describe('ForestClassification page (service mocked)', () => {
   beforeEach(() => { vi.clearAllMocks(); useAuthStore.setState({ user: manager }); queryMock.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, refetch }); mutationMock.mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined }) })
-  it('renders safe empty state without invoking Earth Engine/model services', () => { renderWithProviders(<ForestClassificationPage />); expect(screen.getByRole('heading', { name: /Phân loại đối tượng/ })).toBeInTheDocument(); expect(screen.getByText(/Chưa có kết quả phân loại nào/)).toBeInTheDocument() })
+  it('renders safe empty state without invoking Earth Engine/model services', () => { renderWithProviders(<ForestClassificationPage />); expect(screen.getByRole('heading', { name: /Phân loại đối tượng/ })).toBeInTheDocument(); expect(screen.getByText(/Chưa có kết quả phân loại/)).toBeInTheDocument() })
   it('refetches latest and history from the manual refresh button', () => { renderWithProviders(<ForestClassificationPage />); fireEvent.click(screen.getByRole('button', { name: 'Làm mới' })); expect(refetch).toHaveBeenCalledTimes(2) })
   it('shows analysis action only with forest_classification:manage', () => {
     const view = renderWithProviders(<ForestClassificationPage />)
     expect(screen.getByRole('button', { name: /Chạy lại phân tích/ })).toBeInTheDocument()
+    expect(screen.getByText(/Bấm "Chạy lại phân tích" để tạo kỳ mới/)).toBeInTheDocument()
     view.unmount()
     useAuthStore.setState({ user: { ...manager, role: { code: 'so_tnmt', permissions: {} } } })
     renderWithProviders(<ForestClassificationPage />)
     expect(screen.queryByRole('button', { name: /Chạy lại phân tích/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Bấm "Chạy lại phân tích" để tạo kỳ mới/)).not.toBeInTheDocument()
+    expect(screen.getByText('Chưa có kết quả phân loại.')).toBeInTheDocument()
   })
 })

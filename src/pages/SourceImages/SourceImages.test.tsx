@@ -142,7 +142,7 @@ describe('SourceImagesPage', () => {
     } as never)
 
     renderWithProviders(<SourceImagesPage />)
-    expect(screen.getByText(/Bạn không có quyền truy cập kho ảnh nguồn/i)).toBeInTheDocument()
+    expect(screen.getByText(/Bạn không có quyền xem kho ảnh nguồn/i)).toBeInTheDocument()
   })
 
   it('hiển thị danh sách ảnh nguồn GeoTIFF kèm trạng thái lifecycle các lớp', async () => {
@@ -157,8 +157,8 @@ describe('SourceImagesPage', () => {
     })
 
     // Layer status badges
-    expect(screen.getByText(/Dọn lỗi \(campha_ngap_2022\)/i)).toBeInTheDocument()
-    expect(screen.getByText('campha_urban_ts')).toBeInTheDocument()
+    expect(screen.getByText(/Dọn dẹp thất bại \(campha_ngap_2022\)/i)).toBeInTheDocument()
+    expect(screen.getByText('Đang hoạt động: campha_urban_ts')).toBeInTheDocument()
   })
 
   it('mở dialog chi tiết dọn dẹp khi bấm vào badge dọn lỗi', async () => {
@@ -183,10 +183,10 @@ describe('SourceImagesPage', () => {
     renderWithProviders(<SourceImagesPage />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Dọn lỗi \(campha_ngap_2022\)/i)).toBeInTheDocument()
+      expect(screen.getByText(/Dọn dẹp thất bại \(campha_ngap_2022\)/i)).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText(/Dọn lỗi \(campha_ngap_2022\)/i))
+    fireEvent.click(screen.getByText(/Dọn dẹp thất bại \(campha_ngap_2022\)/i))
 
     await waitFor(() => {
       expect(screen.getByText('Trạng thái dọn dẹp lớp dữ liệu')).toBeInTheDocument()
@@ -284,8 +284,8 @@ describe('SourceImagesPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Xóa ảnh nguồn GeoTIFF/i)).toBeInTheDocument()
-      expect(screen.getByText(/Chỉ xóa bản ghi thông tin/i)).toBeInTheDocument()
-      expect(screen.getByText(/Xóa bản ghi VÀ yêu cầu xóa tệp lưu trữ GeoTIFF/i)).toBeInTheDocument()
+      expect(screen.getByText(/Chỉ xóa thông tin ảnh/i)).toBeInTheDocument()
+      expect(screen.getByText(/Xóa thông tin ảnh và yêu cầu xóa tệp gốc/i)).toBeInTheDocument()
     })
   })
 })

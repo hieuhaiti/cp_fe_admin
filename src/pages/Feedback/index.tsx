@@ -216,11 +216,11 @@ export default function FeedbackPage(): JSX.Element {
           setCurrentPage(1)
         }}
       >
-        <SelectTrigger className="w-36">
+        <SelectTrigger className="w-40">
           <SelectValue placeholder="Trạng thái" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tất cả TT</SelectItem>
+          <SelectItem value="all">Tất cả trạng thái</SelectItem>
           <SelectItem value="pending">Chờ tiếp nhận</SelectItem>
           <SelectItem value="under_review">Đang xem xét</SelectItem>
           <SelectItem value="approved">Đã duyệt</SelectItem>
@@ -236,11 +236,11 @@ export default function FeedbackPage(): JSX.Element {
           setCurrentPage(1)
         }}
       >
-        <SelectTrigger className="w-32">
+        <SelectTrigger className="w-44">
           <SelectValue placeholder="Ưu tiên" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tất cả UT</SelectItem>
+          <SelectItem value="all">Tất cả mức ưu tiên</SelectItem>
           <SelectItem value="low">Thấp</SelectItem>
           <SelectItem value="normal">Bình thường</SelectItem>
           <SelectItem value="high">Cao</SelectItem>
@@ -272,7 +272,6 @@ export default function FeedbackPage(): JSX.Element {
   return (
     <PageLayout
       title="Phản ánh hiện trường"
-      description="Tiếp nhận và xử lý phản ánh do người dân gửi từ cổng bản đồ"
     >
       <Tabs value={view} onValueChange={(value) => setView(value as 'table' | 'map')}>
         <TabsList className="mb-3">
@@ -375,7 +374,7 @@ export default function FeedbackPage(): JSX.Element {
                       </TableCell>
                       <TableCell>
                         <StatusDotBadge
-                          label={STATUS_LABEL[item.status] ?? item.status}
+                          label={STATUS_LABEL[item.status] ?? 'Chưa xác định'}
                           badgeClass={
                             STATUS_CLASS[item.status] ?? 'bg-gray-100 text-gray-600 border-gray-200'
                           }

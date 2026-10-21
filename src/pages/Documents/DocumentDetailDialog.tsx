@@ -1,12 +1,12 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import type { ReactNode } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { documentService, useApiQuery } from '@/service'
 import type { ApiResponse, Document } from '@/types/api'
 import { formatDateTime } from '@/lib/date'
-import { CalendarClock, Download, FileText, Globe, Info } from 'lucide-react'
+import { CalendarClock, Download, FileText, Info } from 'lucide-react'
 import { toast } from 'react-toastify'
 
 interface DocumentDetailDialogProps {
@@ -83,10 +83,10 @@ export default function DocumentDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent aria-describedby={undefined} className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0">
         <div className="shrink-0 border-b px-6 py-5 pr-12">
           <DialogTitle>Chi tiết văn bản</DialogTitle>
-          <DialogDescription className="mt-1">Thông tin chi tiết văn bản đã chọn</DialogDescription>
+
         </div>
 
         {doc ? (
@@ -103,15 +103,7 @@ export default function DocumentDetailDialog({
                     <CodeValue>{doc.id}</CodeValue>
                   </div>
                 </div>
-                <Badge
-                  variant="outline"
-                  className={
-                    isPublic ? 'border-info/30 bg-info/10 text-info' : 'text-muted-foreground'
-                  }
-                >
-                  <Globe className="mr-1 size-3" />
-                  {isPublic ? 'Công khai' : 'Nội bộ'}
-                </Badge>
+                <StatusDotBadge label={isPublic ? 'Công khai' : 'Nội bộ'} tone={isPublic ? 'info' : 'neutral'} />
               </div>
             </div>
 

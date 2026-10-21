@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -7,7 +8,7 @@ import { toast } from 'react-toastify'
 import { mapImageService, useApiQuery } from '@/service'
 import type { ApiResponse, PdfMap, UpdatePdfMapBody } from '@/types/api'
 import { isPdf } from '@/lib/utils'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -131,7 +132,7 @@ export default function MapImageFormDialog({
 
   const onPdfValidate = useCallback((file: File): string | null => {
     if (!ACCEPTED_MIME.includes(file.type)) return 'Chỉ chấp nhận tệp PDF'
-    if (file.size > MAX_FILE_SIZE) return 'Kích thước file không được quá 20MB'
+    if (file.size > MAX_FILE_SIZE) return 'Kích thước tệp không được quá 20 MB'
     return null
   }, [])
 
@@ -185,14 +186,9 @@ export default function MapImageFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent aria-describedby={undefined} className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
         <div className="shrink-0 border-b px-6 py-5 pr-12">
-          <DialogTitle>{isEdit ? 'Chỉnh sửa bản đồ PDF' : 'Thêm bản đồ PDF mới'}</DialogTitle>
-          <DialogDescription className="mt-1">
-            {isEdit
-              ? 'Cập nhật thông tin bản đồ PDF. Các trường không đổi sẽ không được gửi lên.'
-              : 'Điền đầy đủ thông tin và tải lên tệp PDF bản đồ.'}
-          </DialogDescription>
+          <DialogTitle>{isEdit ? 'Chỉnh sửa bản đồ PDF' : 'Thêm bản đồ PDF'}</DialogTitle>
         </div>
 
         {detailLoading ? (
@@ -239,13 +235,13 @@ export default function MapImageFormDialog({
                     <FileUploadDropzone className="border-dashed">
                       <div className="flex flex-col items-center gap-1 text-center">
                         <FileText className="text-muted-foreground size-6" />
-                        <p className="text-sm font-medium">Kéo thả file PDF vào đây</p>
+                        <p className="text-sm font-medium">Kéo thả tệp PDF vào đây</p>
                         <FileUploadTrigger asChild>
                           <Button type="button" variant="outline" size="sm">
-                            Chọn file
+                            Chọn tệp
                           </Button>
                         </FileUploadTrigger>
-                        <p className="text-muted-foreground text-xs">Chỉ nhận PDF · tối đa 20MB</p>
+                        <p className="text-muted-foreground text-xs">Chỉ nhận PDF · tối đa 20 MB</p>
                       </div>
                     </FileUploadDropzone>
                     <FileUploadList>
@@ -341,15 +337,9 @@ export default function MapImageFormDialog({
               <p className="text-muted-foreground text-xs">
                 {isEdit ? (
                   changedCount === 0 ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="bg-muted-foreground/40 size-1.5 rounded-full" />
-                      Chưa có thay đổi nào để lưu
-                    </span>
+                    <StatusDotBadge label="Chưa có thay đổi nào để lưu" tone="neutral" />
                   ) : (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="bg-primary size-1.5 rounded-full" />
-                      {changedCount} trường đã thay đổi
-                    </span>
+                    <StatusDotBadge label={`${changedCount} trường đã thay đổi`} tone="warning" />
                   )
                 ) : (
                   <span>Các trường có dấu (*) là bắt buộc</span>
@@ -370,7 +360,7 @@ export default function MapImageFormDialog({
                   ) : (
                     <span className="flex items-center gap-2">
                       <Save className="size-4" />
-                      {isEdit ? 'Cập nhật' : 'Tạo mới'}
+                      {isEdit ? 'Lưu thay đổi' : 'Thêm bản đồ PDF'}
                     </span>
                   )}
                 </Button>

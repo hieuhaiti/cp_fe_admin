@@ -273,7 +273,7 @@ export default function MapLayerApiListPage(): JSX.Element {
     const url = `https://apicampha.tourismpj.pro.vn/api/v1/shared/${slug}/features`
     try {
       await navigator.clipboard.writeText(url)
-      toast.success('Đã sao chép link Endpoint')
+      toast.success('Đã sao chép địa chỉ API')
     } catch {
       toast.error('Không thể sao chép')
     }
@@ -281,7 +281,7 @@ export default function MapLayerApiListPage(): JSX.Element {
 
   return (
     <PageLayout
-      title="Quản lý API Lớp bản đồ"
+      title="API bản đồ"
       description="Đăng ký và cấp khóa chia sẻ dữ liệu GeoJSON cho các đối tác tích hợp"
     >
       {selectedFilterLayer && !isSelectedLayerShareable && (
@@ -475,7 +475,7 @@ export default function MapLayerApiListPage(): JSX.Element {
               className="gap-1.5"
             >
               <ExternalLink className="size-4" />
-              <span>Public Test</span>
+              <span>Kiểm tra API công khai</span>
             </Button>
           </div>
         }
@@ -491,7 +491,7 @@ export default function MapLayerApiListPage(): JSX.Element {
             <TableRow>
               <TableHead className="w-16">ID</TableHead>
               <TableHead>Lớp bản đồ</TableHead>
-              <TableHead>Tên API & Endpoint (Slug)</TableHead>
+              <TableHead>Tên và đường dẫn API</TableHead>
               <TableHead>Cấu hình trường</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Cập nhật</TableHead>

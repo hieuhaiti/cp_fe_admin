@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -85,7 +86,7 @@ export default function PublicSlugTester() {
     setMeta({})
 
     if (!slug.trim() || !apiKey.trim()) {
-      setError('Vui lòng nhập slug và token chia sẻ')
+      setError('Nhập định danh đường dẫn API và khóa chia sẻ')
       return
     }
 
@@ -112,7 +113,7 @@ export default function PublicSlugTester() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
               <ShieldCheck className="h-5 w-5" />
-              Kiểm tra Map Data API
+              Kiểm tra API dữ liệu bản đồ
             </CardTitle>
             <Badge variant="secondary">GET</Badge>
           </div>
@@ -122,7 +123,7 @@ export default function PublicSlugTester() {
             <div className="space-y-2">
               <Label htmlFor="public-slug" className="inline-flex items-center gap-2">
                 <Link2 className="h-4 w-4" />
-                Slug API
+                Định danh đường dẫn API
               </Label>
               <div className="flex gap-1.5">
                 <Input
@@ -136,7 +137,7 @@ export default function PublicSlugTester() {
                   <Select value="" onValueChange={setSlug}>
                     <SelectTrigger
                       className="w-auto shrink-0 px-3"
-                      aria-label="Chọn slug từ danh sách"
+                      aria-label="Chọn định danh đường dẫn API"
                     >
                       <ChevronDown className="h-4 w-4" />
                     </SelectTrigger>
@@ -158,21 +159,21 @@ export default function PublicSlugTester() {
             <div className="space-y-2">
               <Label htmlFor="public-apikey" className="inline-flex items-center gap-2">
                 <KeyRound className="h-4 w-4" />
-                Token chia sẻ
+                Khóa chia sẻ
               </Label>
               <Input
                 id="public-apikey"
                 value={apiKey}
                 onChange={(event) => setApiKey(event.target.value)}
-                placeholder="eyJ... (token trả về khi cấp / xoay key)"
+                placeholder="eyJ..."
               />
               <p className="text-muted-foreground text-xs">
-                Dùng token JWT được cấp một lần khi tạo hoặc xoay key — không phải API key admin.
+                Dùng khóa chia sẻ (JWT) nhận được khi cấp hoặc xoay khóa, không dùng khóa API quản trị.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="limit">Giới hạn features</Label>
+              <Label htmlFor="limit">Số đối tượng tối đa</Label>
               <Input
                 id="limit"
                 type="number"
@@ -195,7 +196,7 @@ export default function PublicSlugTester() {
                 placeholder="VD: Cẩm Phả, Quang Hanh (bỏ trống nếu lấy tất cả)"
               />
               <p className="text-muted-foreground text-xs">
-                Tìm kiếm theo các cột đã cấu hình trong mục searchFields của API này.
+                Tìm trong các cột đã cấu hình cho API này.
               </p>
             </div>
 
@@ -206,7 +207,7 @@ export default function PublicSlugTester() {
               </Button>
               <Button type="button" variant="outline" onClick={resetAll}>
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Làm mới
+                Đặt lại
               </Button>
             </div>
           </form>
@@ -221,9 +222,7 @@ export default function PublicSlugTester() {
               Phản hồi
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Badge variant={error ? 'destructive' : 'secondary'}>
-                {error ? 'Lỗi' : 'Sẵn sàng'}
-              </Badge>
+              <StatusDotBadge label={error ? 'Lỗi' : 'Sẵn sàng'} tone={error ? 'destructive' : 'neutral'} />
               {meta.fetchedAt && (
                 <span className="text-muted-foreground text-xs">
                   {new Date(meta.fetchedAt).toLocaleTimeString('vi-VN')}
@@ -240,7 +239,7 @@ export default function PublicSlugTester() {
           )}
           <div className="overflow-hidden rounded-md border bg-slate-950">
             <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2 text-xs text-slate-300">
-              <span>JSON response</span>
+              <span>Dữ liệu JSON</span>
               <Button
                 type="button"
                 variant="outline"
@@ -249,7 +248,7 @@ export default function PublicSlugTester() {
                 className="h-7 border-slate-700 bg-slate-900 px-2 text-slate-200 hover:bg-slate-800 hover:text-white"
               >
                 <Copy className="mr-1 h-3.5 w-3.5" />
-                Copy
+                Sao chép
               </Button>
             </div>
             <pre className="max-h-[500px] overflow-auto p-4 text-xs text-slate-100">

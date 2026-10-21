@@ -140,7 +140,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
       const parsed = JSON.parse(text)
       const geojson = extractGeoJson(parsed)
       if (!geojson) {
-        setPreviewError('Tệp không chứa dữ liệu đường nét hợp lệ để xem trước')
+        setPreviewError('Tệp không chứa dữ liệu GeoJSON hợp lệ để xem trước')
         return
       }
       setPreviewGeoJson(geojson)
@@ -159,7 +159,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
       : category
 
     if (!finalCategory || (finalCategory === 'other' && !categoryName.trim())) {
-      toast.error('Vui lòng chọn hoặc nhập nhóm lớp')
+      toast.error('Chọn hoặc nhập danh mục')
       return
     }
     if (!trimmedName) {
@@ -167,7 +167,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
       return
     }
     if (!file) {
-      toast.error('Vui lòng chọn tệp dữ liệu đường nét')
+      toast.error('Chọn tệp GeoJSON')
       return
     }
 
@@ -201,10 +201,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
   }
 
   return (
-    <PageLayout
-      title="Nhập dữ liệu đường nét"
-      description="Nhập dữ liệu đường nét để tạo lớp bản đồ mới"
-    >
+    <PageLayout title="Nhập GeoJSON">
       <div className="mx-auto grid w-full max-w-6xl gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="p-4 sm:p-6">
           <div id="geojson-import-unavailable" className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
@@ -212,7 +209,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
             <div className="text-sm">
               <p className="font-semibold">Tính năng nhập trực tiếp GeoJSON đang được hoàn thiện</p>
               <p className="mt-1 text-xs opacity-90">
-                Hiện tại API backend chưa hỗ trợ nhập trực tiếp GeoJSON. Để nhập dữ liệu lớp bản đồ, vui lòng sử dụng chức năng tải ảnh nguồn GeoTIFF hoặc liên hệ quản trị hệ thống để nhập qua Shapefile / Excel.
+                Hiện chưa hỗ trợ nhập trực tiếp GeoJSON. Bạn có thể tải ảnh nguồn GeoTIFF hoặc liên hệ quản trị hệ thống để nhập qua Shapefile / Excel.
               </p>
               <div className="mt-2.5">
                 <Button
@@ -234,7 +231,7 @@ export default function ImportGeoJsonPage(): JSX.Element {
               categoryName={categoryName}
               onCategoryChange={setCategory}
               onCategoryNameChange={setCategoryName}
-              label="Nhóm lớp"
+              label="Danh mục"
               required
               id="geojson-category"
             />
@@ -278,10 +275,10 @@ export default function ImportGeoJsonPage(): JSX.Element {
 
             <div className="space-y-2">
               <Label>
-                Tệp dữ liệu đường nét <span className="text-destructive">*</span>
+                Tệp GeoJSON <span className="text-destructive">*</span>
               </Label>
               <FileUpload
-                label="Tệp dữ liệu đường nét *"
+                label="Tệp GeoJSON *"
                 value={geoJsonFiles}
                 onValueChange={handleGeoJsonFilesChange}
                 onFileValidate={onFileValidate}
@@ -381,10 +378,6 @@ export default function ImportGeoJsonPage(): JSX.Element {
             <p className="text-muted-foreground flex items-start gap-2 text-xs">
               <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
               Mỗi đối tượng có hình học và tọa độ hợp lệ.
-            </p>
-            <p className="text-muted-foreground flex items-start gap-2 text-xs">
-              <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
-              Tên lớp rõ nghĩa để hệ thống tạo mã lớp ổn định.
             </p>
           </div>
 

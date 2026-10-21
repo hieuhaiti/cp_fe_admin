@@ -127,7 +127,7 @@ export default function CategorySelect({
 
   const displayLabel = useMemo(() => {
     if (isAddingNew || category === 'other') {
-      return '+ Thêm danh mục mới...'
+      return 'Thêm danh mục'
     }
     if (!category) return null
     const matched = options.find((o) => o.value === category)
@@ -161,7 +161,7 @@ export default function CategorySelect({
   const handleSaveNewCategory = async () => {
     const trimmed = newCategoryName.trim()
     if (!trimmed) {
-      setLocalError('Vui lòng nhập tên danh mục')
+      setLocalError('Nhập tên danh mục')
       return
     }
     if (trimmed.length < 2) {
@@ -249,7 +249,7 @@ export default function CategorySelect({
               ) : isLoading && !options.length ? (
                 'Đang tải danh mục...'
               ) : (
-                displayLabel || 'Chọn nhóm lớp'
+                displayLabel || 'Chọn danh mục'
               )}
             </span>
             <ChevronDown className="size-4 shrink-0 opacity-50" />
@@ -264,7 +264,8 @@ export default function CategorySelect({
             <input
               type="text"
               className="placeholder:text-muted-foreground flex-1 bg-transparent text-sm outline-none"
-              placeholder="Tìm kiếm danh mục..."
+              placeholder="Tìm danh mục"
+              aria-label="Tìm danh mục"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
@@ -352,7 +353,7 @@ export default function CategorySelect({
               className="flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
             >
               <Plus className="size-3.5" />
-              <span>+ Thêm danh mục mới...</span>
+              <span>Thêm danh mục</span>
             </button>
           </div>
         </PopoverContent>
@@ -372,20 +373,20 @@ export default function CategorySelect({
                   size="icon-xs"
                   onClick={handleCancelNew}
                   disabled={isCreating}
-                  aria-label="Đóng thêm mới"
+                  aria-label="Hủy thêm danh mục"
                   className="text-muted-foreground hover:text-foreground h-5 w-5"
                 >
                   <X className="size-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="left">Đóng thêm mới</TooltipContent>
+              <TooltipContent side="left">Hủy thêm danh mục</TooltipContent>
             </Tooltip>
           </div>
 
           <div className="flex gap-2">
             <Input
               id={`${id}-custom-name`}
-              placeholder={customCategoryPlaceholder || 'Nhập tên danh mục (VD: Ngập ven biển)'}
+              placeholder={customCategoryPlaceholder}
               value={newCategoryName}
               maxLength={120}
               disabled={disabled || isCreating}
@@ -412,16 +413,13 @@ export default function CategorySelect({
               ) : (
                 <>
                   <Plus className="mr-1.5 size-3.5" />
-                  Lưu
+                  Thêm danh mục
                 </>
               )}
             </Button>
           </div>
 
           {localError && <p className="text-destructive text-xs">{localError}</p>}
-          <p className="text-muted-foreground text-[11px] leading-tight">
-            Danh mục sau khi lưu sẽ tự động được chọn và lưu vào hệ thống để dùng lại cho các lần sau.
-          </p>
         </div>
       )}
 

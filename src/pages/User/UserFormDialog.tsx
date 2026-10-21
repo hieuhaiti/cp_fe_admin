@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useEffect } from 'react'
 import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -136,7 +137,7 @@ export default function UserFormDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
           <DialogTitle>Chỉnh sửa người dùng</DialogTitle>
-          <DialogDescription>Vui lòng sử dụng các thao tác riêng bên dưới.</DialogDescription>
+          <DialogDescription>Dùng các thao tác trên danh sách để đổi vai trò, mật khẩu hoặc trạng thái.</DialogDescription>
 
           <div className="mt-4 space-y-3 text-sm">
             <div className="grid grid-cols-3 gap-2">
@@ -158,7 +159,7 @@ export default function UserFormDialog({
             <div className="grid grid-cols-3 gap-2">
               <span className="font-semibold">Trạng thái:</span>
               <span className="col-span-2">
-                {(user?.isActive ?? user?.is_active) ? 'Hoạt động' : 'Vô hiệu'}
+                <StatusDotBadge label={(user?.isActive ?? user?.is_active) ? 'Đang hoạt động' : 'Ngừng hoạt động'} tone={(user?.isActive ?? user?.is_active) ? 'success' : 'neutral'} />
               </span>
             </div>
 
@@ -185,9 +186,8 @@ export default function UserFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
-        <DialogTitle>Thêm người dùng mới</DialogTitle>
-        <DialogDescription>Điền thông tin để tạo người dùng mới</DialogDescription>
+      <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto" aria-describedby={undefined}>
+        <DialogTitle>Thêm người dùng</DialogTitle>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -268,7 +268,7 @@ export default function UserFormDialog({
               Hủy
             </Button>
             <Button type="submit" disabled={isSubmitting || isLoading}>
-              {isSubmitting || isLoading ? 'Đang xử lý...' : 'Tạo mới'}
+              {isSubmitting || isLoading ? 'Đang thêm...' : 'Thêm người dùng'}
             </Button>
           </div>
         </form>

@@ -1,12 +1,13 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import type { ReactNode } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { mapImageService, useApiQuery } from '@/service'
 import type { ApiResponse, PdfMap } from '@/types/api'
 import { formatDateTime } from '@/lib/date'
-import { CalendarClock, Download, FileText, Globe, Info, Ruler } from 'lucide-react'
+import { CalendarClock, Download, FileText, Info, Ruler } from 'lucide-react'
 import { toast } from 'react-toastify'
 
 interface MapImageDetailDialogProps {
@@ -95,12 +96,9 @@ export default function MapImageDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent aria-describedby={undefined} className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0">
         <div className="shrink-0 border-b px-6 py-5 pr-12">
           <DialogTitle>Chi tiết bản đồ PDF</DialogTitle>
-          <DialogDescription className="mt-1">
-            Thông tin chi tiết bản đồ PDF đã chọn
-          </DialogDescription>
         </div>
 
         {pdfMap ? (
@@ -115,17 +113,7 @@ export default function MapImageDetailDialog({
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
-                  <Badge
-                    variant="outline"
-                    className={
-                      isPublic
-                        ? 'border-info/30 bg-info/10 text-info'
-                        : 'text-muted-foreground'
-                    }
-                  >
-                    <Globe className="mr-1 size-3" />
-                    {isPublic ? 'Công khai' : 'Nội bộ'}
-                  </Badge>
+                  <StatusDotBadge label={isPublic ? 'Công khai' : 'Nội bộ'} tone={isPublic ? 'info' : 'neutral'} />
                   {mapYear && <Badge variant="outline">Năm {mapYear}</Badge>}
                 </div>
               </div>

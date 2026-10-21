@@ -138,21 +138,30 @@ export default function KttvConvertFromLayersDialog({
         reset()
       },
     },
-    true
+    false
   )
 
-  const toggleLayerCode = (code: string) => {
-    setSelectedCodes((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-    )
+  const displayedCodes = useMemo(() => [...new Set(availableLayers.map((layer) => layer.code))], [availableLayers])
+  const selectedCodeSet = useMemo(() => new Set(selectedCodes), [selectedCodes])
+  const selectedDisplayedCount = displayedCodes.filter((code) => selectedCodeSet.has(code)).length
+  const allDisplayedSelected = displayedCodes.length > 0 && selectedDisplayedCount === displayedCodes.length
+  const isUpdatingLayers = layersQuery.isFetching || searchTerm !== debouncedSearch
+
+  const setLayerChecked = (code: string, checked: boolean) => {
+    setSelectedCodes((prev) => {
+      if (checked) return prev.includes(code) ? prev : [...prev, code]
+      return prev.includes(code) ? prev.filter((existing) => existing !== code) : prev
+    })
   }
 
   const toggleAll = () => {
-    if (selectedCodes.length === availableLayers.length) {
-      setSelectedCodes([])
-    } else {
-      setSelectedCodes(availableLayers.map((l) => l.code))
-    }
+    const displayed = new Set(displayedCodes)
+    setSelectedCodes((prev) => {
+      const selected = new Set(prev)
+      return displayedCodes.every((code) => selected.has(code))
+        ? prev.filter((code) => !displayed.has(code))
+        : [...new Set([...prev, ...displayedCodes])]
+    })
   }
 
   const toNum = (v: string | null | undefined) =>
@@ -299,24 +308,33 @@ export default function KttvConvertFromLayersDialog({
 
           {/* Danh sách lớp bản đồ để chọn */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="text-xs font-semibold">
-                Chọn lớp bản đồ nguồn ({selectedCodes.length}/{availableLayers.length} đã chọn)
+                Chọn lớp bản đồ nguồn ({selectedCodes.length} đã chọn)
               </Label>
               {availableLayers.length > 0 && (
-                <button
+                <Button
+                  id="conversion-toggle-displayed-layers"
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={toggleAll}
-                  className="text-primary hover:underline text-xs font-medium"
+                  disabled={isUpdatingLayers || layersQuery.isError || convertMutation.isPending}
+                  className="text-primary"
                 >
-                  {selectedCodes.length === availableLayers.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                </button>
+                  {allDisplayedSelected ? 'Bỏ chọn tất cả đang hiển thị' : 'Chọn tất cả đang hiển thị'}
+                </Button>
               )}
             </div>
+            <p className="text-xs text-muted-foreground" role="status">
+              {selectedDisplayedCount}/{displayedCodes.length} lớp đang hiển thị được chọn. Danh sách tải tối đa 50 lớp; lựa chọn ngoài kết quả tìm kiếm được giữ nguyên.
+            </p>
 
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
+                id="conversion-layer-search"
+                aria-label="Tìm kiếm lớp bản đồ theo tên hoặc mã"
                 placeholder="Tìm kiếm lớp bản đồ theo tên hoặc mã..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -325,9 +343,16 @@ export default function KttvConvertFromLayersDialog({
             </div>
 
             <div className="max-h-56 overflow-y-auto rounded-md border p-2 space-y-1.5 bg-background">
-              {layersQuery.isLoading ? (
+              {isUpdatingLayers ? (
                 <div className="flex items-center justify-center py-6 text-xs text-muted-foreground gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Đang tải danh sách lớp...
+                </div>
+              ) : layersQuery.isError ? (
+                <div className="space-y-2 py-6 text-center text-xs" role="alert">
+                  <p>Không thể tải danh sách lớp bản đồ.</p>
+                  <Button id="conversion-retry-layers" type="button" variant="outline" size="sm" onClick={() => layersQuery.refetch()}>
+                    Thử lại
+                  </Button>
                 </div>
               ) : availableLayers.length === 0 ? (
                 <div className="py-6 text-center text-xs text-muted-foreground">
@@ -337,26 +362,27 @@ export default function KttvConvertFromLayersDialog({
                 availableLayers.map((layer) => {
                   const isChecked = selectedCodes.includes(layer.code)
                   return (
-                    <div
+                    <Label
                       key={layer.code}
-                      onClick={() => toggleLayerCode(layer.code)}
-                      className={`flex items-center gap-2.5 rounded px-2.5 py-1.5 text-xs cursor-pointer transition-colors ${
+                      htmlFor={`conversion-layer-${layer.code}`}
+                      className={`flex min-h-11 items-center gap-2.5 rounded px-2.5 py-1.5 text-xs cursor-pointer transition-colors ${
                         isChecked ? 'bg-primary/10 text-foreground font-medium' : 'hover:bg-muted/50'
                       }`}
                     >
                       <Checkbox
+                        id={`conversion-layer-${layer.code}`}
                         checked={isChecked}
-                        onCheckedChange={() => toggleLayerCode(layer.code)}
-                        onClick={(e) => e.stopPropagation()}
+                        disabled={convertMutation.isPending}
+                        onCheckedChange={(checked) => setLayerChecked(layer.code, checked === true)}
                       />
-                      <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+                      <span className="font-mono text-[11px] text-muted-foreground min-w-0 max-w-[35%] break-all">
                         [{layer.code}]
                       </span>
-                      <span className="truncate flex-1">{layer.name_vi ?? layer.code}</span>
-                      <span className="text-[10px] text-muted-foreground border rounded px-1 shrink-0">
+                      <span className="min-w-0 flex-1 break-words">{layer.name_vi ?? layer.code}</span>
+                      <span className="text-[10px] text-muted-foreground border rounded px-1 min-w-0 max-w-[25%] break-words">
                         {layer.category_name ?? layer.category}
                       </span>
-                    </div>
+                    </Label>
                   )
                 })
               )}

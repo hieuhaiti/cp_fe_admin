@@ -60,7 +60,7 @@ describe('MapImageFormDialog', () => {
 
   it('renders create form with default public visibility', () => {
     renderDialog()
-    expect(screen.getByRole('heading', { name: 'Thêm bản đồ PDF mới' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Thêm bản đồ PDF' })).toBeInTheDocument()
     expect(screen.getByLabelText('Tiêu đề *')).toBeInTheDocument()
     expect(screen.getByRole('spinbutton')).toHaveValue(null)
   })
@@ -68,7 +68,7 @@ describe('MapImageFormDialog', () => {
   it('disables edit submit when no field has changed', () => {
     useApiQueryMock.mockReturnValue({ data: { data: { pdfMap } }, isLoading: false })
     renderDialog({ mapImageId: 4 })
-    expect(screen.getByRole('button', { name: 'Cập nhật' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Lưu thay đổi' })).toBeDisabled()
   })
 
   it('sends only the changed title and optimistic-lock timestamp', async () => {
@@ -76,7 +76,7 @@ describe('MapImageFormDialog', () => {
     useApiQueryMock.mockReturnValue({ data: { data: { pdfMap } }, isLoading: false })
     renderDialog({ mapImageId: 4, onSubmit })
     fireEvent.change(screen.getByLabelText('Tiêu đề *'), { target: { value: 'Bản đồ mới' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ expectedUpdatedAt: '2026-08-27T10:00:00Z', title: 'Bản đồ mới' }))
   })
 

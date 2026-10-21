@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useState, useMemo } from 'react'
 import { Eye, Pen, Plus, RefreshCw, Trash2, Clock, Copy } from 'lucide-react'
 import { toast } from 'react-toastify'
@@ -96,8 +97,7 @@ export default function TimeSeriesPage() {
   if (!canRead) {
     return (
       <PageLayout
-        title="Lớp dữ liệu theo thời gian"
-        description="Quản lý danh mục ảnh vệ tinh theo nhiều mốc thời gian."
+        title="Lớp bản đồ theo thời gian"
       >
         <div className="text-destructive py-12 text-center">
           Bạn không có quyền truy cập danh mục lớp dữ liệu theo thời gian.
@@ -108,8 +108,8 @@ export default function TimeSeriesPage() {
 
   return (
     <PageLayout
-      title="Quản lý lớp dữ liệu theo thời gian"
-      description="Chọn nhóm dữ liệu để tổng hợp các ảnh cùng nhóm thành lớp dữ liệu theo thời gian."
+      title="Lớp bản đồ theo thời gian"
+      description="Tổng hợp các ảnh cùng nhóm thành một lớp bản đồ."
     >
    
       <ToolTableCustom
@@ -269,9 +269,7 @@ export default function TimeSeriesPage() {
                       {latestTime ? formatDateTime(latestTime) : '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={item.isPublic ? 'default' : 'outline'} className="text-xs">
-                        {item.isPublic ? 'Công khai' : 'Nội bộ'}
-                      </Badge>
+                      <StatusDotBadge label={item.isPublic ? 'Công khai' : 'Nội bộ'} tone={item.isPublic ? 'info' : 'neutral'} />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">

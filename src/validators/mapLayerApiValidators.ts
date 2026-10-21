@@ -225,7 +225,7 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
         return 'Cấu hình trường vượt quá danh sách trường hiển thị của lớp bản đồ.'
       }
       if (firstErr.includes('REGISTRY_CONFLICT')) {
-        return 'Lớp bản đồ này hoặc định danh (slug) đã tồn tại API chia sẻ.'
+        return 'Lớp bản đồ này hoặc định danh đường dẫn đã có API chia sẻ.'
       }
       if (firstErr.includes('REGISTRY_FIELD_CONTRACT')) {
         return 'Trường tìm kiếm hoặc sắp xếp phải thuộc danh sách trường đọc của lớp.'
@@ -240,7 +240,7 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
         return 'Cấu hình trường không hợp lệ hoặc chứa trường bị cấm (như geom, id).'
       }
       if (firstErr.includes('API_GRANT_PERMISSION_REQUIRED')) {
-        return 'Tài khoản cần có quyền phân quyền API (grant) để cấu hình phương thức ghi hoặc cấp quyền ghi.'
+        return 'Tài khoản cần có quyền phân quyền API để cấu hình phương thức ghi hoặc cấp quyền ghi.'
       }
       if (firstErr.includes('SCOPE_EXCEEDS_REGISTRY')) {
         return 'Quyền hạn của khóa vượt quá các phương thức được cho phép của API này.'
@@ -259,7 +259,7 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
       return 'Cấu hình trường dữ liệu của lớp bản đồ bị trùng lặp. Vui lòng kiểm tra lại.'
     }
     if (serverMessage.includes('đã được đăng ký') || serverMessage.includes('đã tồn tại')) {
-      return 'Lớp bản đồ này hoặc mã định danh (slug) đã được tạo API chia sẻ.'
+      return 'Lớp bản đồ này hoặc định danh đường dẫn đã có API chia sẻ.'
     }
     if (serverMessage.includes('Cấu hình trường không hợp lệ')) {
       return 'Lớp bản đồ chưa được cấu hình trường dữ liệu hợp lệ (vui lòng cấu hình trường dữ liệu hiển thị trong quản lý lớp).'
@@ -267,10 +267,10 @@ export function getMappedErrorMessage(error: unknown, fallback: string) {
     return serverMessage
   }
 
-  if (code === 401) return 'Token/apikey không hợp lệ hoặc đã hết hạn.'
+  if (code === 401) return 'Thông tin xác thực không hợp lệ hoặc đã hết hạn.'
   if (code === 403) return 'Bạn không có quyền thực hiện thao tác này.'
   if (code === 404) return 'Dữ liệu không tồn tại hoặc đã bị xóa.'
-  if (code === 409) return 'API key hoặc cấu hình chia sẻ đã tồn tại. Vui lòng kiểm tra lại.'
+  if (code === 409) return 'Khóa API hoặc cấu hình chia sẻ đã tồn tại. Vui lòng kiểm tra lại.'
   if (code === 400 || code === 422) return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.'
 
   // Client-side failures (network/timeout/runtime) carry no Server `body`; show

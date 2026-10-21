@@ -503,7 +503,7 @@ function FileUpload(props: FileUploadProps) {
           filesToProcess = filesToProcess.slice(0, remainingSlotCount);
 
           for (const file of rejectedFiles) {
-            let rejectionMessage = `Maximum ${maxFiles} files allowed`;
+            let rejectionMessage = `Chỉ được chọn tối đa ${maxFiles} tệp`;
 
             if (propsRef.current.onFileValidate) {
               const validationMessage = propsRef.current.onFileValidate(file);

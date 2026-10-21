@@ -1,8 +1,7 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useMemo, useState } from 'react'
 import {
   AlertCircle,
-  Eye,
-  EyeOff,
   FolderTree,
   Layers,
   Loader2,
@@ -28,7 +27,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -112,7 +110,7 @@ export default function CategoryManagementTab() {
   const handleSaveCreate = async () => {
     const trimmed = newCategoryName.trim()
     if (!trimmed) {
-      setCreateError('Vui lòng nhập tên danh mục')
+      setCreateError('Nhập tên danh mục')
       return
     }
     if (trimmed.length < 2) {
@@ -127,7 +125,7 @@ export default function CategoryManagementTab() {
     setCreateError(null)
     try {
       const created = await createCategory(trimmed)
-      toast.success(`Đã thêm danh mục "${created.name}" thành công.`)
+      toast.success(`Đã thêm danh mục "${created.name}".`)
       setIsCreateOpen(false)
       setNewCategoryName('')
     } catch (err: unknown) {
@@ -177,7 +175,7 @@ export default function CategoryManagementTab() {
     if (!deleteTarget || AUTOMATIC_CATEGORY_FEATURES.has(deleteTarget.key)) return
     try {
       await deleteCategory(deleteTarget.key)
-      toast.success(`Đã xóa danh mục "${deleteTarget.name}" thành công.`)
+      toast.success(`Đã xóa danh mục "${deleteTarget.name}".`)
       setDeleteTarget(null)
     } catch (err: unknown) {
       const anyErr = err as {
@@ -201,11 +199,8 @@ export default function CategoryManagementTab() {
         <div className="space-y-0.5">
           <h3 className="text-base font-semibold flex items-center gap-2">
             <FolderTree className="size-4 text-primary" />
-            Danh mục lớp dữ liệu
+            Danh mục lớp bản đồ
           </h3>
-          <p className="text-xs text-muted-foreground">
-            Quản lý nhóm phân loại lớp bản đồ, cấu hình ẩn/hiện trên WebGIS và theo dõi số lượng lớp đang sử dụng.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -213,7 +208,8 @@ export default function CategoryManagementTab() {
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground pointer-events-none" />
             <Input
               type="text"
-              placeholder="Tìm danh mục..."
+              placeholder="Tìm danh mục"
+              aria-label="Tìm danh mục"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9 text-sm"
@@ -269,7 +265,7 @@ export default function CategoryManagementTab() {
                 onClick={() => setSearch('')}
                 className="text-xs text-primary"
               >
-                Xóa bộ lọc tìm kiếm
+                Xóa tìm kiếm
               </Button>
             )}
           </div>
@@ -279,8 +275,8 @@ export default function CategoryManagementTab() {
               <TableRow>
                 <TableHead className="w-12 text-center">STT</TableHead>
                 <TableHead className="min-w-[180px]">Tên danh mục</TableHead>
-                <TableHead className="min-w-[140px]">Mã định danh (Key)</TableHead>
-                <TableHead className="min-w-[140px] text-center">Số lượng lớp bản đồ</TableHead>
+                <TableHead className="min-w-[140px]">Mã định danh</TableHead>
+                <TableHead className="min-w-[140px] text-center">Số lớp</TableHead>
                 <TableHead className="min-w-[160px] text-center">Hiển thị WebGIS</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
@@ -315,8 +311,8 @@ export default function CategoryManagementTab() {
                           id={descriptionId}
                           className="mt-1.5 max-w-sm whitespace-normal text-xs font-normal leading-relaxed text-muted-foreground"
                         >
-                          Danh mục tự động của chức năng {automaticFeature}. Không cho phép chỉnh sửa hoặc xóa.
-                          {' '}Không hiển thị trong danh sách “Lớp dữ liệu” trên WebGIS; được quản lý trong chức năng riêng.
+                          Danh mục do chức năng {automaticFeature} quản lý. Không thể sửa hoặc xóa.
+                          {' '}Không hiển thị trong danh sách “Lớp dữ liệu” trên WebGIS.
                         </p>
                       )}
                     </TableCell>
@@ -350,15 +346,7 @@ export default function CategoryManagementTab() {
                     </TableCell>
                     <TableCell className="text-center">
                       {isAutomatic ? (
-                        <Badge
-                          id={`category-${cat.key}-visibility`}
-                          variant="outline"
-                          className="gap-1.5 font-normal text-muted-foreground"
-                          aria-describedby={descriptionId}
-                        >
-                          <EyeOff className="size-3.5" aria-hidden="true" />
-                          Ẩn khỏi danh sách lớp
-                        </Badge>
+                        <StatusDotBadge id={`category-${cat.key}-visibility`} aria-describedby={descriptionId} label="Ẩn khỏi danh sách lớp" tone="neutral" />
                       ) : (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -368,28 +356,17 @@ export default function CategoryManagementTab() {
                               size="sm"
                               disabled={isToggling}
                               onClick={() => handleToggleVisibility(cat)}
-                              className={cn(
-                                'h-7 px-2.5 text-xs font-medium gap-1.5 transition-all',
-                                isVisible
-                                  ? 'border-emerald-300 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                  : 'border-border text-muted-foreground hover:bg-muted'
-                              )}
-                              aria-label={`Chuyển trạng thái hiển thị của ${cat.name}`}
+                              className="h-auto min-h-7 px-0 py-0 text-xs font-medium gap-1.5"
+                              aria-label={`${isVisible ? 'Ẩn' : 'Hiển thị'} danh mục ${cat.name} trên WebGIS`}
                             >
-                              {isToggling ? (
-                                <Loader2 className="size-3.5 animate-spin" />
-                              ) : isVisible ? (
-                                <Eye className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                              ) : (
-                                <EyeOff className="size-3.5 text-muted-foreground" />
-                              )}
-                              <span>{isVisible ? 'Hiện trên WebGIS' : 'Ẩn trên WebGIS'}</span>
+                              {isToggling && <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />}
+                              <StatusDotBadge label={isVisible ? 'Đang hiển thị' : 'Đang ẩn'} tone={isVisible ? 'success' : 'neutral'} tooltip={false} />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             {isVisible
-                              ? 'Nhấn để ẩn danh mục này khỏi thanh chọn lớp WebGIS'
-                              : 'Nhấn để hiển thị lại danh mục này trên WebGIS'}
+                              ? 'Ẩn danh mục khỏi danh sách lớp trên WebGIS'
+                              : 'Hiển thị danh mục trong danh sách lớp trên WebGIS'}
                           </TooltipContent>
                         </Tooltip>
                       )}
@@ -434,12 +411,9 @@ export default function CategoryManagementTab() {
 
       {/* Dialog Tạo danh mục mới */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>Thêm danh mục lớp mới</DialogTitle>
-            <DialogDescription>
-              Nhập tên danh mục chuẩn tiếng Việt. Mã nhận diện sẽ được tự động tạo từ tên.
-            </DialogDescription>
+            <DialogTitle>Thêm danh mục</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
@@ -449,7 +423,6 @@ export default function CategoryManagementTab() {
               </Label>
               <Input
                 id="create-cat-name"
-                placeholder="VD: Hạ tầng cấp thoát nước"
                 value={newCategoryName}
                 maxLength={120}
                 disabled={isCreating}
@@ -499,7 +472,7 @@ export default function CategoryManagementTab() {
               ) : (
                 <>
                   <Plus className="size-3.5" />
-                  Tạo danh mục
+                  Thêm danh mục
                 </>
               )}
             </Button>
@@ -514,7 +487,7 @@ export default function CategoryManagementTab() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa danh mục</AlertDialogTitle>
+            <AlertDialogTitle>Xóa danh mục?</AlertDialogTitle>
             <AlertDialogDescription>
               Bạn có chắc chắn muốn xóa danh mục{' '}
               <strong className="text-foreground">{deleteTarget?.name}</strong> (mã:{' '}

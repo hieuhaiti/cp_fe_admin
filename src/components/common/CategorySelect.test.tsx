@@ -69,11 +69,11 @@ describe('CategorySelect', () => {
     const trigger = screen.getByRole('combobox')
     fireEvent.click(trigger)
 
-    const createOption = await screen.findByText('+ Thêm danh mục mới...')
+    const createOption = await screen.findByText('Thêm danh mục')
     fireEvent.click(createOption)
 
     expect(screen.getByText('Tên danh mục mới')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Lưu/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thêm danh mục' })).toBeInTheDocument()
   })
 
   it('creates new category on server, updates select and triggers callbacks', async () => {
@@ -99,13 +99,13 @@ describe('CategorySelect', () => {
     )
 
     fireEvent.click(screen.getByRole('combobox'))
-    const createOption = await screen.findByText('+ Thêm danh mục mới...')
+    const createOption = await screen.findByText('Thêm danh mục')
     fireEvent.click(createOption)
 
-    const input = screen.getByPlaceholderText('Nhập tên danh mục (VD: Ngập ven biển)')
+    const input = screen.getByLabelText(/Tên danh mục mới/)
     fireEvent.change(input, { target: { value: 'Ngập ven biển' } })
 
-    const saveBtn = screen.getByRole('button', { name: /Lưu/i })
+    const saveBtn = screen.getByRole('button', { name: 'Thêm danh mục' })
     fireEvent.click(saveBtn)
 
     await waitFor(() => {
@@ -129,13 +129,13 @@ describe('CategorySelect', () => {
     )
 
     fireEvent.click(screen.getByRole('combobox'))
-    const createOption = await screen.findByText('+ Thêm danh mục mới...')
+    const createOption = await screen.findByText('Thêm danh mục')
     fireEvent.click(createOption)
 
-    const input = screen.getByPlaceholderText('Nhập tên danh mục (VD: Ngập ven biển)')
+    const input = screen.getByLabelText(/Tên danh mục mới/)
     fireEvent.change(input, { target: { value: 'Giao thông' } })
 
-    const saveBtn = screen.getByRole('button', { name: /Lưu/i })
+    const saveBtn = screen.getByRole('button', { name: 'Thêm danh mục' })
     fireEvent.click(saveBtn)
 
     await waitFor(() => {
@@ -153,12 +153,12 @@ describe('CategorySelect', () => {
     )
 
     fireEvent.click(screen.getByRole('combobox'))
-    const createOption = await screen.findByText('+ Thêm danh mục mới...')
+    const createOption = await screen.findByText('Thêm danh mục')
     fireEvent.click(createOption)
 
     expect(screen.getByText('Tên danh mục mới')).toBeInTheDocument()
 
-    const closeBtn = screen.getByRole('button', { name: 'Đóng thêm mới' })
+    const closeBtn = screen.getByRole('button', { name: 'Hủy thêm danh mục' })
     fireEvent.click(closeBtn)
 
     expect(screen.queryByText('Tên danh mục mới')).not.toBeInTheDocument()
@@ -204,7 +204,7 @@ describe('CategorySelect', () => {
     // Open combobox popover
     fireEvent.click(screen.getByRole('combobox'))
 
-    const searchInput = await screen.findByPlaceholderText('Tìm kiếm danh mục...')
+    const searchInput = await screen.findByPlaceholderText('Tìm danh mục')
     expect(searchInput).toBeInTheDocument()
 
     // Type "giao" to filter for "Giao thông"
@@ -231,15 +231,15 @@ describe('CategorySelect', () => {
     )
 
     fireEvent.click(screen.getByRole('combobox'))
-    const searchInput = await screen.findByPlaceholderText('Tìm kiếm danh mục...')
+    const searchInput = await screen.findByPlaceholderText('Tìm danh mục')
 
     fireEvent.change(searchInput, { target: { value: 'Ven biển' } })
 
     // Click "+ Thêm danh mục mới..."
-    const addBtn = screen.getByText('+ Thêm danh mục mới...')
+    const addBtn = screen.getByText('Thêm danh mục')
     fireEvent.click(addBtn)
 
-    const newNameInput = screen.getByPlaceholderText('Nhập tên danh mục (VD: Ngập ven biển)')
+    const newNameInput = screen.getByLabelText(/Tên danh mục mới/)
     expect(newNameInput).toHaveValue('Ven biển')
   })
 

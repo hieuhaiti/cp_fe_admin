@@ -28,12 +28,12 @@ export const navConfig: NavItem[] = [
     permission: { resource: 'layers', action: 'read' },
     subItems: [
       {
-        name: 'Quản lý lớp dữ liệu',
+        name: 'Lớp bản đồ',
         path: '/map-layers',
         permission: { resource: 'layers', action: 'read' },
       },
       {
-        name: 'Lớp dữ liệu chuỗi thời gian',
+        name: 'Lớp bản đồ theo thời gian',
         path: '/map-layers/time-series',
         permission: { resource: 'raster', action: 'read' },
       },
@@ -119,7 +119,7 @@ export const navConfig: NavItem[] = [
   },
   {
     icon: <MessageSquare />,
-    name: 'Tài liệu hệ thống',
+    name: 'Hướng dẫn quản trị (PDF)',
     path: 'https://apicampha.tourismpj.pro.vn/uploads/HDSD_ADMIN_CAMPHA.pdf',
   },
 ]

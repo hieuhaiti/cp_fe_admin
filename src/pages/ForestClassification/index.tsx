@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { toast } from 'react-toastify'
 import { useQueryClient } from '@tanstack/react-query'
@@ -90,13 +91,8 @@ const STATUS_LABEL: Record<string, string> = {
   published: 'Đã công bố',
   failed: 'Thất bại',
 }
-const STATUS_TONE: Record<string, string> = {
-  pending: 'bg-slate-100 text-slate-700 border-slate-200',
-  computing: 'bg-sky-100 text-sky-800 border-sky-200',
-  exporting: 'bg-amber-100 text-amber-800 border-amber-200',
-  completed: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  published: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  failed: 'bg-red-100 text-red-800 border-red-200',
+const STATUS_TONE: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'destructive'> = {
+  pending: 'neutral', computing: 'info', exporting: 'warning', completed: 'success', published: 'success', failed: 'destructive',
 }
 
 const finiteNumber = (value: unknown): number | null => {
@@ -437,7 +433,8 @@ export default function ForestClassificationPage() {
       ) : !snapshot ? (
         <Card>
           <CardContent className="text-muted-foreground p-8 text-center">
-            Chưa có kết quả phân loại nào. Bấm "Chạy lại phân tích" để tạo kỳ mới.
+            Chưa có kết quả phân loại.
+            {canManage && ' Bấm "Chạy lại phân tích" để tạo kỳ mới.'}
           </CardContent>
         </Card>
       ) : (
@@ -687,9 +684,7 @@ function RecentSeasonsPicker({
                     {!isSelectable ? (
                       <span className="text-slate-400">Chưa kết thúc</span>
                     ) : s.exists ? (
-                      <span className={STATUS_TONE[s.status || ''] || 'text-slate-500'}>
-                        {STATUS_LABEL[s.status || ''] || s.status}
-                      </span>
+                      <StatusDotBadge label={STATUS_LABEL[s.status || ''] || 'Chưa xác định'} tone={STATUS_TONE[s.status || ''] ?? 'neutral'} tooltip={false} />
                     ) : (
                       'Chưa có'
                     )}
@@ -730,9 +725,7 @@ function SnapshotOverview({
       <CardContent className="flex flex-col gap-3 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="outline" className={STATUS_TONE[snapshot.status] || ''}>
-              {STATUS_LABEL[snapshot.status] || snapshot.status}
-            </Badge>
+            <StatusDotBadge label={STATUS_LABEL[snapshot.status] || 'Chưa xác định'} tone={STATUS_TONE[snapshot.status] ?? 'neutral'} />
             <span className="text-lg font-semibold">
               Kỳ {formatPeriod(snapshot.year, snapshot.month)}
             </span>
@@ -996,9 +989,7 @@ function HistoryCard({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={STATUS_TONE[item.status] || ''}>
-                          {STATUS_LABEL[item.status] || item.status}
-                        </Badge>
+                        <StatusDotBadge label={STATUS_LABEL[item.status] || 'Chưa xác định'} tone={STATUS_TONE[item.status] ?? 'neutral'} />
                       </TableCell>
                       <TableCell className="text-right">
                         {formatHa(summary?.forestHa ?? null)}

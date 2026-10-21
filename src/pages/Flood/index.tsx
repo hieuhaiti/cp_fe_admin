@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-toastify'
@@ -126,21 +127,6 @@ function exclusiveEndDate(value: string) {
   return parsed.toISOString()
 }
 
-function StatusBadge({ status }: { status: FloodRunStatus }) {
-  const tone =
-    status === 'SUCCEEDED'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : status === 'FAILED' || status === 'DLQ'
-        ? 'border-red-200 bg-red-50 text-red-700'
-        : status === 'CANCELLED'
-          ? 'border-slate-200 bg-slate-50 text-slate-600'
-          : 'border-amber-200 bg-amber-50 text-amber-700'
-  return (
-    <Badge variant="outline" className={tone}>
-      {STATUS_LABELS[status] || status}
-    </Badge>
-  )
-}
 
 export default function FloodPage() {
   const queryClient = useQueryClient()
@@ -287,11 +273,13 @@ export default function FloodPage() {
 
   const putTrendConfigMutation = useApiMutation(
     (patch: Record<string, unknown>) => floodService.putTrendConfig(patch),
-    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'trend-config'] }) }
+    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'trend-config'] }) },
+    false
   )
   const resetTrendConfigMutation = useApiMutation(
     (key?: string) => floodService.resetTrendConfigField(key),
-    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'trend-config'] }) }
+    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'trend-config'] }) },
+    false
   )
 
   const handleTrendConfigSave = async (key: string, value: unknown) => {
@@ -335,7 +323,7 @@ export default function FloodPage() {
       setSelectedRunId((current) => (current === id ? null : current))
       toast.success(`Đã xóa lượt phân tích #${id}`)
     },
-  })
+  }, false)
   const publishArtifactMutation = useApiMutation((id: number) => floodService.publishArtifact(id), {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['flood', 'run', selectedRunId] }),
   })
@@ -687,7 +675,10 @@ export default function FloodPage() {
                       </TableCell>
                       <TableCell className="max-w-40 truncate">{periodLabel}</TableCell>
                       <TableCell>
-                        <StatusBadge status={run.status} />
+                        <StatusDotBadge
+                                label={STATUS_LABELS[run.status] || 'Chưa xác định'}
+                                tone={run.status === 'SUCCEEDED' ? 'success' : run.status === 'FAILED' || run.status === 'DLQ' ? 'destructive' : run.status === 'CANCELLED' ? 'neutral' : 'warning'}
+                              />
                       </TableCell>
                       <TableCell>
                         {areaHa != null
@@ -816,8 +807,7 @@ export default function FloodPage() {
         <div className="border-t">
           <div className="p-4">
             <p className="text-muted-foreground mb-3 text-xs">
-              Min/Max quyết định giá trị lớn nhất và nhỏ nhất của chú giải. Số lượng màu quyết định
-              bước nhảy.
+              Giá trị nhỏ nhất và lớn nhất xác định khoảng chú giải. Số màu quyết định bước chia.
             </p>
           </div>
           {legendsQuery.isFetching && !legends.length ? (
@@ -831,7 +821,7 @@ export default function FloodPage() {
                 <TableRow>
                   <TableHead>Nhãn hiển thị</TableHead>
                   <TableHead>Bảng màu</TableHead>
-                  <TableHead className="w-28">Min / Max</TableHead>
+                  <TableHead className="w-28">Nhỏ nhất / Lớn nhất</TableHead>
                   {canPublish ? <TableHead className="w-24 text-right">Thao tác</TableHead> : null}
                 </TableRow>
               </TableHeader>
@@ -1031,9 +1021,9 @@ export default function FloodPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ASCENDING">ASCENDING — hướng lên</SelectItem>
-                    <SelectItem value="DESCENDING">DESCENDING — hướng xuống</SelectItem>
-                    <SelectItem value="AUTO">AUTO — hệ thống tự chọn tốt nhất</SelectItem>
+                    <SelectItem value="ASCENDING">Hướng lên (ASCENDING)</SelectItem>
+                    <SelectItem value="DESCENDING">Hướng xuống (DESCENDING)</SelectItem>
+                    <SelectItem value="AUTO">Tự động chọn quỹ đạo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1072,8 +1062,7 @@ export default function FloodPage() {
             </DialogTitle>
             <DialogDescription>
               Chỉ thay đổi được <strong>nhãn tiếng Việt</strong> và <strong>bảng màu</strong>. Kiểu
-              legend ({LEGEND_KIND_LABELS[editingLegend?.kind ?? '']}) do hệ thống xác định tự động
-              dựa trên số màu và khoảng min–max.
+              chú giải ({LEGEND_KIND_LABELS[editingLegend?.kind ?? '']}) được xác định từ số màu và khoảng giá trị.
             </DialogDescription>
           </DialogHeader>
 
@@ -1090,7 +1079,7 @@ export default function FloodPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Khoảng giá trị (Min – Max)</Label>
+              <Label>Khoảng giá trị (nhỏ nhất – lớn nhất)</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
@@ -1128,7 +1117,7 @@ export default function FloodPage() {
                         ).toFixed(3)
                       : '—'}
                   </code>{' '}
-                  · mỗi màu ứng với 1 mốc tick trên bản đồ.
+                  · mỗi màu ứng với một mốc giá trị trên bản đồ.
                 </p>
               )}
               {editingLegend?.kind === 'class' && (
@@ -1166,7 +1155,7 @@ export default function FloodPage() {
                       <th className="w-8 px-3 py-2 text-left">#</th>
                       <th className="px-3 py-2 text-left">Xem trước</th>
                       <th className="px-3 py-2 text-left">Mã hex</th>
-                      <th className="px-3 py-2 text-left">Giá trị tick</th>
+                      <th className="px-3 py-2 text-left">Mốc giá trị</th>
                       <th className="w-8 px-3 py-2"></th>
                     </tr>
                   </thead>
@@ -1521,12 +1510,7 @@ function TrendConfigSection({
                 <p className="text-sm leading-tight font-medium">{f.label}</p>
                 <div className="flex shrink-0 items-center gap-1">
                   {f.hasOverride && (
-                    <Badge
-                      variant="outline"
-                      className="border-amber-400 text-[10px] text-amber-700"
-                    >
-                      đã chỉnh
-                    </Badge>
+                    <StatusDotBadge label="Đã chỉnh sửa" tone="warning" />
                   )}
                   {f.required && (
                     <Badge variant="outline" className="border-sky-300 text-[10px] text-sky-700">
@@ -1773,7 +1757,7 @@ function FloodMapPreview({
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <MapIcon className="size-4 text-sky-600" />
-            Bản đồ preview{periodLabel ? ` · ${periodLabel}` : ''}
+            Bản đồ xem trước{periodLabel ? ` · ${periodLabel}` : ''}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1830,7 +1814,7 @@ function FloodMapPreview({
             </p>
           ) : null}
           {runDetail && published.length === 0 && unpublishedProducts.length === 0 && (
-            <p className="text-muted-foreground py-6 text-center text-sm">Không có artifact nào.</p>
+            <p className="text-muted-foreground py-6 text-center text-sm">Chưa có bản đồ kết quả.</p>
           )}
 
           {published.length > 0 && (

@@ -8,7 +8,8 @@ function LoadingInline({ position = 'inline', size = 'small' }) {
   // inline mode (mặc định)
   if (position !== 'center') {
     return (
-      <span className="inline-flex items-center gap-2">
+      <span className="inline-flex items-center gap-2" role="status">
+        <span className="sr-only">Đang tải</span>
         <Loader2
           className={`${
             size === 'small' ? 'w-4 h-4' : 'w-8 h-8'
@@ -20,7 +21,8 @@ function LoadingInline({ position = 'inline', size = 'small' }) {
 
   // center mode (chiếm full width + height của container cha, không fixed)
   return (
-    <div className="flex items-center justify-center w-full h-full py-10">
+    <div className="flex items-center justify-center w-full h-full py-10" role="status">
+      <span className="sr-only">Đang tải</span>
       <Loader2
         className={`${
           size === 'small' ? 'w-8 h-8' : 'w-12 h-12'

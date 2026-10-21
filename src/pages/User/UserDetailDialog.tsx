@@ -1,5 +1,6 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import type { ReactNode } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { userService, useApiQuery } from '@/service'
 import type { ApiResponse, User } from '@/types/api'
@@ -11,8 +12,8 @@ const ROLE_LABELS: Record<string, string> = {
   ubnd_tp: 'UBND thành phố',
   so_tnmt: 'Sở TN&MT',
   so_xd: 'Sở Xây dựng',
-  so_nnmt: 'Sở NN&MT (legacy)',
-  ubnd_tinh: 'UBND tỉnh (legacy)',
+  so_nnmt: 'Sở NN&MT (cũ)',
+  ubnd_tinh: 'UBND tỉnh (cũ)',
   citizen: 'Người dân',
 }
 
@@ -42,6 +43,56 @@ function roleLabel(user?: User | null) {
   )
 }
 
+const PERMISSION_RESOURCE_LABEL: Record<string, string> = {
+  users: 'Người dùng',
+  system_logs: 'Nhật ký hệ thống',
+  layers: 'Lớp bản đồ',
+  raster: 'Ảnh bản đồ',
+  documents: 'Văn bản tài liệu',
+  api_registry: 'API bản đồ',
+  news: 'Tin tức',
+  pdf_maps: 'Ảnh bản đồ PDF',
+  field_report: 'Phản ánh hiện trường',
+  hydro: 'Thủy văn',
+  kttv: 'Khí tượng thủy văn',
+  map: 'Bản đồ',
+  map_feature: 'Đối tượng bản đồ',
+  stats: 'Thống kê',
+  spatial: 'Phân tích không gian',
+  weather: 'Thời tiết',
+  flood: 'Ngập lụt và thủy văn',
+  flood_forecast: 'Dự báo ngập lụt',
+  forest_classification: 'Phân loại đối tượng',
+  satellite: 'Dữ liệu vệ tinh',
+  map_layers: 'Lớp bản đồ',
+  notifications: 'Thông báo',
+}
+
+const PERMISSION_ACTION_LABEL: Record<string, string> = {
+  read: 'Xem', view: 'Xem', create: 'Thêm', update: 'Chỉnh sửa', delete: 'Xóa',
+  change_status: 'Đổi trạng thái', reset_password: 'Đặt lại mật khẩu',
+  change_role: 'Đổi vai trò', read_own: 'Xem thông tin cá nhân',
+  update_own: 'Sửa thông tin cá nhân', manage: 'Quản lý',
+  categorize: 'Phân loại danh mục', compare: 'So sánh', search: 'Tìm kiếm',
+  download: 'Tải xuống', classify: 'Phân loại đối tượng', export_vector: 'Xuất dữ liệu vectơ',
+  read_public: 'Xem nội dung công khai', read_internal: 'Xem nội dung nội bộ',
+  download_internal: 'Tải nội dung nội bộ', share: 'Chia sẻ', grant: 'Phân quyền',
+  comment: 'Bình luận', notify: 'Thông báo', stats: 'Thống kê', approve: 'Duyệt',
+  measure: 'Đo đạc', edit_params: 'Sửa tham số', run: 'Chạy mô hình',
+  calibrate: 'Hiệu chỉnh', version: 'Quản lý phiên bản', import_export: 'Nhập và xuất',
+  set_threshold: 'Đặt ngưỡng', publish_scenario: 'Công bố kịch bản',
+  create_source: 'Thêm nguồn dữ liệu', test_source: 'Kiểm tra nguồn dữ liệu',
+  config_spatial: 'Cấu hình không gian', config_temporal: 'Cấu hình thời gian',
+  config_variables: 'Cấu hình biến', manage_stations: 'Quản lý trạm', schedule: 'Lập lịch',
+  display_config: 'Cấu hình hiển thị', alarm_threshold: 'Ngưỡng cảnh báo',
+  view_attributes: 'Xem thuộc tính', search_feature: 'Tìm đối tượng',
+  view_3d: 'Xem 3D', view_legend: 'Xem chú giải', locate: 'Định vị',
+  route: 'Tìm đường', draw: 'Vẽ', export: 'Xuất dữ liệu', analyze: 'Phân tích',
+  manual_input: 'Nhập dữ liệu thủ công', match_scenario: 'Đối chiếu kịch bản',
+  publish: 'Công bố', ingest_raster: 'Nhập ảnh bản đồ', send: 'Gửi',
+  ground_truth: 'Dữ liệu kiểm chứng thực địa',
+}
+
 function PermissionList({ permissions }: { permissions: User['role_permissions'] }) {
   if (!permissions) return null
 
@@ -58,10 +109,10 @@ function PermissionList({ permissions }: { permissions: User['role_permissions']
 
         return (
           <div key={resource} className="flex flex-wrap items-center gap-1">
-            <span className="text-muted-foreground shrink-0 text-xs font-medium">{resource}:</span>
+            <span className="text-muted-foreground shrink-0 text-xs font-medium">{PERMISSION_RESOURCE_LABEL[resource] || resource}:</span>
             {enabledActions.map((action) => (
               <Badge key={action} variant="outline" className="text-xs">
-                {action}
+                {PERMISSION_ACTION_LABEL[action] || action}
               </Badge>
             ))}
           </div>
@@ -101,9 +152,8 @@ export default function UserDetailDialog({ open, onOpenChange, userId }: UserDet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
+      <DialogContent aria-describedby={undefined} className="max-h-[80vh] max-w-3xl overflow-y-auto">
         <DialogTitle>Chi tiết người dùng</DialogTitle>
-        <DialogDescription>Thông tin chi tiết người dùng đã chọn</DialogDescription>
 
         {dbQuery.isLoading ? (
           <div className="text-muted-foreground py-8 text-center">Đang tải dữ liệu...</div>
@@ -117,9 +167,9 @@ export default function UserDetailDialog({ open, onOpenChange, userId }: UserDet
             <Row label="Email">{user.email}</Row>
             <Row label="Email đã xác thực">
               {isEmailVerified ? (
-                <Badge variant="default">Đã xác thực</Badge>
+                <StatusDotBadge label="Đã xác thực" tone="success" />
               ) : (
-                <Badge variant="secondary">Chưa xác thực</Badge>
+                <StatusDotBadge label="Chưa xác thực" tone="warning" />
               )}
             </Row>
             {user.email_verified_at && (
@@ -128,11 +178,11 @@ export default function UserDetailDialog({ open, onOpenChange, userId }: UserDet
             <Row label="Họ tên">{fullName || '-'}</Row>
             <Row label="Điện thoại">{user.phone || '-'}</Row>
             <Row label="Địa chỉ">{addressDetail || '-'}</Row>
-            <Row label="Avatar">
+            <Row label="Ảnh đại diện">
               {avatarUrl ? (
                 <img
                   src={parseLink(avatarUrl)}
-                  alt={fullName || 'Avatar'}
+                  alt={fullName || 'Ảnh đại diện'}
                   className="h-20 w-20 rounded-full border object-cover"
                 />
               ) : (
@@ -148,17 +198,17 @@ export default function UserDetailDialog({ open, onOpenChange, userId }: UserDet
             )}
             <Row label="Kích hoạt">
               {isActive ? (
-                <Badge variant="default">Kích hoạt</Badge>
+                <StatusDotBadge label="Đang hoạt động" tone="success" />
               ) : (
-                <Badge variant="secondary">Không kích hoạt</Badge>
+                <StatusDotBadge label="Ngừng hoạt động" tone="neutral" />
               )}
             </Row>
             <Row label="Nhà cung cấp">{user.provider || '-'}</Row>
             <Row label="Có mật khẩu">
               {hasPassword ? (
-                <Badge variant="default">Có</Badge>
+                <StatusDotBadge label="Có" tone="success" />
               ) : (
-                <Badge variant="secondary">Cần đổi mật khẩu</Badge>
+                <StatusDotBadge label="Cần đổi mật khẩu" tone="warning" />
               )}
             </Row>
             {user.password_changed_at && (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'react-toastify'
 import { Clock, KeyRound, Loader2, ShieldCheck, Users } from 'lucide-react'
 import {
@@ -44,7 +44,14 @@ export default function IssueKeyDialog({
 }: IssueKeyDialogProps) {
   const [name, setName] = useState('')
   const [consumer, setConsumer] = useState('')
-  const [scopes, setScopes] = useState<string[]>(['features:read'])
+  const [scopeState, setScopeState] = useState({ open, values: ['features:read'] })
+  if (scopeState.open !== open) {
+    setScopeState({ open, values: open ? ['features:read'] : scopeState.values })
+  }
+  const scopes = scopeState.values
+  const setScopes = (update: (previous: string[]) => string[]) => {
+    setScopeState((previous) => ({ ...previous, values: update(previous.values) }))
+  }
   const [quotaPerMinute, setQuotaPerMinute] = useState(60)
   const [expiresInHours, setExpiresInHours] = useState(720)
 
@@ -53,11 +60,6 @@ export default function IssueKeyDialog({
   const canUpdate = methods.includes('PUT')
   const canDelete = methods.includes('DELETE')
 
-  useEffect(() => {
-    if (open) {
-      setScopes(['features:read'])
-    }
-  }, [open])
 
   const handleToggleScope = (scope: 'features:read' | 'features:create' | 'features:update' | 'features:delete') => {
     if (scope === 'features:read') return
@@ -70,7 +72,7 @@ export default function IssueKeyDialog({
 
   const issueMutation = useApiMutation(
     (body: IssueKeyBody) => {
-      if (!registryId) throw new Error('Thiếu ID API registry')
+      if (!registryId) throw new Error('Chưa xác định API cần cấp khóa')
       return mapLayerApiService.issueKey(registryId, body)
     },
     {
@@ -120,7 +122,7 @@ export default function IssueKeyDialog({
             <div>
               <DialogTitle className="text-lg">Cấp khóa API chia sẻ mới</DialogTitle>
               <DialogDescription>
-                Cấp mã truy cập đọc dữ liệu cho đối tác hoặc ứng dụng tích hợp.
+                Cấp khóa truy cập dữ liệu cho đối tác hoặc ứng dụng tích hợp.
               </DialogDescription>
             </div>
           </div>
@@ -151,9 +153,7 @@ export default function IssueKeyDialog({
               className="h-9"
               autoFocus
             />
-            <p className="text-muted-foreground text-[11px]">
-              Tên để phân biệt mục đích sử dụng của khóa này.
-            </p>
+
           </div>
 
           <div className="space-y-1.5">

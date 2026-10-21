@@ -70,14 +70,14 @@ describe('MapLayers index', () => {
 
   it('renders empty list and permission-gated shapefile and image layer upload', () => {
     renderWithProviders(<MapLayerPage />)
-    expect(screen.getByRole('heading', { name: 'Quản lý lớp dữ liệu' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Lớp bản đồ' })).toBeInTheDocument()
     expect(screen.getByText('Không có dữ liệu')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Nhập Shapefile/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Thêm lớp ảnh bản đồ/ })).toBeInTheDocument()
   })
 
-  it('renders category filter dropdown with default "Tất cả nhóm lớp"', () => {
+  it('renders category filter dropdown with default "Tất cả danh mục"', () => {
     renderWithProviders(<MapLayerPage />)
-    expect(screen.getByText('Tất cả nhóm lớp')).toBeInTheDocument()
+    expect(screen.getByText('Tất cả danh mục')).toBeInTheDocument()
   })
 })

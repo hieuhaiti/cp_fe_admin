@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useMemo, useState } from 'react'
 import type { JSX } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -68,6 +69,7 @@ export default function KttvInputForm(): JSX.Element {
   const [activating, setActivating] = useState(false)
   const [deactivating, setDeactivating] = useState(false)
   const [refreshingForecast, setRefreshingForecast] = useState(false)
+  const [resettingToAuto, setResettingToAuto] = useState(false)
   const [selectedHour, setSelectedHour] = useState<string>('')
   const [submittedRainfall, setSubmittedRainfall] = useState<number | null>(null)
 
@@ -110,7 +112,12 @@ export default function KttvInputForm(): JSX.Element {
   const activeHour = selectedHour || currentHourStr
 
   // Tải trạng thái lịch trình 24 giờ (để hiển thị khung giờ nào đang bị khóa thủ công)
-  const { data: scheduleData } = useQuery({
+  const {
+    data: scheduleData,
+    isLoading: isScheduleLoading,
+    isError: isScheduleError,
+    refetch: refetchSchedule,
+  } = useQuery({
     queryKey: ['admin-flood-forecast-schedule'],
     queryFn: async () => {
       const res = await kttvScenarioService.getForecastSchedule()
@@ -123,12 +130,20 @@ export default function KttvInputForm(): JSX.Element {
   const isManualHour = Boolean(activeSlot?.is_manual_override || activeSlot?.status === 'MANUAL')
 
   async function handleResetToAuto() {
+    if (resettingToAuto || !isManualHour) return
+    const hour = activeHour
+    setResettingToAuto(true)
     try {
-      await kttvScenarioService.resetToAuto({ hour: activeHour })
-      toast.success(`Đã khôi phục mốc giờ ${activeHour} về chế độ tự động hóa (Cron)`)
-      queryClient.invalidateQueries({ queryKey: ['admin-flood-forecast-schedule'] })
+      const res = await kttvScenarioService.resetToAuto({ hour })
+      if (!res.data?.success || !res.data.slot) {
+        throw new Error('Không thể khôi phục mốc giờ. Vui lòng tải lại lịch trình và thử lại.')
+      }
+      await queryClient.invalidateQueries({ queryKey: ['admin-flood-forecast-schedule'] })
+      toast.success(`Đã chuyển mốc ${hour} về tự động. Kịch bản sẽ cập nhật ở lần chạy tự động tiếp theo.`)
     } catch (err: unknown) {
-      toast.error(getMappedErrorMessage(err, 'Lỗi khi khôi phục chế độ tự động'))
+      toast.error(getMappedErrorMessage(err, 'Không thể khôi phục chế độ tự động. Vui lòng thử lại.'))
+    } finally {
+      setResettingToAuto(false)
     }
   }
 
@@ -569,6 +584,7 @@ export default function KttvInputForm(): JSX.Element {
                   <Select
                     value={activeHour}
                     onValueChange={setSelectedHour}
+                    disabled={resettingToAuto}
                   >
                     <SelectTrigger className="h-8 text-xs bg-background w-full">
                       <SelectValue placeholder="Chọn mốc giờ dự báo (24h)" />
@@ -595,32 +611,35 @@ export default function KttvInputForm(): JSX.Element {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between text-xs px-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-[11px]">Chế độ mốc {activeHour}:</span>
-                  {isManualHour ? (
-                    <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[11px] font-medium">
-                      Thủ công 
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50 text-[11px] font-medium">
-                      Tự động 
-                    </Badge>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2" role="status">
+                  <span className="text-xs text-muted-foreground">Chế độ mốc {activeHour}:</span>
+                  <Badge variant="outline">
+                    {isScheduleLoading ? 'Đang tải…' : isScheduleError ? 'Chưa tải được' : !activeSlot ? 'Chưa có lịch trình' : isManualHour ? 'Thủ công' : 'Tự động'}
+                  </Badge>
+                  {isScheduleError && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => refetchSchedule()}>
+                      Tải lại lịch trình
+                    </Button>
                   )}
                 </div>
-                {isManualHour && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={handleResetToAuto}
-                    className="h-5 px-1.5 text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    <RotateCw className="size-3" />
-                    Khôi phục Tự động
-                  </Button>
-                )}
+                <Button
+                  id="kttv-restore-auto"
+                  type="button"
+                  variant="outline"
+                  onClick={handleResetToAuto}
+                  disabled={!isManualHour || isScheduleLoading || isScheduleError || resettingToAuto || activating || deactivating}
+                  aria-busy={resettingToAuto}
+                  aria-describedby="kttv-restore-auto-help"
+                  className="w-full shrink-0 sm:w-auto"
+                >
+                  {resettingToAuto ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <RotateCw className="size-4" aria-hidden="true" />}
+                  {resettingToAuto ? 'Đang khôi phục…' : 'Khôi phục tự động'}
+                </Button>
               </div>
+              <p id="kttv-restore-auto-help" className="text-xs text-muted-foreground">
+                Bỏ khóa thủ công cho mốc {activeHour}. Kịch bản sẽ cập nhật ở lần chạy tự động tiếp theo, không tắt ngay.
+              </p>
             </div>
           )}
         </div>
@@ -723,18 +742,7 @@ export default function KttvInputForm(): JSX.Element {
                   : 'Lượng mưa 0 mm/h — Không có kịch bản ngập nào đang bật'}
               </span>
             </div>
-            <Badge
-              variant="outline"
-              className={
-                activeScenariosInSystem.length > 0
-                  ? 'text-amber-800 border-amber-300 bg-amber-100 dark:bg-amber-900/50 dark:text-amber-300 text-xs font-semibold'
-                  : 'text-emerald-800 border-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold'
-              }
-            >
-              {activeScenariosInSystem.length > 0
-                ? `${activeScenariosInSystem.length} kịch bản đang bật`
-                : 'Tất cả đang tắt'}
-            </Badge>
+            <StatusDotBadge label={activeScenariosInSystem.length > 0 ? `${activeScenariosInSystem.length} kịch bản đang bật` : 'Tất cả đang tắt'} tone={activeScenariosInSystem.length > 0 ? 'warning' : 'success'} />
           </div>
 
           {activeScenariosInSystem.length > 0 ? (
@@ -819,18 +827,7 @@ export default function KttvInputForm(): JSX.Element {
                   : `Lượng mưa ${submittedRainfall} mm/h — Dưới ngưỡng gây ngập lụt (An toàn)`}
               </span>
             </div>
-            <Badge
-              variant="outline"
-              className={
-                activeScenariosInSystem.length > 0
-                  ? 'text-amber-800 border-amber-300 bg-amber-100 dark:bg-amber-900/50 dark:text-amber-300 text-xs font-semibold'
-                  : 'text-emerald-800 border-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold'
-              }
-            >
-              {activeScenariosInSystem.length > 0
-                ? `${activeScenariosInSystem.length} kịch bản đang bật`
-                : 'Khu vực an toàn'}
-            </Badge>
+            <StatusDotBadge label={activeScenariosInSystem.length > 0 ? `${activeScenariosInSystem.length} kịch bản đang bật` : 'Khu vực an toàn'} tone={activeScenariosInSystem.length > 0 ? 'warning' : 'success'} />
           </div>
 
           {activeScenariosInSystem.length > 0 ? (

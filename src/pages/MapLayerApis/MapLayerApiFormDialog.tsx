@@ -140,7 +140,7 @@ export default function MapLayerApiFormDialog({
               onSubmitCreate={(payload) => {
                 const parsed = validateCreatePayload(payload)
                 if (!parsed.success) {
-                  toast.error(parsed.error.issues[0]?.message ?? 'Payload create không hợp lệ')
+                  toast.error(parsed.error.issues[0]?.message ?? 'Dữ liệu tạo API không hợp lệ')
                   return
                 }
                 createMutation.mutate(parsed.data)
@@ -148,7 +148,7 @@ export default function MapLayerApiFormDialog({
               onSubmitUpdate={(payload) => {
                 const parsed = validateUpdatePayload(payload)
                 if (!parsed.success) {
-                  toast.error(parsed.error.issues[0]?.message ?? 'Payload update không hợp lệ')
+                  toast.error(parsed.error.issues[0]?.message ?? 'Dữ liệu cập nhật API không hợp lệ')
                   return
                 }
                 updateMutation.mutate(parsed.data)

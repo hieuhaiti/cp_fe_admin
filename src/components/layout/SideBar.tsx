@@ -38,14 +38,15 @@ function resolveActiveSubPath(
   return best
 }
 
-export function SideBar() {
+export function SideBar({ expanded, onNavigate }: { expanded?: boolean; onNavigate?: () => void } = {}) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isExpanded, setExpanded } = useSidebarStore() as {
+  const { isExpanded: storedExpanded, setExpanded } = useSidebarStore() as {
     isExpanded: boolean
     setExpanded: (isExpanded: boolean) => void
     toggleSidebar: () => void
   }
+  const isExpanded = expanded ?? storedExpanded
   const user = useAuthStore((s) => s.user)
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null)
 
@@ -62,9 +63,11 @@ export function SideBar() {
   const handleMenuClick = (path: string) => {
     if (/^https?:\/\//i.test(path)) {
       window.open(path, '_blank', 'noopener,noreferrer')
+      onNavigate?.()
       return
     }
     navigate(path)
+    onNavigate?.()
   }
 
   const activeSubMenu = useMemo(() => {
@@ -93,7 +96,7 @@ export function SideBar() {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav aria-label="Điều hướng quản trị" className="min-h-0 flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
           {filteredNav.map((item) => {
             const activeSubPath = resolveActiveSubPath(location.pathname, item.subItems)
@@ -114,6 +117,9 @@ export function SideBar() {
                         />
                       )}
                       <Button
+                        aria-label={item.name}
+                        aria-current={!hasSubItems && isActive ? 'page' : undefined}
+                        aria-expanded={hasSubItems ? isSubOpen : undefined}
                         variant={isActive ? 'secondary' : 'ghost'}
                         className={cn(
                           'text-foreground hover:bg-primary/5 h-auto w-full justify-start gap-3 px-3 py-2 transition-colors',
@@ -163,6 +169,7 @@ export function SideBar() {
                           return (
                             <Button
                               key={sub.path}
+                              aria-current={subActive ? 'page' : undefined}
                               variant={subActive ? 'secondary' : 'ghost'}
                               className={cn(
                                 'h-auto w-full justify-start gap-3 px-3 py-1.5 text-sm',

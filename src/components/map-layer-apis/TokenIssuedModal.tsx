@@ -48,7 +48,7 @@ export default function TokenIssuedModal({
     try {
       await navigator.clipboard.writeText(token)
       setTokenCopied(true)
-      toast.success('Đã sao chép mã Token vào bộ nhớ tạm')
+      toast.success('Đã sao chép khóa')
       setTimeout(() => setTokenCopied(false), 2500)
     } catch {
       toast.error('Không thể sao chép tự động')
@@ -85,7 +85,7 @@ export default function TokenIssuedModal({
             </div>
             <div>
               <DialogTitle className="text-lg">
-                {isRotation ? 'Xoay API Key thành công' : 'Cấp khóa chia sẻ API thành công'}
+                {isRotation ? 'Đã xoay khóa API' : 'Đã cấp khóa chia sẻ API'}
               </DialogTitle>
               <DialogDescription>
                 Khóa truy cập cho đối tác đã được hệ thống kích hoạt.
@@ -108,7 +108,7 @@ export default function TokenIssuedModal({
             <div>
               <span className="text-muted-foreground block text-xs">Hạn mức gọi</span>
               <Badge variant="secondary" className="mt-0.5 font-mono text-xs">
-                {data.quota_per_minute ?? 60} req/phút
+                {data.quota_per_minute ?? 60} yêu cầu/phút
               </Badge>
             </div>
             <div>
@@ -125,8 +125,8 @@ export default function TokenIssuedModal({
             <div>
               <p className="font-semibold">Lưu ý bảo mật quan trọng:</p>
               <p className="mt-0.5">
-                Chuỗi mã Token dưới đây chỉ được máy chủ hiển thị{' '}
-                <strong className="underline">duy nhất một lần</strong> này. Vui lòng sao chép và
+                Khóa dưới đây chỉ được hiển thị{' '}
+                <strong className="underline">duy nhất một lần</strong>. Sao chép và
                 chuyển cho đơn vị đối tác lưu trữ an toàn trước khi đóng hộp thoại.
               </p>
             </div>
@@ -137,7 +137,7 @@ export default function TokenIssuedModal({
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                 <KeyRound className="h-3.5 w-3.5 text-primary" />
-                Mã Token truy cập (Bearer Token):
+                Khóa API:
               </label>
               {data.token_hint && (
                 <span className="text-muted-foreground font-mono text-xs">
@@ -147,7 +147,7 @@ export default function TokenIssuedModal({
             </div>
             <div className="relative">
               <pre className="max-h-28 overflow-x-auto rounded-md border bg-slate-950 p-3 font-mono text-xs leading-relaxed text-emerald-400 select-all whitespace-pre-wrap break-all">
-                {token || 'Không có mã token'}
+                {token || 'Không có khóa API'}
               </pre>
               <div className="mt-2 flex justify-end">
                 <Button
@@ -159,12 +159,12 @@ export default function TokenIssuedModal({
                   {tokenCopied ? (
                     <>
                       <Check className="h-4 w-4 text-emerald-600" />
-                      <span>Đã sao chép token</span>
+                      <span>Đã sao chép khóa</span>
                     </>
                   ) : (
                     <>
                       <Copy className="h-4 w-4" />
-                      <span>Sao chép mã Token</span>
+                      <span>Sao chép khóa</span>
                     </>
                   )}
                 </Button>
@@ -177,7 +177,7 @@ export default function TokenIssuedModal({
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-medium break-words">
-                  Ví dụ lệnh gọi cURL (Endpoint:{' '}
+                  Ví dụ lệnh cURL (địa chỉ API:{' '}
                   <code className="text-foreground font-mono break-all">
                     /api/v1/shared/{apiSlug}/features
                   </code>
@@ -190,7 +190,7 @@ export default function TokenIssuedModal({
                   className="h-6 gap-1 text-xs"
                 >
                   {curlCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                  <span>{curlCopied ? 'Đã chép' : 'Chép cURL'}</span>
+                  <span>{curlCopied ? 'Đã sao chép' : 'Sao chép cURL'}</span>
                 </Button>
               </div>
               <pre className="overflow-x-auto rounded border bg-muted/60 p-2.5 font-mono text-[11px] leading-tight text-foreground select-all whitespace-pre-wrap break-all">
@@ -203,9 +203,9 @@ export default function TokenIssuedModal({
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
           <Button variant="outline" size="sm" onClick={handleGoToTester} className="gap-1.5">
             <ExternalLink className="h-4 w-4" />
-            <span>Thử nghiệm trong Public Tester</span>
+            <span>Kiểm tra API</span>
           </Button>
-          <Button onClick={() => onOpenChange(false)}>Đã lưu mã khóa / Đóng</Button>
+          <Button onClick={() => onOpenChange(false)}>Đóng</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

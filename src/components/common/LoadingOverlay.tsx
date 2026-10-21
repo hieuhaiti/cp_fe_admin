@@ -3,7 +3,8 @@ import { HashLoader } from 'react-spinners'
 
 function LoadingOverlay() {
   return (
-    <div className="bg-background/60 fixed inset-0 z-10000 flex items-center justify-center backdrop-blur-sm transition-all duration-300">
+    <div role="status" className="bg-background/60 fixed inset-0 z-10000 flex items-center justify-center backdrop-blur-sm transition-all duration-300">
+      <span className="sr-only">Đang tải</span>
       <HashLoader color="#14b8a5" />
     </div>
   )

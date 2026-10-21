@@ -55,7 +55,7 @@ describe('MapLayerFormDialog', () => {
   it('renders create mode and validates a missing layer name', async () => {
     const onSubmit = vi.fn()
     renderDialog({ onSubmit })
-    expect(screen.getByRole('heading', { name: 'Thêm lớp dữ liệu mới' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Thêm lớp dữ liệu' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
     await waitFor(() => expect(onSubmit).not.toHaveBeenCalled())
   })

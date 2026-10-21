@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useEffect, useMemo } from 'react'
 import { useForm, type SubmitHandler } from 'react-hook-form'
 import { z } from 'zod'
@@ -56,8 +57,8 @@ const roleLabels: Record<string, string> = {
   ubnd_tp: 'UBND thành phố',
   so_tnmt: 'Sở TN&MT',
   so_xd: 'Sở Xây dựng',
-  ubnd_tinh: 'UBND tỉnh (legacy)',
-  so_nnmt: 'Sở NN&MT (legacy)',
+  ubnd_tinh: 'UBND tỉnh (cũ)',
+  so_nnmt: 'Sở NN&MT (cũ)',
   citizen: 'Người dân',
   admin: 'Quản trị viên',
 }
@@ -161,10 +162,7 @@ export default function ProfilePage() {
   const createdAt = user?.createdAt ?? user?.created_at
 
   return (
-    <PageLayout
-      title="Hồ sơ cá nhân"
-      description="Quản lý thông tin hiển thị và thông tin liên hệ của tài khoản"
-    >
+    <PageLayout title="Hồ sơ cá nhân">
       <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
         <div className="space-y-6">
           <Card className="overflow-hidden border-0 shadow-lg">
@@ -205,11 +203,7 @@ export default function ProfilePage() {
                     <CheckCircle2 className="text-success size-4" />
                     Trạng thái
                   </span>
-                  <span className="text-foreground font-medium">
-                    {(user?.isActive ?? user?.is_active) === false
-                      ? 'Tạm khóa'
-                      : 'Đang hoạt động'}
-                  </span>
+                  <StatusDotBadge label={(user?.isActive ?? user?.is_active) === false ? 'Ngừng hoạt động' : 'Đang hoạt động'} tone={(user?.isActive ?? user?.is_active) === false ? 'neutral' : 'success'} />
                 </div>
                 {createdAt && (
                   <div className="flex items-center justify-between gap-3">
@@ -264,9 +258,7 @@ export default function ProfilePage() {
                 </CardDescription>
               </div>
               {isDirty && (
-                <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning">
-                  Có thay đổi chưa lưu
-                </Badge>
+                <StatusDotBadge label="Có thay đổi chưa lưu" tone="warning" />
               )}
             </div>
           </CardHeader>
@@ -276,9 +268,6 @@ export default function ProfilePage() {
               <section>
                 <div className="mb-4">
                   <h3 className="text-foreground text-sm font-semibold">Thông tin định danh</h3>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Email được dùng để xác thực tài khoản.
-                  </p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2 md:col-span-2">
@@ -299,9 +288,6 @@ export default function ProfilePage() {
               <section className="border-t pt-6">
                 <div className="mb-4">
                   <h3 className="text-foreground text-sm font-semibold">Thông tin liên hệ</h3>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Thông tin này được dùng khi phối hợp xử lý nghiệp vụ và cảnh báo.
-                  </p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2 md:col-span-2">

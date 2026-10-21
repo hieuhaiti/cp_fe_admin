@@ -48,7 +48,7 @@ describe('NewsFormDialog', () => {
   it('shows validation errors for missing title and content', async () => {
     const onSubmit = vi.fn()
     renderDialog({ onSubmit })
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm bài viết' }))
     expect(await screen.findByText('Tiêu đề phải có ít nhất 5 ký tự')).toBeInTheDocument()
     expect(screen.getByText('Nội dung là bắt buộc')).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
@@ -58,10 +58,10 @@ describe('NewsFormDialog', () => {
     const onSubmit = vi.fn()
     renderDialog({ onSubmit })
     fireEvent.change(screen.getByLabelText('Tiêu đề *'), { target: { value: 'Tin thử nghiệm' } })
-    fireEvent.change(screen.getByLabelText('Slug'), { target: { value: 'tin-thu-nghiem' } })
+    fireEvent.change(screen.getByLabelText('Định danh đường dẫn'), { target: { value: 'tin-thu-nghiem' } })
     fireEvent.change(screen.getByLabelText('Nội dung *'), { target: { value: 'Nội dung' } })
-    fireEvent.change(screen.getByLabelText('Tags (phân cách bằng dấu phẩy)'), { target: { value: 'gis, flood, gis' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    fireEvent.change(screen.getByLabelText('Từ khóa (phân cách bằng dấu phẩy)'), { target: { value: 'gis, flood, gis' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm bài viết' }))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     const payload = onSubmit.mock.calls[0][0] as FormData
     expect(payload.get('slug')).toBe('tin-thu-nghiem')
@@ -74,14 +74,14 @@ describe('NewsFormDialog', () => {
     fireEvent.change(document.querySelector('input[type=file]') as HTMLInputElement, {
       target: { files: [makeFile('thumb.pdf', 'application/pdf')] },
     })
-    expect(toastMock.error).toHaveBeenCalledWith(expect.stringContaining('Chỉ chấp nhận file ảnh'))
+    expect(toastMock.error).toHaveBeenCalledWith(expect.stringContaining('Chỉ chấp nhận tệp ảnh'))
   })
 
   it('preloads edit data and shows update action', () => {
     useApiQueryMock.mockReturnValue({ data: { data: { news: { id: 2, title: 'Tin cũ', content: 'Nội dung cũ', slug: 'tin-cu', tags: ['gis'], is_published: true, is_featured: false } } }, isLoading: false })
     renderDialog({ newsId: 2 })
-    expect(screen.getByRole('heading', { name: 'Chỉnh sửa tin tức' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Sửa bài viết' })).toBeInTheDocument()
     expect(screen.getByLabelText('Tiêu đề *')).toHaveValue('Tin cũ')
-    expect(screen.getByRole('button', { name: 'Cập nhật' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lưu thay đổi' })).toBeInTheDocument()
   })
 })

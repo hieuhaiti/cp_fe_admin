@@ -1,3 +1,4 @@
+import { STATUS_LABEL } from '@/constant/newsConstant'
 import type { JSX } from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { useApiQuery, useApiMutation, newsService } from '@/service'
@@ -40,18 +41,9 @@ import { formatDate } from '@/lib/date'
 import { hasPerm } from '@/lib/permissions'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 
-const STATUS_LABEL: Record<string, string> = {
-  published: 'Đã xuất bản',
-  draft: 'Bản nháp',
-}
-const STATUS_CLASS: Record<string, string> = {
-  published: 'bg-green-50 text-green-700 border-green-200',
-  draft: 'bg-slate-100 text-slate-500 border-slate-200',
-}
-const STATUS_DOT: Record<string, string> = {
-  published: 'bg-green-500',
-  draft: 'bg-slate-400',
-}
+
+
+
 
 export default function News(): JSX.Element {
   const user = useAuthStore((s) => s.user)
@@ -185,7 +177,7 @@ export default function News(): JSX.Element {
   }
 
   return (
-    <PageLayout title="Tin tức" description="Quản lý bài viết tin tức">
+    <PageLayout title="Tin tức">
       <ToolTableCustom
         searchValue={searchValue}
         setSearchValue={(v) => {
@@ -231,7 +223,7 @@ export default function News(): JSX.Element {
             {canCreate && (
               <Button variant="default" onClick={openAddDialog}>
                 <Plus className="size-4" />
-                Thêm tin tức
+                Thêm bài viết
               </Button>
             )}
           </div>
@@ -278,11 +270,8 @@ export default function News(): JSX.Element {
                     </TableCell>
                     <TableCell>
                       <StatusDotBadge
-                        label={STATUS_LABEL[status] ?? status}
-                        badgeClass={
-                          STATUS_CLASS[status] ?? 'bg-slate-100 text-slate-500 border-slate-200'
-                        }
-                        dotClass={STATUS_DOT[status] ?? 'bg-slate-400'}
+                        label={STATUS_LABEL[status] ?? 'Chưa xác định'}
+                        tone={status === 'published' ? 'success' : 'neutral'}
                       />
                     </TableCell>
                     <TableCell>{viewCount}</TableCell>
@@ -355,10 +344,9 @@ export default function News(): JSX.Element {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogTitle>Xóa bài viết?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa bài viết &quot;{newsToDelete?.title}&quot;? Hành động này
-              không thể hoàn tác.
+              Bài viết &quot;{newsToDelete?.title}&quot; sẽ bị xóa. Thao tác này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

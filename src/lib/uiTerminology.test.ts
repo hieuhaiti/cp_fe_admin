@@ -41,6 +41,17 @@ describe('uiTerminology helper', () => {
       expect(result).toContain('hệ thống xử lý viễn thám')
     })
 
+    it.each(['WMS', 'WFS', 'WCS', 'COG', 'GeoTIFF'])('preserves the GIS standard %s', (standard) => {
+      const message = `Không thể tải dữ liệu ${standard}.`
+      expect(neutralizeUiMessage(message)).toBe(message)
+    })
+
+    it('explains registry conflicts without changing their meaning', () => {
+      expect(neutralizeUiMessage('REGISTRY_CONFLICT')).toBe(
+        'Lớp bản đồ này hoặc định danh đường dẫn đã có API chia sẻ'
+      )
+    })
+
     it('translates RASTER_LAYER_CONFLICT code', () => {
       const input = 'Mã lớp đã tồn tại (RASTER_LAYER_CONFLICT)'
       const result = neutralizeUiMessage(input)
@@ -60,9 +71,9 @@ describe('uiTerminology helper', () => {
       expect(formatLifecycleStatus('active')).toBe('Đang hoạt động')
     })
 
-    it('returns original or empty for undefined', () => {
+    it('keeps missing values distinct and does not expose unknown enums', () => {
       expect(formatLifecycleStatus(undefined)).toBe('')
-      expect(formatLifecycleStatus('unknown_status')).toBe('unknown_status')
+      expect(formatLifecycleStatus('unknown_status')).toBe('Chưa xác định')
     })
   })
 
@@ -72,6 +83,10 @@ describe('uiTerminology helper', () => {
       expect(formatModelStatus('FAILED')).toBe('Mô hình thất bại')
       expect(formatModelStatus('RUNNING')).toBe('Đang chạy mô hình')
       expect(formatModelStatus('PENDING')).toBe('Chờ thực thi')
+      expect(formatModelStatus('QUEUED')).toBe('Chờ thực thi')
+      expect(formatModelStatus('CANCELLED')).toBe('Đã hủy')
+      expect(formatModelStatus('DLQ')).toBe('Cần xử lý')
+      expect(formatModelStatus('future_status')).toBe('Chưa xác định')
     })
 
     it('returns empty string for nullish values', () => {

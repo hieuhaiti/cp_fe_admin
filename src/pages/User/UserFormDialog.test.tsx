@@ -50,7 +50,7 @@ beforeEach(() => {
 describe('UserFormDialog', () => {
   it('renders create form with default citizen role', () => {
     renderDialog()
-    expect(screen.getByRole('heading', { name: 'Thêm người dùng mới' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Thêm người dùng' })).toBeInTheDocument()
     expect(screen.getByLabelText('Email *')).toBeInTheDocument()
     expect(screen.getByLabelText('Mật khẩu *')).toBeInTheDocument()
     expect(screen.getByLabelText('Họ và tên *')).toBeInTheDocument()
@@ -59,7 +59,7 @@ describe('UserFormDialog', () => {
   it('shows validation errors and does not submit an empty form', async () => {
     const onSubmit = vi.fn()
     renderDialog({ onSubmit })
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm người dùng' }))
     expect(await screen.findByText('Email không hợp lệ')).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
@@ -70,7 +70,7 @@ describe('UserFormDialog', () => {
     fireEvent.change(screen.getByLabelText('Email *'), { target: { value: ' admin@example.com ' } })
     fireEvent.change(screen.getByLabelText('Mật khẩu *'), { target: { value: 'secret123' } })
     fireEvent.change(screen.getByLabelText('Họ và tên *'), { target: { value: ' Nguyễn Văn A ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm người dùng' }))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     expect(onSubmit).toHaveBeenCalledWith({
       email: 'admin@example.com', password: 'secret123', fullName: 'Nguyễn Văn A', roleCode: 'citizen',
@@ -90,6 +90,6 @@ describe('UserFormDialog', () => {
     expect(screen.getByRole('heading', { name: 'Chỉnh sửa người dùng' })).toBeInTheDocument()
     expect(screen.getByText('old@example.com')).toBeInTheDocument()
     expect(screen.getByText('Người dùng cũ')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Tạo mới' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Thêm người dùng' })).not.toBeInTheDocument()
   })
 })

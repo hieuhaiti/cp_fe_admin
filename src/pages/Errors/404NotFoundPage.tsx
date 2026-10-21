@@ -11,9 +11,7 @@ export default function NotFoundPage(): JSX.Element {
         <h1 className="text-foreground mt-4 text-5xl tracking-tight sm:text-7xl">
           {'Không tìm thấy trang'}
         </h1>
-        <p className="text-foreground mt-6 text-lg font-medium sm:text-xl">
-          {'Không tìm thấy trang yêu cầu.'}
-        </p>
+
         <div className="mt-10 flex items-center justify-center">
           <button
             onClick={() => navigate('/')}

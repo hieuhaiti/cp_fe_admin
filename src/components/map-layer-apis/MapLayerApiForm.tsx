@@ -470,7 +470,7 @@ export default function MapLayerApiForm({
 
           const hasWriteMethod = selectedAllowedMethods.some((m) => m !== 'GET')
           if (hasWriteMethod && selectedWriteFields.length === 0 && !existingRegistryForSelected) {
-            toast.error('Vui lòng chọn ít nhất 1 trường dữ liệu cho phép ghi (writeFields) khi bật quyền POST/PUT/DELETE.')
+            toast.error('Chọn ít nhất một trường được phép ghi khi bật POST, PUT hoặc DELETE.')
             return
           }
 
@@ -495,7 +495,7 @@ export default function MapLayerApiForm({
 
         const hasWriteMethod = selectedAllowedMethods.some((m) => m !== 'GET')
         if (hasWriteMethod && selectedWriteFields.length === 0) {
-          toast.error('Vui lòng chọn ít nhất 1 trường dữ liệu cho phép ghi (writeFields) khi bật quyền POST/PUT/DELETE.')
+          toast.error('Chọn ít nhất một trường được phép ghi khi bật POST, PUT hoặc DELETE.')
           return
         }
 
@@ -658,13 +658,13 @@ export default function MapLayerApiForm({
               Lớp bản đồ này đã có API chia sẻ ({existingRegistryForSelected.name})
             </div>
             <p className="text-muted-foreground break-words">
-              Endpoint hiện tại:{' '}
+              Địa chỉ API hiện tại:{' '}
               <code className="font-mono text-foreground font-semibold break-all">
                 /api/v1/shared/{existingRegistryForSelected.slug}/features
               </code>
             </p>
             <p className="break-words">
-              Theo quy định, mỗi lớp bản đồ chỉ có duy nhất 1 API chia sẻ. Khi bạn nhấn nút <strong>"Cấp khóa cho lớp này"</strong> bên dưới, hệ thống sẽ cấp một khóa chia sẻ (API Key) mới cho đối tác mà không tạo trùng API.
+              Chọn <strong>"Cấp khóa cho lớp này"</strong> để cấp thêm khóa chia sẻ cho đối tác, không tạo API mới.
             </p>
           </div>
         )}
@@ -688,7 +688,7 @@ export default function MapLayerApiForm({
                   Lớp bản đồ này chưa có danh sách trường thuộc tính hiển thị.
                 </div>
                 <p className="text-[11px] leading-relaxed break-words">
-                  Lớp này chưa có danh sách thuộc tính trong siêu dữ liệu (metadata). Bạn có thể vào mục <strong>Quản lý lớp dữ liệu</strong> &rarr; chọn <strong>Chỉnh sửa</strong> để cấu hình danh sách trường dữ liệu hiển thị cho lớp này, hoặc chọn một lớp bản đồ khác đã có sẵn trường thuộc tính.
+                  Vào <strong>Quản lý lớp dữ liệu</strong> &rarr; <strong>Chỉnh sửa</strong> để cấu hình trường hiển thị, hoặc chọn lớp khác đã có trường thuộc tính.
                 </p>
               </div>
             )}
@@ -713,13 +713,12 @@ export default function MapLayerApiForm({
                 {...form.register('name')}
                 placeholder="VD: API Lớp ranh giới đất đai Cẩm Phả"
               />
-              <FieldHint>Tên định danh hiển thị của API chia sẻ dữ liệu này.</FieldHint>
               <FieldError message={form.formState.errors.name?.message} />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="slug" className="text-xs font-semibold">
-                Mã định danh API (Slug) <span className="text-destructive">*</span>
+                Định danh đường dẫn API <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="slug"
@@ -734,7 +733,7 @@ export default function MapLayerApiForm({
                 className="font-mono text-sm"
               />
               <FieldHint>
-                Endpoint truy vấn:{' '}
+                Địa chỉ API:{' '}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-primary font-semibold">
                   /api/v1/shared/{form.watch('slug') || 'slug-api'}/features
                 </code>
@@ -756,9 +755,9 @@ export default function MapLayerApiForm({
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <Label className="text-xs font-semibold">Quyền thao tác dữ liệu cho phép (Xem, Thêm, Sửa, Xóa)</Label>
+                  <Label className="text-xs font-semibold">Thao tác được phép</Label>
                   <p className="text-[11px] text-muted-foreground">
-                    Chọn các thao tác mà hệ thống cho phép ứng dụng bên ngoài thực hiện đối với lớp bản đồ này.
+                    Áp dụng cho ứng dụng bên ngoài truy cập lớp bản đồ này.
                   </p>
                 </div>
               </div>
@@ -1011,7 +1010,7 @@ export default function MapLayerApiForm({
 
               {selectedLayerAllowedSearchFields.length === 0 ? (
                 <div className="rounded-md border border-dashed border-border/80 bg-muted/20 p-3 text-xs text-muted-foreground space-y-1">
-                  <p className="font-medium text-foreground">Lớp bản đồ này chưa cấu hình cột tìm kiếm trong metadata (metadata.searchFields rỗng).</p>
+                  <p className="font-medium text-foreground">Lớp bản đồ này chưa có cột được phép tìm kiếm.</p>
                   <p className="text-[11px]">
                     Theo quy tắc an toàn dữ liệu, hệ thống chỉ cho phép tìm kiếm theo từ khóa trên các cột được cho phép trong cấu hình lớp. API vẫn hỗ trợ đầy đủ việc đọc dữ liệu và lọc theo tọa độ (bbox).
                   </p>
@@ -1229,7 +1228,7 @@ export default function MapLayerApiForm({
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="rate-per-min">Request/phút</Label>
+              <Label htmlFor="rate-per-min">Yêu cầu/phút</Label>
               <Input
                 id="rate-per-min"
                 type="number"
@@ -1242,7 +1241,7 @@ export default function MapLayerApiForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bbox-limit">Giới hạn bbox</Label>
+              <Label htmlFor="bbox-limit">Giới hạn vùng truy vấn (bbox)</Label>
               <Input
                 id="bbox-limit"
                 type="number"
@@ -1272,7 +1271,7 @@ export default function MapLayerApiForm({
                   })
                 }}
               />
-              <FieldHint>Bỏ trống nếu key không hết hạn.</FieldHint>
+              <FieldHint>Bỏ trống nếu khóa không hết hạn.</FieldHint>
               <FieldError message={form.formState.errors.expires_at?.message} />
             </div>
           </div>
@@ -1299,14 +1298,14 @@ export default function MapLayerApiForm({
             <SelectItem value="false">Tạm dừng</SelectItem>
           </SelectContent>
         </Select>
-        <FieldHint>Tạm dừng sẽ khiến đối tác không thể dùng key để đọc dữ liệu.</FieldHint>
+        <FieldHint>Tạm dừng sẽ khiến đối tác không thể dùng khóa để đọc dữ liệu.</FieldHint>
       </div>
 
       <div className="bg-muted/50 rounded-md border p-3 text-sm">
         <div className="flex items-start gap-2">
           <ShieldCheck className="text-primary mt-0.5 size-4 shrink-0" />
           <p className="text-muted-foreground text-xs leading-relaxed">
-            Mã khóa đầy đủ (JWT Token) chỉ hiển thị một lần duy nhất khi tạo hoặc xoay khóa. Hệ thống chỉ lưu bản băm và tiền tố nhận diện (Token Hint).
+            Khóa đầy đủ chỉ hiển thị một lần khi cấp hoặc xoay khóa. Hãy sao chép và lưu ở nơi an toàn.
           </p>
         </div>
       </div>

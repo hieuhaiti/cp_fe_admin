@@ -69,7 +69,7 @@ describe('LandingPage', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Nguyễn Văn Quản Trị/)
     expect(screen.getByText('Trung tâm quản trị kỹ thuật')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Quản lý người dùng/ })).toHaveAttribute('href', '/users')
-    expect(screen.getByRole('link', { name: /Sổ tay hướng dẫn Admin \(PDF\)/ })).toHaveAttribute('target', '_blank')
+    expect(screen.getByRole('link', { name: /Hướng dẫn quản trị \(PDF\)/ })).toHaveAttribute('target', '_blank')
   })
 
   it('renders role-aware briefing hero and primary CTA for ubnd_tp', () => {
@@ -113,7 +113,7 @@ describe('LandingPage', () => {
   it('renders loading state without throwing error', () => {
     queryMock.mockReturnValue({ data: undefined, isLoading: true, isError: false, refetch: vi.fn() })
     renderWithProviders(<LandingPage />)
-    expect(screen.getByText('Chỉ số vận hành & Hiện trạng thực tế')).toBeInTheDocument()
+    expect(screen.getByText('Chỉ số tổng quan')).toBeInTheDocument()
   })
 
   it('renders error state and allows retry', () => {

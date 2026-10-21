@@ -19,8 +19,9 @@
  * ============================================================
  */
 
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { toast } from 'react-toastify'
 import KttvInputForm from './KttvInputForm'
 import { renderWithProviders } from '@/test/renderWithProviders'
 
@@ -128,6 +129,83 @@ describe('KttvInputForm', () => {
 
     const rainfallInput = screen.getByLabelText(/Lượng mưa hiện tại/) as HTMLInputElement
     expect(Number(rainfallInput.value)).toBeGreaterThanOrEqual(0)
+  })
+
+  it('keeps restore visible but disabled when the selected hour is automatic', async () => {
+    const hour = `${String(new Date().getHours()).padStart(2, '0')}:00`
+    getForecastSchedule.mockResolvedValue({ data: [{ hour_str: hour, status: 'PENDING', is_manual_override: false }] })
+    renderWithProviders(<KttvInputForm />)
+
+    expect(await screen.findByRole('button', { name: 'Khôi phục tự động' })).toBeDisabled()
+    expect(resetToAuto).not.toHaveBeenCalled()
+  })
+
+  it('restores the manual hour once and refreshes its schedule without changing scenarios', async () => {
+    const hour = `${String(new Date().getHours()).padStart(2, '0')}:00`
+    const manualSlot = { id: 8, hour_str: hour, status: 'MANUAL', is_manual_override: true }
+    const autoSlot = { ...manualSlot, status: 'PENDING', is_manual_override: false, precip_mm: 0 }
+    getForecastSchedule.mockResolvedValue({ data: [manualSlot] })
+    let finishReset: (value: unknown) => void = () => { throw new Error('Reset request has not started') }
+    resetToAuto.mockImplementation(() => new Promise((resolve) => { finishReset = resolve }))
+    renderWithProviders(<KttvInputForm />)
+
+    const button = await screen.findByRole('button', { name: 'Khôi phục tự động' })
+    await waitFor(() => expect(button).toBeEnabled())
+    fireEvent.click(button)
+    expect(screen.getByRole('button', { name: 'Đang khôi phục…' })).toBeDisabled()
+    fireEvent.click(button)
+    expect(resetToAuto).toHaveBeenCalledTimes(1)
+    expect(resetToAuto).toHaveBeenCalledWith({ hour })
+
+    getForecastSchedule.mockResolvedValue({ data: [autoSlot] })
+    await act(async () => { finishReset({ data: { success: true, slot: autoSlot } }) })
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('lần chạy tự động tiếp theo')))
+    expect(screen.getByRole('button', { name: 'Khôi phục tự động' })).toBeDisabled()
+    expect(getForecastSchedule).toHaveBeenCalledTimes(2)
+    expect(setManualOverride).not.toHaveBeenCalled()
+    expect(updateScenario).not.toHaveBeenCalled()
+  })
+
+  it('keeps the manual hour retryable when restore fails', async () => {
+    const hour = `${String(new Date().getHours()).padStart(2, '0')}:00`
+    getForecastSchedule.mockResolvedValue({ data: [{ hour_str: hour, status: 'MANUAL', is_manual_override: true }] })
+    resetToAuto.mockRejectedValueOnce(new Error('Mất kết nối'))
+    renderWithProviders(<KttvInputForm />)
+    const button = await screen.findByRole('button', { name: 'Khôi phục tự động' })
+    await waitFor(() => expect(button).toBeEnabled())
+    fireEvent.click(button)
+    await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    expect(button).toBeEnabled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it('does not report restore success when the server returns no slot', async () => {
+    const hour = `${String(new Date().getHours()).padStart(2, '0')}:00`
+    getForecastSchedule.mockResolvedValue({ data: [{ hour_str: hour, status: 'MANUAL', is_manual_override: true }] })
+    resetToAuto.mockResolvedValueOnce({ data: { success: true, slot: null } })
+    renderWithProviders(<KttvInputForm />)
+    const button = await screen.findByRole('button', { name: 'Khôi phục tự động' })
+    await waitFor(() => expect(button).toBeEnabled())
+    fireEvent.click(button)
+    await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(button).toBeEnabled()
+  })
+
+  it('shows missing schedule separately from automatic mode', async () => {
+    renderWithProviders(<KttvInputForm />)
+    expect(await screen.findByText('Chưa có lịch trình')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Khôi phục tự động' })).toBeDisabled()
+  })
+
+  it('shows a retry action when loading the schedule fails', async () => {
+    getForecastSchedule.mockRejectedValue(new Error('Mất kết nối'))
+    renderWithProviders(<KttvInputForm />)
+    expect(await screen.findByText('Chưa tải được')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Khôi phục tự động' })).toBeDisabled()
+    getForecastSchedule.mockResolvedValue({ data: [] })
+    fireEvent.click(screen.getByRole('button', { name: 'Tải lại lịch trình' }))
+    expect(await screen.findByText('Chưa có lịch trình')).toBeInTheDocument()
   })
 
   it('triggers refresh forecast when clicking Làm mới button', async () => {

@@ -190,7 +190,7 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
-      <ToastContainer position="top-right" className="z-9999" autoClose={3000} />
+      <ToastContainer position="top-right" className="z-9999" autoClose={3000} aria-label="Thông báo (Alt+T)" />
     </>
   )
 }

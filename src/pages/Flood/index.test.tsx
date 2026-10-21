@@ -15,6 +15,8 @@
 
 import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { toast } from 'react-toastify'
+import { useApiMutation } from '@/service'
 import FloodPage from './index'
 import { renderWithProviders } from '@/test/renderWithProviders'
 
@@ -25,10 +27,31 @@ vi.mock('@/service', () => ({
 }))
 vi.mock('react-leaflet', () => ({ MapContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>, TileLayer: () => null, GeoJSON: () => null, ImageOverlay: () => null, LayersControl: ({ children }: { children: React.ReactNode }) => <div>{children}</div>, useMap: () => ({ fitBounds: vi.fn(), getZoom: () => 10 }) }))
 vi.mock('leaflet', () => ({ default: { latLngBounds: vi.fn(() => ({ isValid: () => false })), CRS: {} } }))
+vi.mock('react-toastify', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 describe('Flood page (all model and queue services mocked)', () => {
   it('renders the flood administration page without executing a model job', () => {
     renderWithProviders(<FloodPage />)
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+  })
+
+  it('keeps page-owned success notifications without default API success toasts', () => {
+    vi.mocked(useApiMutation).mockClear()
+    vi.mocked(toast.success).mockClear()
+    renderWithProviders(<FloodPage />)
+
+    const calls = vi.mocked(useApiMutation).mock.calls
+    // Registration order: legend update/reset, trend update/reset, submit/rerun/cancel, delete.
+    const trendUpdate = calls[2]
+    const trendReset = calls[3]
+    const deleteRun = calls[7]
+    expect(trendUpdate[2]).toBe(false)
+    expect(trendReset[2]).toBe(false)
+    expect(deleteRun[2]).toBe(false)
+    expect(calls[0][2]).toBeUndefined()
+    expect(calls[4][2]).toBeUndefined()
+
+    deleteRun[1]?.onSuccess?.({ data: { id: 17 } }, 17, undefined, {} as never)
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith('Đã xóa lượt phân tích #17')
   })
 })

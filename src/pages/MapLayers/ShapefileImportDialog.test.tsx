@@ -68,13 +68,13 @@ describe('ShapefileImportDialog', () => {
     expect(screen.getByText(/Yêu cầu cấu trúc tệp Shapefile/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Tên lớp hiển thị/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Mã lớp kỹ thuật/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Tiến hành nhập Shapefile/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Nhập Shapefile/i })).toBeInTheDocument()
   })
 
   it('validates submission when no file is selected', () => {
     renderDialog()
 
-    const submitBtn = screen.getByRole('button', { name: /Tiến hành nhập Shapefile/i })
+    const submitBtn = screen.getByRole('button', { name: /Nhập Shapefile/i })
     expect(submitBtn).toBeDisabled()
   })
 
@@ -102,7 +102,7 @@ describe('ShapefileImportDialog', () => {
     const nameInput = screen.getByLabelText(/Tên lớp hiển thị/)
     fireEvent.change(nameInput, { target: { value: 'Ranh giới Cẩm Phả' } })
 
-    const submitBtn = screen.getByRole('button', { name: /Tiến hành nhập Shapefile/i })
+    const submitBtn = screen.getByRole('button', { name: /Nhập Shapefile/i })
     expect(submitBtn).not.toBeDisabled()
     fireEvent.click(submitBtn)
 
@@ -157,7 +157,7 @@ describe('ShapefileImportDialog', () => {
     const nameInput = screen.getByLabelText(/Tên lớp hiển thị/)
     fireEvent.change(nameInput, { target: { value: 'Lớp Lỗi' } })
 
-    const submitBtn = screen.getByRole('button', { name: /Tiến hành nhập Shapefile/i })
+    const submitBtn = screen.getByRole('button', { name: /Nhập Shapefile/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {

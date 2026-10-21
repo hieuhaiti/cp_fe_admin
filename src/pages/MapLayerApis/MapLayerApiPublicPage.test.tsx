@@ -31,7 +31,7 @@ describe('MapLayerApiPublicPage', () => {
   it('defaults invalid tabs to the API tester', () => {
     renderWithProviders(<MapLayerApiPublicPage />, { initialEntries: ['/public/map-apis?tab=invalid'] })
     expect(screen.getByText('Public tester content')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Test API' })).toHaveAttribute('data-state', 'active')
+    expect(screen.getByRole('tab', { name: 'Kiểm tra API' })).toHaveAttribute('data-state', 'active')
   })
 
   it('renders integration guide from the guide search param', () => {

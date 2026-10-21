@@ -25,3 +25,5 @@ export const FEATURED_DOT: Record<string, string> = {
   true: 'bg-amber-500',
   false: 'bg-slate-300',
 }
+
+export const STATUS_LABEL: Record<string, string> = { published: 'Đã xuất bản', draft: 'Bản nháp' }

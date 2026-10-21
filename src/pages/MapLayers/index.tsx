@@ -18,13 +18,13 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Badge } from '@/components/ui/badge'
 import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import {
   PUBLISHED_LABEL,
   PUBLISHED_CLASS,
   PUBLISHED_DOT,
   getMapLayerCategoryLabel,
+  GEOMETRY_TYPE_LABEL,
 } from '@/constant/mapLayerConstant'
 import { useLayerCategories } from '@/hooks/useLayerCategories'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
@@ -46,13 +46,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { CloudUpload, FileArchive, FolderTree, Layers, Pen, Trash2 } from 'lucide-react'
+import { CloudUpload, FolderTree, Layers, Pen, Trash2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import PageLayout from '@/layout/pageLayout'
 import MapLayerDetailDialog from './MapLayerDetailDialog'
 import MapLayerFormDialog from './MapLayerFormDialog'
 import GeoTiffUploadDialog from './GeoTiffUploadDialog'
-import ShapefileImportDialog from './ShapefileImportDialog'
 import CategoryManagementTab from './CategoryManagementTab'
 import { formatDate } from '@/lib/date'
 import { hasPerm } from '@/lib/permissions'
@@ -76,7 +75,6 @@ function getPagination(data: unknown): Partial<Pagination> {
 
 export default function MapLayerPage(): JSX.Element {
   const user = useAuthStore((s) => s.user)
-  const canCreateLayer = hasPerm(user, 'layers', 'create')
   const canCreateRaster = hasPerm(user, 'raster', 'create') && hasPerm(user, 'layers', 'create')
   const canUpdate = hasPerm(user, 'layers', 'update')
   const canDelete = hasPerm(user, 'layers', 'delete')
@@ -140,18 +138,10 @@ export default function MapLayerPage(): JSX.Element {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [geoTiffDialogOpen, setGeoTiffDialogOpen] = useState(false)
-  const [shapefileDialogOpen, setShapefileDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [layerToDelete, setLayerToDelete] = useState<MapLayer | null>(null)
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
   const [layerToPublish, setLayerToPublish] = useState<MapLayer | null>(null)
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search)
-    if (searchParams.get('action') === 'import-shapefile') {
-      setShapefileDialogOpen(true)
-    }
-  }, [])
 
   const updateMutation = useApiMutation(
     (payload: { code: string; data: CreateMapLayerBody }) =>
@@ -229,8 +219,8 @@ export default function MapLayerPage(): JSX.Element {
   }
 
   return (
-    <PageLayout title="Quản lý lớp dữ liệu" description="Quản lý lớp dữ liệu và danh mục bản đồ">
-      <Tabs defaultValue="layers" className="w-full space-y-4">
+    <PageLayout title="Lớp bản đồ">
+      <Tabs defaultValue="layers" className="min-w-0 w-full space-y-4">
         <TabsList>
           <TabsTrigger value="layers" className="gap-2">
             <Layers className="size-4" />
@@ -238,7 +228,7 @@ export default function MapLayerPage(): JSX.Element {
           </TabsTrigger>
           <TabsTrigger value="categories" className="gap-2">
             <FolderTree className="size-4" />
-            <span>Quản lý danh mục ({categories?.length ?? 0})</span>
+            <span>Danh mục ({categories?.length ?? 0})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -259,10 +249,10 @@ export default function MapLayerPage(): JSX.Element {
               }}
             >
               <SelectTrigger className="w-44">
-                <SelectValue placeholder="Tất cả nhóm lớp" />
+                <SelectValue placeholder="Tất cả danh mục" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả nhóm lớp</SelectItem>
+                <SelectItem value="all">Tất cả danh mục</SelectItem>
                 {isCategoriesError ? (
                   <div className="px-2 py-1.5 text-xs text-destructive">
                     Lỗi tải danh mục: {(categoriesError as Error)?.message || 'Không thể lấy dữ liệu'}
@@ -313,7 +303,7 @@ export default function MapLayerPage(): JSX.Element {
                 <SelectItem value="POINT">Dữ liệu điểm</SelectItem>
                 <SelectItem value="LINESTRING">Dữ liệu đường</SelectItem>
                 <SelectItem value="POLYGON">Dữ liệu vùng</SelectItem>
-                <SelectItem value="RASTER">Dữ liệu Raster</SelectItem>
+                <SelectItem value="RASTER">Ảnh bản đồ</SelectItem>
               </SelectContent>
             </Select>
 
@@ -334,16 +324,6 @@ export default function MapLayerPage(): JSX.Element {
               </SelectContent>
             </Select>
 
-            {canCreateLayer && (
-              <Button
-                onClick={() => setShapefileDialogOpen(true)}
-                className="gap-2 shadow-sm"
-              >
-                <FileArchive className="size-4" />
-                Nhập Shapefile
-              </Button>
-            )}
-
             {canCreateRaster && (
               <Button variant="outline" onClick={() => setGeoTiffDialogOpen(true)}>
                 Thêm lớp ảnh bản đồ
@@ -362,7 +342,7 @@ export default function MapLayerPage(): JSX.Element {
           <TableHeader className="sticky top-0 z-20">
             <TableRow>
               <TableHead>Tên lớp</TableHead>
-              <TableHead>Nhóm lớp</TableHead>
+              <TableHead>Danh mục</TableHead>
               <TableHead>Kiểu</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Ngày tạo</TableHead>
@@ -397,7 +377,9 @@ export default function MapLayerPage(): JSX.Element {
                       categories?.find((c) => c.key === layer.category)?.name ||
                       getMapLayerCategoryLabel(layer.category)}
                   </TableCell>
-                  <TableCell className="uppercase">{layer.geometry_type || '-'}</TableCell>
+                  <TableCell>
+                    {GEOMETRY_TYPE_LABEL[String(layer.geometry_type || '').toUpperCase()] || layer.geometry_type || '-'}
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1">
                       <StatusDotBadge
@@ -405,16 +387,9 @@ export default function MapLayerPage(): JSX.Element {
                         badgeClass={PUBLISHED_CLASS[String(layer.publish_status === 'published')]}
                         dotClass={PUBLISHED_DOT[String(layer.publish_status === 'published')]}
                       />
-                      <Badge variant={layer.is_public ? 'secondary' : 'outline'}>
-                        {layer.is_public ? 'Công khai' : 'Nội bộ'}
-                      </Badge>
+                      <StatusDotBadge label={layer.is_public ? 'Công khai' : 'Nội bộ'} tone={layer.is_public ? 'info' : 'neutral'} />
                       {layer.is_enable_default && (
-                        <Badge
-                          variant="outline"
-                          className="border-warning/30 bg-warning/10 text-warning"
-                        >
-                          Bật mặc định
-                        </Badge>
+                        <StatusDotBadge label="Bật mặc định" tone="warning" />
                       )}
                     </div>
                   </TableCell>
@@ -510,11 +485,6 @@ export default function MapLayerPage(): JSX.Element {
         onOpenChange={setGeoTiffDialogOpen}
         onPublished={() => dbQuery.refetch()}
       />
-      <ShapefileImportDialog
-        open={shapefileDialogOpen}
-        onOpenChange={setShapefileDialogOpen}
-        onSuccess={() => dbQuery.refetch()}
-      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -550,7 +520,7 @@ export default function MapLayerPage(): JSX.Element {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận công bố</AlertDialogTitle>
             <AlertDialogDescription>
-              {`Lớp "${layerToPublish?.name_vi || layerToPublish?.name || layerToPublish?.code}" sẽ được publish lên dịch vụ bản đồ. Chỉ lớp có phạm vi "Công khai" mới xuất hiện với người dân.`}
+              {`Lớp "${layerToPublish?.name_vi || layerToPublish?.name || layerToPublish?.code}" sẽ được công bố lên dịch vụ bản đồ. Chỉ lớp có phạm vi "Công khai" mới xuất hiện với người dân.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

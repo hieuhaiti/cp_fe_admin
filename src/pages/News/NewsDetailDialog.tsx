@@ -1,5 +1,6 @@
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
+import { STATUS_LABEL } from '@/constant/newsConstant'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { newsService, useApiQuery } from '@/service'
 import type { ApiResponse, News, NewsData } from '@/types/api'
 import { parseLink } from '@/lib/utils'
@@ -12,10 +13,7 @@ interface NewsDetailDialogProps {
   newsId: number | null
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  published: 'Đã xuất bản',
-  draft: 'Bản nháp',
-}
+
 
 const CATEGORY_LABEL: Record<string, string> = {
   general: 'Tin chung',
@@ -63,9 +61,8 @@ export default function NewsDetailDialog({ open, onOpenChange, newsId }: NewsDet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
+      <DialogContent aria-describedby={undefined} className="max-h-[80vh] max-w-3xl overflow-y-auto">
         <DialogTitle>Chi tiết tin tức</DialogTitle>
-        <DialogDescription>Thông tin chi tiết bài viết đã chọn</DialogDescription>
 
         {dbQuery.isLoading ? (
           <div className="text-muted-foreground mt-4 text-sm">Đang tải dữ liệu...</div>
@@ -82,7 +79,7 @@ export default function NewsDetailDialog({ open, onOpenChange, newsId }: NewsDet
               <span className="col-span-2">{title || '-'}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <span className="font-semibold">Slug:</span>
+              <span className="font-semibold">Đường dẫn bài viết:</span>
               <span className="col-span-2 font-mono text-sm">{slug || '-'}</span>
             </div>
             {summary && (
@@ -108,9 +105,7 @@ export default function NewsDetailDialog({ open, onOpenChange, newsId }: NewsDet
             <div className="grid grid-cols-3 gap-2">
               <span className="font-semibold">Trạng thái:</span>
               <span className="col-span-2">
-                <Badge variant={status === 'published' ? 'default' : 'secondary'}>
-                  {STATUS_LABEL[status] ?? status ?? '-'}
-                </Badge>
+                <StatusDotBadge label={STATUS_LABEL[status] ?? 'Chưa xác định'} tone={status === 'published' ? 'success' : 'neutral'} />
               </span>
             </div>
             {category && (

@@ -160,7 +160,7 @@ export default function NewsComments(): JSX.Element {
   }
 
   return (
-    <PageLayout title="Bình luận tin tức" description="Quản lý bình luận bài viết">
+    <PageLayout title="Bình luận tin tức">
       <ToolTableCustom
         searchValue={searchValue}
         setSearchValue={(v) => {
@@ -366,9 +366,9 @@ export default function NewsComments(): JSX.Element {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogTitle>Xóa bình luận?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.
+              Thao tác này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

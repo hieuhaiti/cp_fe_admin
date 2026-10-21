@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { Plus, Trash2, ListChecks, FileCode, ListFilter, Search, X, Database, Check } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,7 +45,7 @@ interface MapLayerFormDialogProps {
 type MapLayerDetailData = MapLayer | { mapLayer?: MapLayer }
 
 export const mapLayerSchema = z.object({
-  category: z.string().trim().min(1, { message: 'Vui lòng chọn nhóm lớp' }).max(60),
+  category: z.string().trim().min(1, { message: 'Chọn danh mục' }).max(60),
   category_name: z
     .string({ message: 'Tên danh mục là bắt buộc' })
     .trim()
@@ -853,14 +853,14 @@ function DisplayFieldsEditor({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
           <span>Danh sách trường được chọn ({displayFields.length}):</span>
-          <span className="text-[10px] italic">Bật icon kính lúp để cho phép tìm kiếm nhanh qua tham số ?q=</span>
+          <span className="text-[10px] italic">Bật biểu tượng kính lúp để cho phép tìm kiếm qua tham số ?q=</span>
         </div>
 
         {displayFields.length === 0 ? (
           <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300">
             <p className="font-medium">Chưa có trường hiển thị nào được chọn.</p>
             <p className="text-[11px] mt-0.5">
-              Vui lòng nhập tên trường hoặc click chọn từ cột trong bảng dữ liệu ở trên để kích hoạt hiển thị thuộc tính và chia sẻ API.
+              Nhập tên trường hoặc chọn cột từ bảng dữ liệu phía trên để hiển thị thuộc tính và chia sẻ qua API.
             </p>
           </div>
         ) : (
@@ -888,7 +888,7 @@ function DisplayFieldsEditor({
                     className={`rounded p-0.5 transition-colors ${
                       isSearchable ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-200/50' : 'text-muted-foreground/60 hover:text-primary hover:bg-accent'
                     }`}
-                    title={isSearchable ? 'Đang bật tìm kiếm nhanh (click để tắt)' : 'Bật tìm kiếm nhanh cho trường này'}
+                    title={isSearchable ? 'Tắt tìm kiếm nhanh cho trường này' : 'Bật tìm kiếm nhanh cho trường này'}
                   >
                     <Search className="size-3" />
                   </button>
@@ -1134,13 +1134,8 @@ export default function MapLayerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
-        <DialogTitle>{isEdit ? 'Chỉnh sửa lớp dữ liệu' : 'Thêm lớp dữ liệu mới'}</DialogTitle>
-        <DialogDescription>
-          {isEdit
-            ? 'Cập nhật thông tin lớp dữ liệu bản đồ'
-            : 'Tạo lớp dữ liệu theo nhóm nghiệp vụ và kiểu hình học'}
-        </DialogDescription>
+      <DialogContent aria-describedby={undefined} className="max-h-[85vh] max-w-3xl overflow-y-auto">
+        <DialogTitle>{isEdit ? 'Chỉnh sửa lớp dữ liệu' : 'Thêm lớp dữ liệu'}</DialogTitle>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <CategorySelect
@@ -1148,7 +1143,7 @@ export default function MapLayerFormDialog({
             categoryName={categoryName}
             onCategoryChange={setCategory}
             onCategoryNameChange={setCategoryName}
-            label="Nhóm lớp"
+            label="Danh mục"
             required
           />
 

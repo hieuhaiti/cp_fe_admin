@@ -66,14 +66,14 @@ describe('News page actions', () => {
   it('renders create/edit/delete actions according to permission', () => {
     renderWithProviders(<NewsPage />)
     expect(screen.getByText('Tin thử')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm tin tức' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm bài viết' }))
     expect(screen.getByText('News form opened')).toBeInTheDocument()
   })
 
   it('deletes with Server optimistic-lock timestamp', () => {
     renderWithProviders(<NewsPage />)
     fireEvent.click(screen.getByRole('button', { name: 'Xóa' }))
-    expect(screen.getByRole('heading', { name: 'Xác nhận xóa' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Xóa bài viết?' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Xóa' }))
     expect(mutates[2]).toHaveBeenCalledWith({ id: 12, expectedUpdatedAt: '2026-01-02T00:00:00.000Z' })
   })

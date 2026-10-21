@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -518,10 +519,7 @@ export default function TimeSeriesCreateDialog({
                             </span>
                           </span>
                           {!group.isPublishable && (
-                            <Badge variant="destructive" className="shrink-0 gap-1 text-[10px]">
-                              <AlertTriangle className="size-3" />
-                              Trùng mốc
-                            </Badge>
+                            <StatusDotBadge label="Trùng mốc" tone="destructive" />
                           )}
                         </button>
                       )

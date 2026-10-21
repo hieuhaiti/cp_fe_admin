@@ -52,7 +52,8 @@ export default function ToolTableCustom({
           <div className="relative w-full min-w-48 sm:w-64">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
             <Input
-              placeholder="Tìm kiếm..."
+              placeholder="Tìm kiếm"
+              aria-label="Tìm kiếm"
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
               className="text-foreground pr-9 pl-9"
@@ -60,6 +61,7 @@ export default function ToolTableCustom({
             {searchValue && (
               <Button
                 variant="ghost"
+                aria-label="Xóa tìm kiếm"
                 size="sm"
                 onClick={() => {
                   setLocalSearch('')
@@ -84,7 +86,7 @@ export default function ToolTableCustom({
         {pagination && pagination.totalPages > 1 ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-muted-foreground text-sm whitespace-nowrap">
-              Hiển thị trang <span className="font-semibold">{pagination.currentPage}</span> /{' '}
+              Trang <span className="font-semibold">{pagination.currentPage}</span> /{' '}
               {pagination.totalPages}
             </div>
 

@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import type { JSX } from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { useApiQuery, useApiMutation, userService, authService } from '@/service'
@@ -39,7 +40,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { KeyRound, Plus, Power, ShieldCheck, Trash2 } from 'lucide-react'
 import PageLayout from '@/layout/pageLayout'
@@ -296,7 +296,7 @@ export default function User(): JSX.Element {
   }
 
   return (
-    <PageLayout title="Người dùng" description="Quản lý người dùng hệ thống">
+    <PageLayout title="Người dùng">
       <ToolTableCustom
         searchValue={searchValue}
         setSearchValue={setSearchValue}
@@ -335,7 +335,7 @@ export default function User(): JSX.Element {
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
                 <SelectItem value="active">Đang hoạt động</SelectItem>
-                <SelectItem value="inactive">Đã vô hiệu</SelectItem>
+                <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
               </SelectContent>
             </Select>
 
@@ -408,9 +408,9 @@ export default function User(): JSX.Element {
                     <TableCell>{roleLabel(roleCode, roleName)}</TableCell>
                     <TableCell>
                       {isActive ? (
-                        <Badge variant="default">Hoạt động</Badge>
+                        <StatusDotBadge label="Đang hoạt động" tone="success" />
                       ) : (
-                        <Badge variant="secondary">Vô hiệu</Badge>
+                        <StatusDotBadge label="Ngừng hoạt động" tone="neutral" />
                       )}
                     </TableCell>
                     <TableCell className="text-right">

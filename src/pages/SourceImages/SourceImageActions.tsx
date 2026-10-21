@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useState, useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,7 +14,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import CategorySelect from '@/components/common/CategorySelect'
 import { Loader2, RefreshCw, AlertTriangle, Trash2, Send, Layers } from 'lucide-react'
 import { mapLayerService } from '@/service'
@@ -418,18 +418,7 @@ export function CleanupDetailDialog({
               </div>
               <div>
                 <span className="text-muted-foreground block text-[11px]">Trạng thái xử lý</span>
-                <Badge
-                  variant={
-                    cleanupData.cleanupStatus === 'complete'
-                      ? 'secondary'
-                      : cleanupData.cleanupStatus === 'failed'
-                        ? 'destructive'
-                        : 'outline'
-                  }
-                  className="mt-0.5 text-[10px]"
-                >
-                  {formatLifecycleStatus(cleanupData.cleanupStatus)}
-                </Badge>
+                <StatusDotBadge label={formatLifecycleStatus(cleanupData.cleanupStatus)} tone={cleanupData.cleanupStatus === 'complete' ? 'success' : cleanupData.cleanupStatus === 'failed' ? 'destructive' : 'warning'} />
               </div>
             </div>
 
@@ -567,7 +556,7 @@ export function DeleteSourceImageDialog({
                 />
                 <div>
                   <span className="font-semibold text-foreground block">
-                    Chỉ xóa bản ghi thông tin (khuyến nghị)
+                    Chỉ xóa thông tin ảnh (khuyến nghị)
                   </span>
                   <span className="text-muted-foreground text-[11px] block">
                     Tệp lưu trữ GeoTIFF gốc vẫn được giữ lại an toàn trên hệ thống.
@@ -587,7 +576,7 @@ export function DeleteSourceImageDialog({
                 />
                 <div>
                   <span className="font-semibold text-destructive block">
-                    Xóa bản ghi VÀ yêu cầu xóa tệp lưu trữ GeoTIFF
+                    Xóa thông tin ảnh và yêu cầu xóa tệp gốc
                   </span>
                   <span className="text-muted-foreground text-[11px] block">
                     Hệ thống sẽ kiểm tra các liên kết khác trước khi dọn dẹp tệp vật lý. Thao tác này không thể hoàn tác!

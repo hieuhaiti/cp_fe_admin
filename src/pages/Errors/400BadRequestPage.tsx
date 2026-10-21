@@ -10,9 +10,7 @@ export default function BadRequestPage(): JSX.Element {
         <h1 className="text-foreground mt-4 text-5xl tracking-tight sm:text-7xl">
           {'Yêu cầu không hợp lệ'}
         </h1>
-        <p className="text-foreground mt-6 text-lg font-medium sm:text-xl">
-          {'Xin lỗi, yêu cầu của bạn không hợp lệ.'}
-        </p>
+
         <div className="mt-10 flex items-center justify-center">
           <button
             onClick={() => navigate('/')}

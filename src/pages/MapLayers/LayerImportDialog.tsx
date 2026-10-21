@@ -43,7 +43,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CategorySelect from '@/components/common/CategorySelect'
-import { toCategorySlug } from '@/constant/mapLayerConstant'
+import { GEOMETRY_TYPE_LABEL, toCategorySlug } from '@/constant/mapLayerConstant'
 import { mapLayerService, remoteSensingService, useApiQuery } from '@/service'
 import storageService from '@/service/storageService'
 import type { ImportJob, ImportJobError, ShapefileImportPayload } from '@/types/api'
@@ -71,10 +71,10 @@ const SRID_OPTIONS = [
 ]
 
 const ENCODING_OPTIONS = [
-  { value: 'auto', label: 'Tự động (Dựa trên file .cpg hoặc mặc định UTF-8)' },
+  { value: 'auto', label: 'Tự động (dựa trên tệp .cpg hoặc mặc định UTF-8)' },
   { value: 'UTF-8', label: 'UTF-8 (Unicode chuẩn)' },
   { value: 'CP1258', label: 'CP1258 / Windows-1258 (Tiếng Việt chuẩn Windows)' },
-  { value: 'TCVN3', label: 'TCVN3 / ABC (Bản đồ font .VnTime cũ)' },
+  { value: 'TCVN3', label: 'TCVN3 / ABC (bản đồ dùng phông .VnTime cũ)' },
   { value: 'CP1252', label: 'CP1252 / Windows-1252 (Ký tự Tây Âu)' },
 ]
 
@@ -309,7 +309,7 @@ export default function LayerImportDialog({
         ? toCategorySlug(tiffCategoryName) || 'other'
         : tiffCategory
     if (!finalCategory || (finalCategory === 'other' && !tiffCategoryName.trim())) {
-      toast.error('Vui lòng chọn hoặc nhập tên danh mục hợp lệ.')
+      toast.error('Chọn hoặc nhập danh mục hợp lệ.')
       return
     }
 
@@ -321,7 +321,7 @@ export default function LayerImportDialog({
       }
 
       setPhase('uploading')
-      setStatusMessage('Đang tải tệp ảnh GeoTIFF lên hệ thống lưu trữ MinIO...')
+      setStatusMessage('Đang tải tệp ảnh GeoTIFF...')
 
       try {
         const fileObjectId = await storageService.upload(file, 'raster')
@@ -374,7 +374,7 @@ export default function LayerImportDialog({
     }
 
     setPhase('uploading')
-    setStatusMessage('Đang tải tệp ảnh GeoTIFF lên hệ thống lưu trữ MinIO...')
+    setStatusMessage('Đang tải tệp ảnh GeoTIFF...')
 
     try {
       const fileObjectId = await storageService.upload(file, 'raster')
@@ -515,7 +515,7 @@ export default function LayerImportDialog({
       stopPolling()
       setActiveJobId(jobId)
       setPhase('processing')
-      setStatusMessage('Máy chủ đang nạp dữ liệu không gian vào PostGIS...')
+      setStatusMessage('Đang nhập dữ liệu không gian...')
 
       void pollJobOnce(jobId).then((finished) => {
         if (finished) return
@@ -571,7 +571,7 @@ export default function LayerImportDialog({
         ? toCategorySlug(shpCategoryName) || 'other'
         : shpCategory
     if (!finalCategory || (finalCategory === 'other' && !shpCategoryName.trim())) {
-      toast.error('Vui lòng chọn hoặc nhập nhóm danh mục hợp lệ.')
+      toast.error('Chọn hoặc nhập danh mục hợp lệ.')
       return
     }
 
@@ -588,7 +588,7 @@ export default function LayerImportDialog({
     }
 
     setPhase('uploading')
-    setStatusMessage('Đang tải tệp Shapefile (.zip) lên hệ thống lưu trữ MinIO...')
+    setStatusMessage('Đang tải tệp Shapefile (.zip)...')
 
     let fileObjectId: number | string
     try {
@@ -621,7 +621,7 @@ export default function LayerImportDialog({
       const jobId = createdJob?.id || createdJob?.jobId
 
       if (!jobId) {
-        throw new Error('Máy chủ không trả về mã tác vụ import.')
+        throw new Error('Máy chủ không trả về mã tác vụ nhập dữ liệu.')
       }
 
       startShpPolling(Number(jobId))
@@ -658,7 +658,7 @@ export default function LayerImportDialog({
           </div>
           <DialogDescription>
             {activeTab === 'shapefile'
-              ? 'Tải lên tệp nén .zip chứa bộ dữ liệu Shapefile để chuyển đổi tự động vào PostGIS và công bố lớp dữ liệu lên hệ thống WebGIS.'
+              ? 'Tải lên tệp .zip chứa bộ dữ liệu Shapefile để nhập và công bố lớp bản đồ trên WebGIS.'
               : 'Tải lên tệp ảnh viễn thám GeoTIFF (.tif, .tiff) để công bố thành lớp bản đồ độc lập hoặc thêm vào chuỗi thời gian WebGIS.'}
           </DialogDescription>
         </DialogHeader>
@@ -679,7 +679,7 @@ export default function LayerImportDialog({
                     {phase === 'uploading' && 'Bước 1/3: Tải tệp lên máy chủ lưu trữ'}
                     {phase === 'enqueueing' && 'Bước 2/3: Xếp hàng xử lý'}
                     {phase === 'saving' && 'Bước 2/2: Khởi tạo và công bố lớp bản đồ'}
-                    {phase === 'processing' && 'Bước 3/3: Chuyển đổi và nạp dữ liệu PostGIS'}
+                    {phase === 'processing' && 'Bước 3/3: Chuyển đổi và nhập dữ liệu bản đồ'}
                     {phase === 'completed' &&
                       (activeTab === 'shapefile'
                         ? 'Nhập Shapefile thành công!'
@@ -738,8 +738,8 @@ export default function LayerImportDialog({
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Hình học:</span>
-                  <Badge variant="outline" className="text-[10px] uppercase">
-                    {jobDetail.geometry_type || 'VECTOR'}
+                  <Badge variant="outline" className="text-[10px]">
+                    {GEOMETRY_TYPE_LABEL[String(jobDetail.geometry_type || '').toUpperCase()] || jobDetail.geometry_type || 'Dữ liệu vectơ'}
                   </Badge>
                 </div>
                 <div>
@@ -840,12 +840,6 @@ export default function LayerImportDialog({
                 >
                   <Layers className="size-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Ảnh bản đồ GeoTIFF</span>
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] ml-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200"
-                  >
-                    Raster
-                  </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="shapefile"
@@ -853,12 +847,6 @@ export default function LayerImportDialog({
                 >
                   <FileArchive className="size-4 text-sky-600 dark:text-sky-400" />
                   <span>Tệp Shapefile (.zip)</span>
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] ml-1 bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200"
-                  >
-                    Vector
-                  </Badge>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -928,13 +916,13 @@ export default function LayerImportDialog({
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <div className="text-xs leading-relaxed space-y-1">
                       <p className="font-semibold text-emerald-900 dark:text-emerald-100">
-                        Yêu cầu tệp ảnh viễn thám GeoTIFF (.tif, .tiff):
+                        Yêu cầu tệp GeoTIFF (.tif, .tiff):
                       </p>
                       <p>
-                        Hỗ trợ định dạng ảnh raster viễn thám (Sentinel, Landsat, Drone UAV, bản đồ hiện trạng/ngập lụt) có gán tọa độ địa lý.
+                        Hỗ trợ ảnh GeoTIFF có gán tọa độ địa lý, gồm ảnh vệ tinh, ảnh chụp từ thiết bị bay và bản đồ chuyên đề.
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        * Tệp ảnh gốc được lưu trữ bảo toàn tại Kho ảnh nguồn. Dung lượng tối đa hỗ trợ: <strong>500MB</strong>.
+                        * Tệp ảnh gốc được lưu trữ bảo toàn tại Kho ảnh nguồn. Dung lượng tối đa hỗ trợ: <strong>500 MB</strong>.
                       </p>
                     </div>
                   </div>
@@ -961,7 +949,7 @@ export default function LayerImportDialog({
                     }}
                     onFileValidate={(f) => {
                       if (!/\.(tif|tiff)$/i.test(f.name)) return 'Chỉ hỗ trợ tệp .tif hoặc .tiff.'
-                      if (f.size > MAX_FILE_SIZE) return 'Kích thước file không được quá 500MB'
+                      if (f.size > MAX_FILE_SIZE) return 'Kích thước tệp không được quá 500 MB'
                       return null
                     }}
                     onFileReject={(_f, msg) => toast.error(msg)}
@@ -980,7 +968,7 @@ export default function LayerImportDialog({
                           </Button>
                         </FileUploadTrigger>
                         <p className="text-muted-foreground text-[11px] mt-1">
-                          Hỗ trợ .tif, .tiff · Tối đa 500MB
+                          Hỗ trợ .tif, .tiff · Tối đa 500 MB
                         </p>
                       </div>
                     </FileUploadDropzone>
@@ -1092,7 +1080,7 @@ export default function LayerImportDialog({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">
-                      Nhóm danh mục <span className="text-destructive">*</span>
+                      Danh mục <span className="text-destructive">*</span>
                     </Label>
                     <CategorySelect
                       category={tiffCategory}
@@ -1273,7 +1261,7 @@ export default function LayerImportDialog({
                     }}
                     onFileValidate={(f) => {
                       if (!/\.zip$/i.test(f.name)) return 'Chỉ hỗ trợ tệp nén .zip.'
-                      if (f.size > MAX_FILE_SIZE) return 'Kích thước file không được quá 500MB'
+                      if (f.size > MAX_FILE_SIZE) return 'Kích thước tệp không được quá 500 MB'
                       return null
                     }}
                     onFileReject={(_f, msg) => toast.error(msg)}
@@ -1292,7 +1280,7 @@ export default function LayerImportDialog({
                           </Button>
                         </FileUploadTrigger>
                         <p className="text-muted-foreground text-[11px] mt-1">
-                          Hỗ trợ định dạng .zip · Tối đa 500MB
+                          Hỗ trợ định dạng .zip · Tối đa 500 MB
                         </p>
                       </div>
                     </FileUploadDropzone>
@@ -1366,7 +1354,7 @@ export default function LayerImportDialog({
                 {/* Danh mục */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">
-                    Nhóm danh mục <span className="text-destructive">*</span>
+                    Danh mục <span className="text-destructive">*</span>
                   </Label>
                   <CategorySelect
                     category={shpCategory}
@@ -1380,7 +1368,7 @@ export default function LayerImportDialog({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="shp-srid" className="text-xs font-semibold">
-                      Hệ tọa độ đích (PostGIS)
+                      Hệ tọa độ đích
                     </Label>
                     <Select value={selectedShpSridPreset} onValueChange={setSelectedShpSridPreset}>
                       <SelectTrigger id="shp-srid" className="text-xs">
@@ -1427,7 +1415,7 @@ export default function LayerImportDialog({
                 {/* Cấu hình kiểm tra Topology */}
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Cấu hình kiểm tra Topology
+                    Kiểm tra hình học
                   </Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <button
@@ -1449,7 +1437,7 @@ export default function LayerImportDialog({
                         )}
                       </div>
                       <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
-                        Tự động làm sạch hình học (ST_MakeValid, khử điểm trùng). Phù hợp đa số lớp dữ liệu.
+                        Sửa hình học không hợp lệ và loại bỏ điểm trùng. Phù hợp với đa số lớp dữ liệu.
                       </p>
                     </button>
 
@@ -1465,7 +1453,7 @@ export default function LayerImportDialog({
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-xs text-foreground">
-                          Không sửa lỗi, hoàn trả file nếu có lỗi
+                          Không sửa lỗi, trả lại tệp nếu có lỗi
                         </span>
                         {topologyProfile === 'administrative_boundary' && (
                           <CheckCircle2 className="h-4 w-4 text-sky-600 dark:text-sky-400 shrink-0" />
@@ -1521,7 +1509,7 @@ export default function LayerImportDialog({
                     Hủy
                   </Button>
                   <Button type="submit" disabled={zipFiles.length === 0}>
-                    Tiến hành nhập Shapefile
+                    Nhập Shapefile
                   </Button>
                 </DialogFooter>
               </form>

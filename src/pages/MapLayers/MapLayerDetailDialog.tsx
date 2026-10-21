@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -71,31 +72,6 @@ function DetailField({
 
 
 
-function BooleanBadge({
-  value,
-  trueLabel,
-  falseLabel,
-  tone = 'success',
-}: {
-  value?: boolean
-  trueLabel: string
-  falseLabel: string
-  tone?: 'success' | 'info' | 'warning'
-}) {
-  if (value === undefined) return <Badge variant="secondary">Chưa xác định</Badge>
-
-  const toneClass = {
-    info: 'border-info/30 bg-info/10 text-info',
-    success: 'border-success/30 bg-success/10 text-success',
-    warning: 'border-warning/30 bg-warning/10 text-warning',
-  }[tone]
-
-  return (
-    <Badge variant="outline" className={value ? toneClass : 'text-muted-foreground'}>
-      {value ? trueLabel : falseLabel}
-    </Badge>
-  )
-}
 
 export default function MapLayerDetailDialog({
   open,
@@ -149,12 +125,9 @@ export default function MapLayerDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent aria-describedby={undefined} className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0">
         <div className="shrink-0 border-b px-6 py-5 pr-12">
           <DialogTitle>Chi tiết lớp dữ liệu bản đồ</DialogTitle>
-          <DialogDescription className="mt-1">
-            Thông tin nghiệp vụ, nguồn dữ liệu và trạng thái công bố của lớp đã chọn
-          </DialogDescription>
         </div>
 
         {dbQuery.isLoading ? (
@@ -189,24 +162,9 @@ export default function MapLayerDetailDialog({
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
-                  <BooleanBadge
-                    value={layer.publish_status === 'published'}
-                    trueLabel="Đã xuất bản"
-                    falseLabel="Bản nháp"
-                    tone="success"
-                  />
-                  <BooleanBadge
-                    value={layer.is_public}
-                    trueLabel="Công khai"
-                    falseLabel="Nội bộ"
-                    tone="info"
-                  />
-                  <BooleanBadge
-                    value={layer.is_enable_default}
-                    trueLabel="Bật mặc định"
-                    falseLabel="Tắt mặc định"
-                    tone="warning"
-                  />
+                  <StatusDotBadge label={layer.publish_status === 'published' ? 'Đã xuất bản' : 'Bản nháp'} tone={layer.publish_status === 'published' ? 'info' : 'neutral'} />
+                  <StatusDotBadge label={layer.is_public === undefined ? 'Chưa xác định' : layer.is_public ? 'Công khai' : 'Nội bộ'} tone={layer.is_public ? 'info' : 'neutral'} />
+                  <StatusDotBadge label={layer.is_enable_default === undefined ? 'Chưa xác định' : layer.is_enable_default ? 'Bật mặc định' : 'Tắt mặc định'} tone={layer.is_enable_default ? 'warning' : 'neutral'} />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button

@@ -1,15 +1,28 @@
+import { STATUS_DOT_BADGE_STYLES } from '@/lib/statusBadgeStyles'
+export const GEOMETRY_TYPE_LABEL: Record<string, string> = {
+  POINT: 'Dữ liệu điểm',
+  MULTIPOINT: 'Dữ liệu đa điểm',
+  LINE: 'Dữ liệu đường',
+  LINESTRING: 'Dữ liệu đường',
+  MULTILINESTRING: 'Dữ liệu đa đường',
+  POLYGON: 'Dữ liệu vùng',
+  MULTIPOLYGON: 'Dữ liệu đa vùng',
+  GEOMETRY: 'Dữ liệu hình học',
+  RASTER: 'Ảnh bản đồ',
+}
+
 // ── Active status ─────────────────────────────────────────────────
 export const ACTIVE_LABEL: Record<string, string> = {
   true: 'Đang hoạt động',
   false: 'Ngừng hoạt động',
 }
 export const ACTIVE_CLASS: Record<string, string> = {
-  true: 'bg-green-50 text-green-700 border-green-200',
-  false: 'bg-slate-100 text-slate-500 border-slate-200',
+  true: STATUS_DOT_BADGE_STYLES.success.badge,
+  false: STATUS_DOT_BADGE_STYLES.neutral.badge,
 }
 export const ACTIVE_DOT: Record<string, string> = {
-  true: 'bg-green-500',
-  false: 'bg-slate-400',
+  true: STATUS_DOT_BADGE_STYLES.success.dot,
+  false: STATUS_DOT_BADGE_STYLES.neutral.dot,
 }
 
 // ── Published status ──────────────────────────────────────────────
@@ -18,12 +31,12 @@ export const PUBLISHED_LABEL: Record<string, string> = {
   false: 'Bản nháp',
 }
 export const PUBLISHED_CLASS: Record<string, string> = {
-  true: 'bg-sky-50 text-sky-700 border-sky-200',
-  false: 'bg-slate-100 text-slate-500 border-slate-200',
+  true: STATUS_DOT_BADGE_STYLES.info.badge,
+  false: STATUS_DOT_BADGE_STYLES.neutral.badge,
 }
 export const PUBLISHED_DOT: Record<string, string> = {
-  true: 'bg-sky-500',
-  false: 'bg-slate-400',
+  true: STATUS_DOT_BADGE_STYLES.info.dot,
+  false: STATUS_DOT_BADGE_STYLES.neutral.dot,
 }
 
 // ── Role label mapping ────────────────────────────────────────────
@@ -42,11 +55,11 @@ export const PUBLIC_LABEL: Record<string, string> = {
 }
 export const PUBLIC_CLASS: Record<string, string> = {
   true: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  false: 'bg-slate-100 text-slate-500 border-slate-200',
+  false: STATUS_DOT_BADGE_STYLES.neutral.badge,
 }
 export const PUBLIC_DOT: Record<string, string> = {
   true: 'bg-emerald-500',
-  false: 'bg-slate-400',
+  false: STATUS_DOT_BADGE_STYLES.neutral.dot,
 }
 
 // ── Category (nhóm lớp) ───────────────────────────────────────────

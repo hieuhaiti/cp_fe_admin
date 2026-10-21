@@ -87,11 +87,11 @@ export default function SourceImagesPage(): JSX.Element {
 
   if (!canRead) {
     return (
-      <PageLayout title="Kho ảnh nguồn GeoTIFF" description="Quản lý tệp ảnh viễn thám gốc">
+      <PageLayout title="Kho ảnh nguồn GeoTIFF">
         <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-muted-foreground">
           <ShieldAlert className="size-10 text-destructive/70" />
           <p className="text-sm font-medium">
-            Bạn không có quyền truy cập kho ảnh nguồn (yêu cầu quyền raster:read).
+            Bạn không có quyền xem kho ảnh nguồn.
           </p>
         </div>
       </PageLayout>
@@ -99,10 +99,7 @@ export default function SourceImagesPage(): JSX.Element {
   }
 
   return (
-    <PageLayout
-      title="Kho ảnh nguồn GeoTIFF"
-      description="Quản lý tệp ảnh viễn thám gốc, theo dõi trạng thái dọn dẹp lớp đã xóa, đổi nhóm chuỗi thời gian hoặc công bố lại thành lớp bản đồ mới."
-    >
+    <PageLayout title="Kho ảnh nguồn GeoTIFF">
       <ToolTableCustom
         searchValue={searchValue}
         setSearchValue={(val) => {

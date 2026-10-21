@@ -80,8 +80,8 @@ export default function Login() {
   }, [])
 
   const loginSchema = z.object({
-    email: z.string().email('Vui lòng nhập địa chỉ email hợp lệ.'),
-    password: z.string().min(1, 'Vui lòng nhập mật khẩu.'),
+    email: z.string().email('Nhập địa chỉ email hợp lệ.'),
+    password: z.string().min(1, 'Nhập mật khẩu.'),
   })
 
   async function submitLogin(email: string, password: string) {
@@ -156,9 +156,6 @@ export default function Login() {
                 <h2 className="text-foreground mt-4 text-3xl font-bold tracking-tight">
                   Hệ thống GIS Cẩm Phả
                 </h2>
-                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-                  Đăng nhập để truy cập nền tảng quản lý dữ liệu không gian, bản đồ số và quy hoạch.
-                </p>
               </div>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -167,7 +164,7 @@ export default function Login() {
                     htmlFor="email"
                     className="text-muted-foreground mb-1.5 block text-sm font-medium"
                   >
-                    Email đăng nhập
+                    Email
                   </label>
                   <div className="focus-within:text-primary relative flex items-center transition-all">
                     <User className="text-muted-foreground absolute left-3.5 h-5 w-5 transition-colors" />
@@ -187,7 +184,7 @@ export default function Login() {
                     htmlFor="password"
                     className="text-muted-foreground mb-1.5 block text-sm font-medium"
                   >
-                    Mật khẩu truy cập
+                    Mật khẩu
                   </label>
                   <div className="focus-within:text-primary relative flex items-center transition-all">
                     <Lock className="text-muted-foreground absolute left-3.5 h-5 w-5" />
@@ -204,6 +201,7 @@ export default function Login() {
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-primary absolute right-1 h-10 w-10 hover:bg-transparent"
+                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                       onClick={() => setShowPassword((prev) => !prev)}
                     >
                       {showPassword ? (
@@ -228,7 +226,7 @@ export default function Login() {
                   disabled={isLoading}
                   className="shadow-primary/20 hover:shadow-primary/40 mt-2 h-12 w-full rounded-xl text-base font-bold shadow-lg transition-all"
                 >
-                  {isLoading ? 'Đang xác thực...' : 'Truy cập hệ thống'}
+                  {isLoading ? 'Đang xác thực...' : 'Đăng nhập'}
                 </Button>
               </form>
 
@@ -295,11 +293,8 @@ export default function Login() {
           <div className="mt-8 space-y-2 text-center">
             <h3 className="text-foreground flex items-center justify-center gap-2 text-2xl font-bold tracking-tight">
               <Map className="text-primary h-6 w-6" />
-              Nền Tảng Quản Trị Không Gian
+              Quản trị GIS Cẩm Phả
             </h3>
-            <p className="text-muted-foreground mx-auto max-w-sm">
-              Theo dõi, phân tích và trực quan hóa dữ liệu bản đồ thời gian thực.
-            </p>
           </div>
         </div>
       </div>

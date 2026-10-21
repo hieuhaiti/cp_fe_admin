@@ -42,9 +42,11 @@
  * ============================================================
  */
 
-import { fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import KttvScenariosPage from './index'
+import KttvConvertFromLayersDialog from './KttvConvertFromLayersDialog'
+import { toast } from 'react-toastify'
 import { renderWithProviders } from '@/test/renderWithProviders'
 import { useAuthStore } from '@/stores/common/useAuthStore'
 import type { User } from '@/types/api'
@@ -52,6 +54,36 @@ const queryMock = vi.hoisted(() => vi.fn()); const mutationMock = vi.hoisted(() 
 vi.mock('@/service', () => ({ kttvScenarioService: { getAll: vi.fn(), delete: vi.fn() }, useApiQuery: queryMock, useApiMutation: mutationMock }))
 vi.mock('./KttvScenarioFormDialog', () => ({ default: ({ open }: { open: boolean }) => open ? <div>Scenario form opened</div> : null }))
 vi.mock('./KttvInputForm', () => ({ default: () => <div>KTTV input form</div> }))
+vi.mock('react-toastify', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const admin = { id: 1, email: 'a@a.com', roleCode: 'so_tnmt', isActive: true, role: { code: 'so_tnmt', permissions: { flood: { read: true, run: true } } } } as User
 const item = { id: 7, code: 'KB7', name_vi: 'Kịch bản 7', layer_code: 'flood_7', is_active: true }
 describe('KTTV scenario index', () => { beforeEach(() => { vi.clearAllMocks(); useAuthStore.setState({ user: admin }); queryMock.mockReturnValue({ data: { data: { items: [item], pagination: { total: 1 } } }, refetch: vi.fn() }); mutationMock.mockReturnValue({ mutate: remove, isPending: false }) }); it('opens create form by permission', () => { renderWithProviders(<KttvScenariosPage />); fireEvent.click(screen.getByRole('button', { name: 'Thêm kịch bản' })); expect(screen.getByText('Scenario form opened')).toBeInTheDocument() }); it('deletes by exact scenario id', () => { renderWithProviders(<KttvScenariosPage />); fireEvent.click(screen.getByRole('button', { name: 'Xóa' })); fireEvent.click(screen.getByRole('button', { name: 'Xóa' })); expect(remove).toHaveBeenCalledWith(7) }) })
+
+describe('KTTV success notification ownership', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useAuthStore.setState({ user: admin })
+    queryMock.mockReturnValue({ data: { data: { items: [item] } }, refetch: vi.fn() })
+    mutationMock.mockReturnValue({ mutate: remove, isPending: false })
+  })
+
+  it('keeps one local delete success toast', () => {
+    renderWithProviders(<KttvScenariosPage />)
+    const [, options, notification] = mutationMock.mock.calls[0]
+    expect(notification).toBe(false)
+    act(() => options.onSuccess())
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith('Xóa kịch bản thành công')
+  })
+
+  it('keeps the conversion result counts without a default success toast', () => {
+    const onConverted = vi.fn()
+    const onOpenChange = vi.fn()
+    renderWithProviders(<KttvConvertFromLayersDialog open={false} onOpenChange={onOpenChange} onConverted={onConverted} />)
+    const [, options, notification] = mutationMock.mock.calls[0]
+    expect(notification).toBe(false)
+    act(() => options.onSuccess({ data: { created: [{}], skipped: [{}] } }))
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith('Đã chuyển đổi thành công 1 kịch bản ngập (bỏ qua 1 kịch bản đã tồn tại)')
+    expect(onConverted).toHaveBeenCalledOnce()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+})

@@ -31,15 +31,15 @@ export const STATUS_LABEL: Record<string, string> = {
   in_progress: 'Đang xem xét',
 }
 export const STATUS_CLASS: Record<string, string> = {
-  pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  under_review: 'bg-sky-50 text-sky-700 border-sky-200',
-  approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  resolved: 'bg-green-50 text-green-700 border-green-200',
-  rejected: 'bg-red-50 text-red-700 border-red-200',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+  under_review: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800',
+  approved: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+  resolved: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800',
+  rejected: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800',
 
   // Fallbacks / legacy
-  new: 'bg-amber-50 text-amber-700 border-amber-200',
-  in_progress: 'bg-sky-50 text-sky-700 border-sky-200',
+  new: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+  in_progress: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800',
 }
 export const STATUS_DOT: Record<string, string> = {
   pending: 'bg-amber-500',

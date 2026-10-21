@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { documentService, useApiMutation, useApiQuery } from '@/service'
@@ -9,7 +10,6 @@ import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
@@ -91,7 +91,6 @@ export default function DocumentsPage() {
   return (
     <PageLayout
       title="Văn bản tài liệu"
-      description="Quản lý văn bản, tài liệu hiển thị trên cổng thông tin"
     >
       <ToolTableCustom
         searchValue={q}
@@ -160,9 +159,7 @@ export default function DocumentsPage() {
                     {item.issued_at ? formatDate(item.issued_at) : '-'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={isPublic ? 'default' : 'secondary'}>
-                      {isPublic ? 'Công khai' : 'Nội bộ'}
-                    </Badge>
+                    <StatusDotBadge label={isPublic ? 'Công khai' : 'Nội bộ'} tone={isPublic ? 'info' : 'neutral'} />
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">

@@ -46,7 +46,7 @@ export default function MapLayerApiPublicPage() {
   const currentTab = toValidTab(searchParams.get('tab'))
 
   return (
-    <PageLayout title="Kiểm tra Map Data API" description="Kiểm tra API key được cấp">
+    <PageLayout title="Kiểm tra API bản đồ">
       <Tabs
         value={currentTab}
         onValueChange={(tab) => {
@@ -54,7 +54,7 @@ export default function MapLayerApiPublicPage() {
         }}
       >
         <TabsList>
-          <TabsTrigger value="tester">Test API</TabsTrigger>
+          <TabsTrigger value="tester">Kiểm tra API</TabsTrigger>
           <TabsTrigger value="guide">Hướng dẫn tích hợp</TabsTrigger>
         </TabsList>
 
@@ -70,13 +70,13 @@ export default function MapLayerApiPublicPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
               <p>
-                API dữ liệu bản đồ cho phép đối tác đọc features GeoJSON của một lớp bản đồ được
-                chia sẻ. Mỗi lớp được định danh bằng một <strong className="text-foreground">slug</strong>{' '}
+                API dữ liệu bản đồ cho phép đối tác đọc các đối tượng GeoJSON của một lớp bản đồ được
+                chia sẻ. Mỗi lớp có một <strong className="text-foreground">định danh đường dẫn</strong>{' '}
                 duy nhất; mỗi đối tác được cấp một{' '}
-                <strong className="text-foreground">API key</strong> riêng để xác thực.
+                <strong className="text-foreground">khóa API</strong> riêng để xác thực.
               </p>
               <p>
-                Key chỉ hiển thị <strong className="text-foreground">một lần</strong> sau khi cấp
+                Khóa chỉ hiển thị <strong className="text-foreground">một lần</strong> sau khi cấp
                 hoặc xoay — hãy lưu lại ngay.
               </p>
             </CardContent>
@@ -89,11 +89,10 @@ export default function MapLayerApiPublicPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p className="text-muted-foreground">
-                Dùng header <Code>Authorization: Bearer &lt;token&gt;</Code>. Token là JWT được
-                trả về <strong className="text-foreground">một lần duy nhất</strong> khi cấp hoặc
-                xoay key qua màn Quản lý Map API — hãy lưu lại ngay.
+                Dùng trường HTTP <Code>Authorization: Bearer &lt;token&gt;</Code> với khóa chia sẻ (JWT)
+                nhận được khi cấp hoặc xoay khóa trong trang quản lý API lớp bản đồ.
               </p>
-              <CodeBlock lang="HTTP header">
+              <CodeBlock lang="Trường HTTP">
                 {`Authorization: Bearer eyJ...`}
               </CodeBlock>
             </CardContent>
@@ -102,10 +101,10 @@ export default function MapLayerApiPublicPage() {
           {/* Endpoints */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Endpoints</CardTitle>
+              <CardTitle className="text-base">Địa chỉ API</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 text-sm">
-              <Section title="1. Lấy danh sách features">
+              <Section title="1. Lấy danh sách đối tượng">
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">GET</Badge>
                   <Code>/api/v1/shared/{'{slug}'}/features</Code>
@@ -114,7 +113,7 @@ export default function MapLayerApiPublicPage() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b text-left text-muted-foreground">
-                        <th className="pb-2 pr-4 font-medium">Tham số (query)</th>
+                        <th className="pb-2 pr-4 font-medium">Tham số truy vấn</th>
                         <th className="pb-2 pr-4 font-medium">Bắt buộc</th>
                         <th className="pb-2 font-medium">Mô tả</th>
                       </tr>
@@ -123,7 +122,7 @@ export default function MapLayerApiPublicPage() {
                       <tr>
                         <td className="py-2 pr-4 font-mono">limit</td>
                         <td className="py-2 pr-4 text-muted-foreground">Không</td>
-                        <td className="py-2 text-muted-foreground">Số features trả về — giá trị hợp lệ: <Code>10</Code>, <Code>20</Code>, <Code>50</Code>, <Code>100</Code></td>
+                        <td className="py-2 text-muted-foreground">Số đối tượng trả về — giá trị hợp lệ: <Code>10</Code>, <Code>20</Code>, <Code>50</Code>, <Code>100</Code></td>
                       </tr>
                       <tr>
                         <td className="py-2 pr-4 font-mono">page</td>
@@ -162,7 +161,7 @@ export default function MapLayerApiPublicPage() {
 
               <Section title="JavaScript / Fetch">
                 <CodeBlock lang="javascript">
-                  {`const TOKEN = 'eyJ...'; // JWT nhận được khi cấp / xoay key — lưu lại ngay
+                  {`const TOKEN = 'eyJ...'; // JWT nhận được khi cấp / xoay khóa — lưu lại ngay
 const SLUG  = 'thuy-loi-cam-pha';
 const BASE  = 'https://api.campha.vn/api/v1';
 
@@ -176,7 +175,7 @@ async function getFeatures(page = 1, limit = 50) {
 }
 
 const data = await getFeatures(1, 50);
-console.log(data.features.length, 'features');`}
+console.log(data.features.length, 'đối tượng');`}
                 </CodeBlock>
               </Section>
 
@@ -184,7 +183,7 @@ console.log(data.features.length, 'features');`}
                 <CodeBlock lang="python">
                   {`import requests
 
-TOKEN = 'eyJ...'  # JWT nhận được khi cấp / xoay key — lưu lại ngay
+TOKEN = 'eyJ...'  # JWT nhận được khi cấp / xoay khóa — lưu lại ngay
 SLUG  = 'thuy-loi-cam-pha'
 BASE  = 'https://api.campha.vn/api/v1'
 
@@ -195,7 +194,7 @@ resp = requests.get(f'{BASE}/shared/{SLUG}/features', params=params, headers=hea
 resp.raise_for_status()
 
 data = resp.json()
-print(f"{data['total']} features, trả về {data['returned']}")`}
+print(f"{data['total']} đối tượng, trả về {data['returned']}")`}
                 </CodeBlock>
               </Section>
             </CardContent>
@@ -217,8 +216,8 @@ print(f"{data['total']} features, trả về {data['returned']}")`}
       "properties": { "name": "Hồ chứa A", ... }
     }
   ],
-  "total": 320,      // tổng số features khớp
-  "returned": 100,   // số features trong response này
+  "total": 320,      // tổng số đối tượng khớp
+  "returned": 100,   // số đối tượng trả về lần này
   "hasMore": true    // còn trang tiếp theo
 }`}
               </CodeBlock>
@@ -235,7 +234,7 @@ print(f"{data['total']} features, trả về {data['returned']}")`}
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 pr-4 font-medium">HTTP Status</th>
+                      <th className="pb-2 pr-4 font-medium">Mã HTTP</th>
                       <th className="pb-2 font-medium">Nguyên nhân</th>
                     </tr>
                   </thead>
@@ -246,15 +245,15 @@ print(f"{data['total']} features, trả về {data['returned']}")`}
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-mono">403</td>
-                      <td className="py-2 text-muted-foreground">Key bị thu hồi hoặc hết hạn</td>
+                      <td className="py-2 text-muted-foreground">Khóa bị thu hồi hoặc hết hạn</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-mono">404</td>
-                      <td className="py-2 text-muted-foreground">Slug không tồn tại hoặc lớp đã bị xóa</td>
+                      <td className="py-2 text-muted-foreground">Định danh đường dẫn không tồn tại hoặc lớp đã bị xóa</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-mono">429</td>
-                      <td className="py-2 text-muted-foreground">Vượt quá giới hạn request/phút của key</td>
+                      <td className="py-2 text-muted-foreground">Vượt giới hạn yêu cầu/phút của khóa</td>
                     </tr>
                   </tbody>
                 </table>

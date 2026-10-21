@@ -54,7 +54,7 @@ describe('MapLayerApiListPage', () => {
 
   it('renders list page and opens create dialog by permission', () => {
     renderWithProviders(<MapLayerApiListPage />)
-    expect(screen.getByRole('heading', { name: 'Quản lý API Lớp bản đồ' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'API bản đồ' })).toBeInTheDocument()
     expect(screen.getByText('Chưa có API lớp bản đồ nào được đăng ký.')).toBeInTheDocument()
 
     const createBtn = screen.getByRole('button', { name: /Đăng ký API mới/i })

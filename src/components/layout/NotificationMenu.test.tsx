@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NotificationMenu } from './NotificationMenu'
 import { renderWithProviders } from '@/test/renderWithProviders'
 import { toast } from 'react-toastify'
+import { act, screen } from '@testing-library/react'
+import { useLocation } from 'react-router-dom'
+
+function LocationProbe() {
+  return <output data-testid="notification-location">{useLocation().pathname}</output>
+}
 
 let capturedWsHandler: ((message: any) => void) | null = null
 
@@ -49,7 +55,7 @@ describe('NotificationMenu', () => {
   })
 
   it('triggers toast with multi-line title and body when receiving WebSocket message', () => {
-    renderWithProviders(<NotificationMenu />)
+    renderWithProviders(<><NotificationMenu /><LocationProbe /></>)
     expect(capturedWsHandler).toBeTypeOf('function')
 
     capturedWsHandler!({
@@ -73,13 +79,10 @@ describe('NotificationMenu', () => {
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     const toastCall = vi.mocked(toast.info).mock.calls[0]
     const toastOpts = toastCall[1] as { onClick?: () => void }
-    toastOpts.onClick?.()
+    act(() => toastOpts.onClick?.())
 
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      'https://admincampha.tourismpj.pro.vn/flood',
-      '_blank',
-      'noopener,noreferrer'
-    )
+    expect(screen.getByTestId('notification-location')).toHaveTextContent('/kttv-scenarios')
+    expect(windowOpenSpy).not.toHaveBeenCalled()
     windowOpenSpy.mockRestore()
   })
 
@@ -99,7 +102,7 @@ describe('NotificationMenu', () => {
 
     const toastCall = vi.mocked(toast.info).mock.calls[0]
     const toastOpts = toastCall[1] as { onClick?: () => void }
-    toastOpts.onClick?.()
+    act(() => toastOpts.onClick?.())
 
     expect(windowOpenSpy).toHaveBeenCalledWith(
       'https://admincampha.tourismpj.pro.vn/flood',

@@ -113,7 +113,7 @@ export default function KttvScenariosPage(): JSX.Element {
         toast.success('Xóa kịch bản thành công')
       },
     },
-    true
+    false
   )
 
   const allForStats = (statsQuery.data as ApiResponse<any> | undefined)?.data?.items ?? scenarios

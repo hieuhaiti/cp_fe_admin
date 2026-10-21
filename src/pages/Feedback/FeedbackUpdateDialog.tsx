@@ -1,3 +1,5 @@
+import { STATUS_DOT } from '@/constant/feedbackConstant'
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useEffect, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -7,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { STATUS_CLASS, STATUS_LABEL } from '@/constant/feedbackConstant'
 import {
   FEEDBACK_REVIEW_STATUSES,
@@ -135,7 +136,7 @@ export default function FeedbackUpdateDialog({
   const referenceCode = feedback?.reference_code || feedback?.referenceCode
   const contentText = feedback?.title || feedback?.description || '-'
   const currentStatusLabel = feedback?.status
-    ? STATUS_LABEL[feedback.status] ?? feedback.status
+    ? STATUS_LABEL[feedback.status] ?? 'Chưa xác định'
     : null
 
   return (
@@ -166,9 +167,7 @@ export default function FeedbackUpdateDialog({
             {feedback?.status && (
               <div className="flex items-center gap-2 pt-1">
                 <span className="font-medium text-foreground">Trạng thái hiện tại:</span>
-                <Badge variant="outline" className={STATUS_CLASS[feedback.status] ?? ''}>
-                  {currentStatusLabel}
-                </Badge>
+                <StatusDotBadge label={currentStatusLabel ?? 'Chưa xác định'} badgeClass={STATUS_CLASS[feedback.status]} dotClass={STATUS_DOT[feedback.status]} />
               </div>
             )}
           </div>

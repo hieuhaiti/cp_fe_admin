@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { mapImageService, useApiMutation, useApiQuery } from '@/service'
@@ -15,7 +16,6 @@ import PageLayout from '@/layout/pageLayout'
 import ToolTableCustom from '@/components/features/ToolTableCustom'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
@@ -161,7 +161,7 @@ export default function MapImagePage() {
                 <TableCell className="font-medium">{item.title || item.fileName || item.original_name || `Bản đồ #${item.id}`}</TableCell>
                 <TableCell>{item.scale_label ?? item.scaleLabel ?? '-'}</TableCell>
                 <TableCell>{year ?? '-'}</TableCell>
-                <TableCell><Badge variant={isPublic ? 'default' : 'secondary'}>{isPublic ? 'Công khai' : 'Nội bộ'}</Badge></TableCell>
+                <TableCell><StatusDotBadge label={isPublic ? 'Công khai' : 'Nội bộ'} tone={isPublic ? 'info' : 'neutral'} /></TableCell>
                 <TableCell>{createdAt ? formatDate(createdAt) : '-'}</TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">

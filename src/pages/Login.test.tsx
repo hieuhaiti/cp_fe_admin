@@ -30,8 +30,8 @@ const fetchProfile = vi.hoisted(() => vi.fn())
 vi.mock('@/service/authService', () => ({ default: { login } }))
 
 function fillCredentials(email = ' admin@campha.gov.vn ', password = ' Secret@123 ') {
-  fireEvent.change(screen.getByLabelText('Email đăng nhập'), { target: { value: email } })
-  fireEvent.change(screen.getByLabelText('Mật khẩu truy cập'), { target: { value: password } })
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } })
+  fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: password } })
 }
 
 describe('Login', () => {
@@ -49,9 +49,9 @@ describe('Login', () => {
   it('validates email and required password without calling auth service', async () => {
     renderWithProviders(<Login />, { initialEntries: ['/login'] })
     fillCredentials('invalid', '')
-    const submit = screen.getByRole('button', { name: /Truy cập hệ thống/ })
+    const submit = screen.getByRole('button', { name: /Đăng nhập/ })
     fireEvent.submit(submit.closest('form')!)
-    expect(await screen.findByText('Vui lòng nhập địa chỉ email hợp lệ.')).toBeInTheDocument()
+    expect(await screen.findByText('Nhập địa chỉ email hợp lệ.')).toBeInTheDocument()
     expect(login).not.toHaveBeenCalled()
   })
 
@@ -69,7 +69,7 @@ describe('Login', () => {
     })
     renderWithProviders(<Login />, { initialEntries: ['/login'] })
     fillCredentials()
-    fireEvent.click(screen.getByRole('button', { name: /Truy cập hệ thống/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Đăng nhập/ }))
     await waitFor(() => expect(login).toHaveBeenCalledWith({ email: 'admin@campha.gov.vn', password: 'Secret@123' }))
     expect(loginSuccess).toHaveBeenCalledWith({ accessToken: 'access', refreshToken: 'refresh', tokenType: 'Bearer', expiresIn: 900, refreshExpiresIn: 86400 })
     expect(fetchProfile).toHaveBeenCalledTimes(1)
@@ -80,7 +80,7 @@ describe('Login', () => {
     fetchProfile.mockResolvedValue(false)
     renderWithProviders(<Login />, { initialEntries: ['/login'] })
     fillCredentials()
-    fireEvent.click(screen.getByRole('button', { name: /Truy cập hệ thống/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Đăng nhập/ }))
     expect(await screen.findByText('Tài khoản không có quyền quản trị.')).toBeInTheDocument()
   })
 
@@ -88,7 +88,7 @@ describe('Login', () => {
     login.mockReturnValue(new Promise(() => undefined))
     renderWithProviders(<Login />, { initialEntries: ['/login'] })
     fillCredentials()
-    fireEvent.click(screen.getByRole('button', { name: /Truy cập hệ thống/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Đăng nhập/ }))
     expect(await screen.findByRole('button', { name: /Đang xác thực/ })).toBeDisabled()
   })
 })

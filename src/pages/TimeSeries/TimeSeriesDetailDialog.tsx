@@ -1,3 +1,4 @@
+import { StatusDotBadge } from '@/components/common/StatusDotBadge'
 import { formatDateTime } from '@/lib/date'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Layers, Clock, ShieldCheck, Copy } from 'lucide-react'
+import { Layers, Clock, Copy } from 'lucide-react'
 import { toast } from 'react-toastify'
 import type { TimeSeriesCatalogLayer } from '@/types/api'
 
@@ -111,9 +112,7 @@ export default function TimeSeriesDetailDialog({
               </div>
               <div>
                 <span className="text-muted-foreground block text-xs">Quyền truy cập:</span>
-                <Badge variant={layer.isPublic ? 'default' : 'outline'}>
-                  <ShieldCheck className="mr-1 size-3" /> {layer.isPublic ? 'Công khai' : 'Nội bộ'}
-                </Badge>
+                <StatusDotBadge label={layer.isPublic ? 'Công khai' : 'Nội bộ'} tone={layer.isPublic ? 'info' : 'neutral'} />
               </div>
 
               <div>

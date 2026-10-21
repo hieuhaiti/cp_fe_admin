@@ -47,11 +47,12 @@ describe('DocumentFormDialog', () => {
 
   it('requires a document file when creating', async () => {
     renderDialog()
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby')
     fireEvent.change(screen.getByLabelText('Tiêu đề *'), { target: { value: 'Quyết định thử nghiệm' } })
     fireEvent.change(screen.getByLabelText('Mã văn bản *'), { target: { value: '01/QD' } })
     fireEvent.change(screen.getByLabelText('Cơ quan ban hành *'), { target: { value: 'UBND Cẩm Phả' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
-    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Vui lòng chọn file văn bản để tải lên'))
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm văn bản' }))
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Chọn tệp văn bản để tải lên'))
   })
 
   it('submits FormData with required fields and file', async () => {
@@ -61,7 +62,7 @@ describe('DocumentFormDialog', () => {
     fireEvent.change(screen.getByLabelText('Tiêu đề *'), { target: { value: ' Quyết định thử nghiệm ' } })
     fireEvent.change(screen.getByLabelText('Mã văn bản *'), { target: { value: ' 01/QD ' } })
     fireEvent.change(screen.getByLabelText('Cơ quan ban hành *'), { target: { value: ' UBND Cẩm Phả ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm văn bản' }))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     const payload = onSubmit.mock.calls[0][0] as FormData
     expect(payload.get('title')).toBe('Quyết định thử nghiệm')
@@ -73,7 +74,8 @@ describe('DocumentFormDialog', () => {
   it('disables update until an edit field changes', () => {
     useApiQueryMock.mockReturnValue({ data: { data: { id: 3, title: 'Cũ', document_code: '01', issuing_agency: 'UBND', visibility: 'public', original_name: 'old.pdf' } }, isLoading: false })
     renderDialog({ documentId: 3 })
-    const button = screen.getByRole('button', { name: 'Cập nhật' })
+    const button = screen.getByRole('button', { name: 'Lưu thay đổi' })
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription('Tệp gốc không thể thay đổi sau khi tạo.')
     expect(button).toBeDisabled()
     fireEvent.change(screen.getByLabelText('Tiêu đề *'), { target: { value: 'Mới' } })
     expect(button).not.toBeDisabled()
