@@ -34,7 +34,7 @@ describe('IssueKeyDialog lifecycle — isolated service', () => {
     expect(screen.getByLabelText(/Hạn mức truy cập/)).toHaveValue(75)
     expect(screen.getByLabelText(/Thời hạn hiệu lực/)).toHaveValue(168)
     expect(mutation.mutate).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Cấp khóa', exact: true }))
+    await user.click(screen.getByRole('button', { name: 'Cấp khóa' }))
     expect(mutation.mutate).toHaveBeenCalledWith({ name: 'Khóa thử nghiệm', consumer: 'Đối tác thử nghiệm', scopes: ['features:read'], quotaPerMinute: 75, expiresInHours: 168 })
   })
   it('keeps method restrictions and cancel behavior', async () => {

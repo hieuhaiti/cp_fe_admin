@@ -27,7 +27,7 @@ describe('MainLayout responsive navigation', () => {
     const user = userEvent.setup()
     renderWithProviders(<MainLayout><p>Nội dung quản trị</p></MainLayout>)
     await user.click(screen.getByRole('button', { name: 'Mở menu quản trị' }))
-    await user.click(screen.getByRole('button', { name: 'Tổng quan', exact: true }))
+    await user.click(screen.getByRole('button', { name: 'Tổng quan' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
   it('retains desktop sidebar and collapse action', async () => {
